@@ -2,58 +2,34 @@ name: intermap
 channels:
   - defaults
   - conda-forge
-  - pytorch
-  # - fastai
+  - rapidsai
+  - nvidia
 dependencies:
   - python>=3.6
   - pip
-  # BASICS
   - numpy
   - scipy
   - pandas
-  - tqdm
-  - click
+#  - tqdm
   - ipython
-  # VISUALIZATION
-  - matplotlib
-  - ipympl  # interactive matplotlib plots
-  - seaborn
-  # - altair
-  # - yellowbrick
-  # ML, STATS & DEEP LEARNING
-  # - statsmodels
-  # - scikit-learn
-  # - sktime
-  # - tslearn
-  # - xgboost
-  # - catboost
-  # - lightgbm
-  # - pytorch
-  # - fastai  # activate fastai channel above!
-  # - tensorflow
-  # - keras
-  # - spacy
-  # OTHER TOOLS
-  # - optuna
-  # - dask
-  # - snakeviz
-  - pip:
-     - -e .  # install git checkout of intermap in editable mode
-     # add here only pip-packages that are not available in conda/conda-forge! E.g.:
-     # - icecream
-     # - jax
-     # - numpyro
-     # - funsor
-     # - neptune-client
-     # - neptune-contrib
+#  - matplotlib
+#  - ipympl
+#  - mpld3
+#  - numba
+#  - pytest
+#  - pytest-cov
+#  - tox
+#  - nbdime
+#  - nbstripout
+#  - sphinx
+#  - recommonmark
+#  - mdtraj
+#  - prody
+  - raft-dask
+  - cuda-version=12.0
+  - cuda-cudart
+  - cupy
+  - pylibraft
 
-  # DEVELOPMENT ONLY PACKAGES (could also be kept in a separate environment file)
-  - jupyterlab
-  - pytest
-  - pytest-cov
-  - tox
-  - pre_commit
-  - nbdime
-  - nbstripout
-  - sphinx
-  - recommonmark
+  - pip:
+     - -e .
