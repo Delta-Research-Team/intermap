@@ -2,16 +2,18 @@ name: intermap
 channels:
   - defaults
   - conda-forge
-  - rapidsai
-  - nvidia
 dependencies:
   - python>=3.6
   - pip
   - numpy
   - scipy
   - pandas
-#  - tqdm
   - ipython
+  - mdtraj
+  - numba
+  - netcdf4
+
+#  - tqdm
 #  - matplotlib
 #  - ipympl
 #  - mpld3
@@ -25,11 +27,13 @@ dependencies:
 #  - recommonmark
 #  - mdtraj
 #  - prody
-  - raft-dask
-  - cuda-version=12.0
-  - cuda-cudart
-  - cupy
-  - pylibraft
+#  - raft-dask
+#  - cuda-version=12.0
+#  - cuda-cudart
+#  - cupy
+#  - pylibraft
 
   - pip:
      - -e .
+     - numba-kdtree
+     - git+https://github.com/rglez/rgpack.git@0.0.3
