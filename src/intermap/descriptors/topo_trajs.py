@@ -43,21 +43,17 @@ def prepare_datastructures(topo, traj, heavies):
     Prepare datastructures for the calculation of descriptors
 
     Args:
-        arg: namespace with the arguments
-        first_timer: first timer to measure the time
+        topo: path to the topology file
+        traj: path to the trajectory file
+        heavies: list of elements considered as heavy atoms
 
     Returns:
         mini_traj: the first chunk of the trajectory
-        trajs: list of trajectories
         resids_to_atoms: numba Dict of each residue's indices
         resids_to_noh: numba Dict of each residue's indices without hydrogens
-        calphas: numba Dict of each residue's C-alpha indices
-        oxy: numba Dict of each residue's oxygen indices
-        nitro: numba Dict of each residue's nitrogen indices
         donors: numba Dict of each residue's donor indices
         hydros: numba Dict of each residue's hydrogen indices
         acceptors: numba Dict of each residue's acceptor indices
-        corr_indices: list of indices of atoms to be considered for correlation
     """
 
     # Load trajectory
