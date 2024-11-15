@@ -12,28 +12,13 @@ dependencies:
   - mdtraj
   - numba
   - netcdf4
-
-#  - tqdm
-#  - matplotlib
-#  - ipympl
-#  - mpld3
-#  - numba
-#  - pytest
-#  - pytest-cov
-#  - tox
-#  - nbdime
-#  - nbstripout
-#  - sphinx
-#  - recommonmark
-#  - mdtraj
-#  - prody
-#  - raft-dask
-#  - cuda-version=12.0
-#  - cuda-cudart
-#  - cupy
-#  - pylibraft
+  - tqdm
+  - numba
+  - mdtraj
+  - pytest
+  - pytest-cov
 
   - pip:
      - -e .
-     - numba-kdtree
+     - numpy-indexed
      - git+https://github.com/rglez/rgpack.git@0.0.3
