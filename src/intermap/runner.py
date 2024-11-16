@@ -3,7 +3,7 @@ from multiprocessing import Pool
 
 import mdtraj as md
 
-import topo_trajs as tt
+import intermap.topo_trajs as tt
 from intermap.indexman import IndexManager as iman
 from intermap.interactions import find_hbonds
 
