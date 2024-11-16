@@ -70,7 +70,7 @@ def prepare_datastructures(topo, traj, heavies):
         get_dha_indices(mini_traj, heavies, atoms_to_resids)
 
     return (
-    mini_traj, resids_to_atoms, resids_to_noh, donors, hydros, acceptors)
+        mini_traj, resids_to_atoms, resids_to_noh, donors, hydros, acceptors)
 
 
 def get_resids_indices(trajectory):
