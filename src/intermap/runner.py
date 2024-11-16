@@ -40,7 +40,7 @@ def run(args):
             results = p.starmap(find_hbonds, arguments)
             hbonds.extend(results)
 
-    return hbonds
+    return seles, hbonds
 
 # =============================================================================
 # Debugging area
