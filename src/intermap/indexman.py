@@ -26,6 +26,7 @@ class IndexManager:
         # Get the topology and bonds
         self.topo, bonds = self.traj.topology.to_dataframe()
         self.bonds = bonds.astype(int)
+        self.labels = self.get_labels()
 
         # Get the indices of the selections
         self.s1_idx, self.s2_idx = self.get_selections_indices()
@@ -36,6 +37,18 @@ class IndexManager:
             self.s1_idx)
         self.s2_donors, self.s2_hydros, self.s2_acc = self.get_sel_dha_idx(
             self.s2_idx)
+
+    def get_labels(self):
+        """
+        Get the labels of the atoms in the topology.
+
+        Returns:
+            labels (list): labels of the atoms in the topology
+        """
+        df = self.topo
+        labels = [f'{x[0]}-{x[1]}-{x[2]}'
+                  for x in zip(df.resName, df.resSeq, df.name)]
+        return np.asarray(labels)
 
     def get_selections_indices(self):
         """
@@ -101,3 +114,23 @@ class IndexManager:
         sel_donors = np.intersect1d(sel_idx, self.donors)
         sel_hydros = np.asarray([donors_hydros[donor] for donor in sel_donors])
         return sel_donors, sel_hydros, sel_heavies
+
+
+# =============================================================================
+# Debugging area
+# =============================================================================
+# from argparse import Namespace
+# import mdtraj as md
+#
+# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
+# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
+# sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
+# sel2 = "water"
+# nprocs = 8
+# chunk_size = 150
+# args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
+#                  chunk_size=chunk_size)
+#
+# master_traj = md.load_frame(args.traj, top=args.topo, index=0)
+#
+# self = IndexManager(sel1, sel2, master_traj)

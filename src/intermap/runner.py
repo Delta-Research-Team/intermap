@@ -21,6 +21,7 @@ def run(args):
 
     # Load the topology and the trajectory
     master_traj = md.load_frame(traj, top=topo, index=0)
+
     seles = iman(sel1, sel2, master_traj)
     s1_donors, s1_hydros, s1_acc = seles.s1_donors, seles.s1_hydros, seles.s1_acc
     s2_donors, s2_hydros, s2_acc = seles.s2_donors, seles.s2_hydros, seles.s2_acc
@@ -40,3 +41,16 @@ def run(args):
             hbonds.extend(results)
 
     return hbonds
+
+# =============================================================================
+# Debugging area
+# =============================================================================
+# from argparse import Namespace
+#
+# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
+# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
+# sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
+# sel2 = "water"
+# nprocs = 8
+# chunk_size = 150
+# args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs, chunk_size=chunk_size)
