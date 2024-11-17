@@ -34,6 +34,7 @@ def run(args):
 
     # Find the hydrogen bonds in parallel for each chunk
     hbonds = defaultdict(list)
+    frame = 0
     for chunk in chunks:
 
         # Get the chunk coords and delete the chunk object to free memory
@@ -51,9 +52,12 @@ def run(args):
             del xyz
 
             # Convert the results to a dictionary of counts per frame
-            for frame, hbonds_frame in enumerate(hbonds_chunk):
+            for i, hbonds_frame in enumerate(hbonds_chunk):
                 for hbond in hbonds_frame:
-                    hbonds[tuple(hbond)].append(frame)
+                    hbonds[tuple(hbond)].append(i + frame)
+
+        # Update the frame counter
+        frame += len(hbonds_chunk)
     return seles, hbonds
 
 
