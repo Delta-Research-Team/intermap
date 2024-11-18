@@ -3,6 +3,7 @@ from collections import defaultdict
 from multiprocessing import Pool
 
 import mdtraj as md
+from numpy.core.defchararray import strip
 
 import intermap.topo_trajs as tt
 from intermap.indexman import IndexManager as iman
@@ -18,6 +19,9 @@ def run(args):
     topo = args.topo
     sel1 = args.sel1
     sel2 = args.sel2
+    start = args.start
+    last = args.last
+    stride = args.stride
     chunk_size = args.chunk_size
     nprocs = args.nprocs
 
@@ -30,7 +34,9 @@ def run(args):
     s2_donors, s2_hydros, s2_acc = seles.s2_donors, seles.s2_hydros, seles.s2_acc
 
     # Yield chunks of the trajectory
-    chunks = tt.get_traj_chunks(topo, [traj], chunk_size=chunk_size)
+    chunks = tt.get_traj_chunks(topo, [traj],
+                                start=start, last=last, stride=stride,
+                                chunk_size=chunk_size)
 
     # Find the hydrogen bonds in parallel for each chunk
     hbonds = defaultdict(list)
