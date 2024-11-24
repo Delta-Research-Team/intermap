@@ -1,7 +1,31 @@
 # Created by gonzalezroy at 11/15/24
 import numpy as np
 
+# Constants and global variables
+valid_interactions = ['hbonds', 'close_contacts']
 heavies = ['S', 'N', 'O', 'P']
+
+
+def parse_interactions(interactions):
+    """
+    Parse the interactions declared by the user.
+
+    Args:
+        interactions: str, 'all' or list of interactions to calculate
+
+    Returns:
+        interactions: list of interactions to calculate
+    """
+
+    if interactions == 'all':
+        return valid_interactions
+    elif isinstance(interactions, list):
+        for interaction in interactions:
+            if interaction not in valid_interactions:
+                raise ValueError(f"Invalid interaction: {interaction}")
+        return interactions
+    else:
+        raise ValueError(f"Invalid interactions declared: {interactions}")
 
 
 class IndexManager:
@@ -9,7 +33,7 @@ class IndexManager:
     Class to manage the indices of the selections in a trajectory.
     """
 
-    def __init__(self, sel1, sel2, master_traj):
+    def __init__(self, sel1, sel2, master_traj, interactions='all'):
         """
         Initialize the IndexManager class.
 
@@ -17,13 +41,17 @@ class IndexManager:
             sel1: MDtraj selection string # 1
             sel2: MDtraj selection string # 2
             master_traj: MDtraj trajectory object (one frame only)
+            interactions: str, 'all' or list of interactions to calculate
         """
         # Parse arguments
         self.s1 = sel1
         self.s2 = sel2
         self.traj = master_traj
 
-        # Get the topology and bonds
+        # Parse interactions
+        self.inters = parse_interactions(interactions)
+
+        # Get the topology, bonds and labels
         self.topo, bonds = self.traj.topology.to_dataframe()
         self.bonds = bonds.astype(int)
         self.labels = self.get_labels()
@@ -31,12 +59,9 @@ class IndexManager:
         # Get the indices of the selections
         self.s1_idx, self.s2_idx = self.get_selections_indices()
 
-        # [hbonds]: get the indices of (D)onors, (H)ydrogens and (A)cceptor
+        # Get the indices of interactions selections
         self.donors, self.hydros, self.heavies = self.get_all_dha_idx()
-        self.s1_donors, self.s1_hydros, self.s1_acc = self.get_sel_dha_idx(
-            self.s1_idx)
-        self.s2_donors, self.s2_hydros, self.s2_acc = self.get_sel_dha_idx(
-            self.s2_idx)
+        self.indices = self.get_interaction_indices()
 
     def get_labels(self):
         """
@@ -115,6 +140,31 @@ class IndexManager:
         sel_hydros = np.asarray([donors_hydros[donor] for donor in sel_donors])
         return sel_donors, sel_hydros, sel_heavies
 
+    def get_interaction_indices(self):
+        """'
+        Get the indices of the atoms involved in the interactions.
+
+        Returns:
+            selection_indices (dict): dictionary with the indices of the atoms
+                involved in the interactions
+        """
+        selection_indices = {}
+
+        if ('hbonds' in self.inters) or ('all' in self.inters):
+            s1_donors, s1_hydros, s1_acc = self.get_sel_dha_idx(self.s1_idx)
+            s2_donors, s2_hydros, s2_acc = self.get_sel_dha_idx(self.s2_idx)
+            selection_indices['hbonds'] = {'s1_donors': s1_donors,
+                                           's1_hydros': s1_hydros,
+                                           's1_acc': s1_acc,
+                                           's2_donors': s2_donors,
+                                           's2_hydros': s2_hydros,
+                                           's2_acc': s2_acc}
+
+        if ('close_contacts' in self.inters) or ('all' in self.inters):
+            selection_indices['close_contacts'] = {'s1_idx': self.s1_idx,
+                                                   's2_idx': self.s2_idx}
+
+        return selection_indices
 
 # =============================================================================
 # Debugging area
