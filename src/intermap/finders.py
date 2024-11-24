@@ -5,8 +5,7 @@ Functions to find the interactions between two selections in a frame.
 
 import numpy as np
 import pandas as pd
-from numba import njit, prange
-from numba.typed import List
+from numba import njit
 from numba_kdtree import KDTree as nckd
 
 from intermap.geometric import calc_angle, calc_dist
@@ -46,7 +45,7 @@ def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
         n_triples += x.size
     for x in ball_2:
         n_triples += x.size
-    DHA_labels = np.empty((n_triples, 3), dtype=np.int32)
+    DHA_labels = np.empty((n_triples, 4), dtype=np.int32)
     DHA_coords = np.empty((n_triples, 3, 3), dtype=np.float32)
 
     counter = -1
@@ -56,7 +55,7 @@ def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
         for j in ball_1[i]:
             A = s2_acc[j]
             counter += 1
-            DHA_labels[counter] = [D, A, k]
+            DHA_labels[counter] = [D, A, k, 0]
             DHA_coords[counter][0] = xyz[D]
             DHA_coords[counter][1] = xyz[H]
             DHA_coords[counter][2] = xyz[A]
@@ -67,7 +66,7 @@ def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
         for j in ball_2[i]:
             A = s1_acc[j]
             counter += 1
-            DHA_labels[counter] = [D, A, k]
+            DHA_labels[counter] = [D, A, k, 0]
             DHA_coords[counter][0] = xyz[D]
             DHA_coords[counter][1] = xyz[H]
             DHA_coords[counter][2] = xyz[A]
@@ -81,7 +80,7 @@ def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
 
     correct_DHA = DHA_labels[DA_dist_correct & DHA_angle_correct]
 
-    return correct_DHA
+    return correct_DHA.astype(np.int32)
 
 
 @njit(parallel=False)
@@ -105,7 +104,7 @@ def close_contacts(xyz, k, s1_indices, s2_indices):
 
     # Find the CC
     n_doubles = sum([len(x) for x in ball_1])
-    CC_labels = np.zeros((n_doubles, 3), dtype=np.int32)
+    CC_labels = np.zeros((n_doubles, 4), dtype=np.int32)
 
     counter = -1
     for i, x in enumerate(ball_1):
@@ -116,16 +115,22 @@ def close_contacts(xyz, k, s1_indices, s2_indices):
             CC_labels[counter][0] = X1
             CC_labels[counter][1] = X2
             CC_labels[counter][2] = k
+            CC_labels[counter][3] = 1
+
+    idems = CC_labels[:, 0] == CC_labels[:, 1]
+    CC_labels = CC_labels[~idems]
     return CC_labels
 
 
-@njit(parallel=True)
-def inters(xyz, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc,
+@njit(parallel=False)
+def inters(xyz, frame, s1_donors, s1_hydros, s1_acc, s2_donors,
+           s2_hydros, s2_acc,
            s1_indices, s2_indices):
     """
     Find the interactions between two selections in a frame.
 
     Args:
+        frame (int): Frame identifier.
         xyz (ndarray): Coordinates of the atoms in the frame.
         s1_donors (ndarray): Indices of the donor atoms in s1.
         s1_hydros (ndarray): Indices of the hydrogen atoms in s1.
@@ -141,69 +146,50 @@ def inters(xyz, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc,
         cc_list (List): List of close contacts for each frame.
     """
     num_frames = xyz.shape[0]
-    hb_list = List()
-    cc_list = List()
-    for i in prange(num_frames):
-        hb_list.append(
-            hbonds(
-                xyz[i], i,
-                s1_donors, s1_hydros, s1_acc, s2_donors,
-                s2_hydros, s2_acc))
-        cc_list.append(
-            close_contacts(
-                xyz[i], i, s1_indices, s2_indices))
-    return hb_list, cc_list
+    list_inters = []
+
+    for i in range(num_frames):
+        hbs = hbonds(xyz[i], i + frame,
+                     s1_donors, s1_hydros, s1_acc, s2_donors,
+                     s2_hydros, s2_acc)
+        ccs = close_contacts(xyz[i], i + frame, s1_indices, s2_indices)
+        inters_i = np.concatenate((hbs, ccs))
+        list_inters.append(inters_i)
+
+    return list_inters
 
 
-def update_intermap(intermap_dict, inter_list, inter_type, labels, frame):
+def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
     """
-    Update the intermap dictionary with the new interactions found in the frame.
+    Get the intermap DataFrame from the interactions list and the labels.
 
     Args:
-        intermap_dict (dict): Dictionary with the interactions.
-        inter_list (List): List of interactions for each frame.
-        inter_type (str): Type of interaction.
+        inter_list (ndarray): Array of interactions for each frame.
         labels (ndarray): Labels of the atoms in the selection.
-        frame (int): Frame identifier.
-
-    Returns:
-        intermap_dict (dict): Updated dictionary with the interactions.
-    """
-    for i, inter_frame in enumerate(inter_list):
-        k = inter_frame[0, 2]
-        for r1, r2 in inter_frame[:, :2]:
-            intermap_dict[(labels[r1], labels[r2], inter_type)].append(
-                frame + k)
-    return intermap_dict
-
-
-def intermap2df(intermap_dict, nframes, prev_cutoff=1):
-    """
-    Convert the intermap dictionary to a DataFrame.
-
-    Args:
-        nframes (int): Number of frames in the trajectory.
+        inters_types (ndarray): Types of interactions.
+        n (int): Number of frames in the trajectory.
         prev_cutoff (float): Prevalence cutoff for the interactions.
-        intermap_dict (dict): Dictionary with the interactions.
 
     Returns:
         df (DataFrame): DataFrame with the interactions.
     """
+    df = pd.DataFrame(inter_list, columns=['r1', 'r2', 'frame', 'type'])
+    df = df.groupby(['r1', 'r2', 'type'])['frame'].unique()
+    df = df.reset_index()
+    df['prevalence'] = df['frame'].map(lambda x: round(len(x) / n * 100, 2))
+    df.reset_index(inplace=True)
 
-    def data_generator():
-        """
-        Generator to yield the data for the DataFrame creation.
-        """
-        for key, value in intermap_dict.items():
-            prevalence = round(len(value) / nframes * 100, 2)
-            if prevalence > prev_cutoff:
-                yield [y for x in key for y in x.split('-')] + [prevalence] + [
-                    sorted(value)]
+    df = df[df['prevalence'] > prev_cutoff]
+    df['r1'] = df['r1'].map(lambda x: labels[x])
+    df['r2'] = df['r2'].map(lambda x: labels[x])
+    df['type'] = df['type'].map(lambda x: inters_types[x])
+    df[['resname1', 'resid1', 'name1']] = df['r1'].str.split('-', expand=True)
+    df[['resname2', 'resid2', 'name2']] = df['r2'].str.split('-', expand=True)
+    df = df[
+        ['resname1', 'resid1', 'name1', 'resname2', 'resid2', 'name2', 'type',
+         'prevalence', 'frame']]
+    df.sort_values(by='prevalence', ascending=True, inplace=True)
 
-    df = pd.DataFrame(data_generator(), columns=['resname1', 'resid1', 'name1',
-                                                 'resname2', 'resid2', 'name2',
-                                                 'inter', 'prevalence',
-                                                 'frames'])
     return df
 
 # %% ==========================================================================
@@ -214,15 +200,15 @@ def intermap2df(intermap_dict, nframes, prev_cutoff=1):
 # from intermap import topo_trajs as tt
 # import numpy as np
 # import time
-# from collections import defaultdict
 # import pandas as pd
+# from numba import set_num_threads
 #
-# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+# topo = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/A1_21bp_box_dry.prmtop'
+# traj = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/8oxoGA1_21bp_1_dry.nc'
 #
 # sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
-# sel2 = "water"
-# chunk_size = 100
+# sel2 = sel1
+# chunk_size = 2000
 # n_cores = 8
 #
 # # %% ==========================================================================
@@ -232,11 +218,12 @@ def intermap2df(intermap_dict, nframes, prev_cutoff=1):
 # chunk = next(chunks)
 # xyz = chunk.xyz
 # N = len(xyz)
-#
+# prev_cutoff = 2
 # # Get the selections
 # master_traj = md.load_frame(traj, top=topo, index=0)
 # seles = iman(sel1, sel2, master_traj)
 # labels = seles.labels
+# inters_types = np.asarray(['hb', 'cc'])
 # idxs = seles.indices
 # s1_indices = seles.s1_idx
 # s2_indices = seles.s2_idx
@@ -247,25 +234,22 @@ def intermap2df(intermap_dict, nframes, prev_cutoff=1):
 # s2_donors = idxs['hbonds']['s2_donors']
 # s2_acc = idxs['hbonds']['s2_acc']
 #
-# # %% Run the functions in parallel ============================================
+# # # %% Run the functions in parallel ============================================
 # first_timer = time.time()
 # set_num_threads(n_cores)
-# _ = inters(xyz[:1],
-#            s1_donors, s1_hydros, s1_acc,
-#            s2_donors, s2_hydros, s2_acc,
-#            s1_indices, s2_indices)
+# cc1 = close_contacts(xyz[0], 0, s1_indices, s2_indices)
+# hb1 = hbonds(xyz[0], 0, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros,
+#              s2_acc)
+# estimate = int((len(cc1) + len(hb1)) * len(xyz) * 1.5)
+# frame = 0
+# inter_list = inters(xyz, frame,
+#                     s1_donors, s1_hydros, s1_acc,
+#                     s2_donors, s2_hydros, s2_acc,
+#                     s1_indices, s2_indices)
+# inter_list = np.concatenate(inter_list)
 #
-# hb_list, cc_list = inters(xyz,
-#                           s1_donors, s1_hydros, s1_acc,
-#                           s2_donors, s2_hydros, s2_acc,
-#                           s1_indices, s2_indices)
 # print(f"Elapsed time: {time.time() - first_timer:.2f} s")
 #
-# # %% ==========================================================================
-# # Fill intermap
-# frame = 0
-# intermap_dict = defaultdict(list)
-# intermap_dict = update_intermap(intermap_dict, hb_list, 'hb', labels, frame)
-# intermap_dict = update_intermap(intermap_dict, cc_list, 'cc', labels, frame)
-# frame += N
-# intermap = intermap2df(intermap_dict, N, prev_cutoff=2)
+# df_map = get_intermap(inter_list, labels, inters_types, N)
+
+# %% ==========================================================================

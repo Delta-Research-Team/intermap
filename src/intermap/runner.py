@@ -1,14 +1,12 @@
 # Created by gonzalezroy at 11/14/24
-from collections import defaultdict
-
 
 import mdtraj as md
+import numpy as np
 from numba import set_num_threads
 
 import intermap.finders as find
 import intermap.topo_trajs as tt
 from intermap.indexman import IndexManager as iman
-
 
 
 def run(args):
@@ -26,10 +24,12 @@ def run(args):
     start = args.start
     last = args.last
     stride = args.stride
+    prev_cutoff = args.prev_cutoff
 
     # Get the selections
     master_traj = md.load_frame(traj, top=topo, index=0)
     index_manager = iman(sel1, sel2, master_traj, interactions)
+    inter_types = np.asarray(['hb', 'cc'])
     labels = index_manager.labels
 
     # ... for close contacts
@@ -52,37 +52,31 @@ def run(args):
 
     # Compile the interactions computing functions & set the number of threads
     set_num_threads(nprocs)
-    _ = find.inters(master_traj.xyz[:1],
+    _ = find.inters(master_traj.xyz[:1], 0,
                     s1_donors, s1_hydros, s1_acc,
                     s2_donors, s2_hydros, s2_acc,
                     s1_indices, s2_indices)
 
-    frame = 0
-    intermap_dict = defaultdict(list)
+    n_frame = 0
+    intermap_lists = []
     for chunk in chunks:
         # Get the chunk coords and mark the chunk object to free memory
         xyz = chunk.xyz
-        N = len(xyz)
-        # del chunk
 
-        # Run the interactions in parallel
-        hb_list, cc_list = find.inters(xyz,
-                                       s1_donors, s1_hydros, s1_acc,
-                                       s2_donors, s2_hydros, s2_acc,
-                                       s1_indices, s2_indices)
-        # del xyz
+        # # Run the interactions in parallel
+        inter_list = find.inters(xyz, n_frame,
+                                 s1_donors, s1_hydros, s1_acc,
+                                 s2_donors, s2_hydros, s2_acc,
+                                 s1_indices, s2_indices)
+        intermap_lists.extend(inter_list)
+        n_frame += len(xyz)
 
-        # Update the intermap dictionary
-        intermap_dict = find.update_intermap(intermap_dict, hb_list, 'hb',
-                                             labels, frame)
-        # del hb_list
-        intermap_dict = find.update_intermap(intermap_dict, cc_list, 'cc',
-                                             labels, frame)
-        # del cc_list
+    intermap_lists = np.concatenate(intermap_lists)
 
-        # Update the frame counter
-        frame += N
-    intermap = find.intermap2df(intermap_dict, frame)
+
+    intermap = find.get_intermap(intermap_lists, labels, inter_types, n_frame,
+                                 prev_cutoff=prev_cutoff)
+
     return intermap
 
 
@@ -91,14 +85,15 @@ def run(args):
 # =============================================================================
 # from argparse import Namespace
 #
-# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
-# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
+# topo = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/A1_21bp_box_dry.prmtop'
+# traj = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/8oxoGA1_21bp_1_dry.nc'
 # sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
-# sel2 = "water"
+# sel2 = sel1
 # nprocs = 8
-# chunk_size = 100
+# chunk_size = 500
 # interactions = ['hbonds', 'close_contacts']
-#
+# prev_cutoff = 2
 # args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
-#                  chunk_size=chunk_size, interactions=interactions)
-# intermap = run(args)
+#                  chunk_size=chunk_size, interactions=interactions, start=0,
+#                  last=-1, stride=1, prev_cutoff=prev_cutoff)
+# inter_map = run(args)
