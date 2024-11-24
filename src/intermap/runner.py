@@ -1,12 +1,14 @@
 # Created by gonzalezroy at 11/14/24
 from collections import defaultdict
 
+
 import mdtraj as md
 from numba import set_num_threads
 
 import intermap.finders as find
 import intermap.topo_trajs as tt
 from intermap.indexman import IndexManager as iman
+
 
 
 def run(args):
