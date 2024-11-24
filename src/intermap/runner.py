@@ -23,6 +23,9 @@ def run(args):
     interactions = args.interactions
     chunk_size = args.chunk_size
     nprocs = args.nprocs
+    start = args.start
+    last = args.last
+    stride = args.stride
 
     # Get the selections
     master_traj = md.load_frame(traj, top=topo, index=0)
@@ -43,7 +46,9 @@ def run(args):
     s2_acc = selections['hbonds']['s2_acc']
 
     # Yield chunks of the trajectory and find the interactions in parallel
-    chunks = tt.get_traj_chunks(topo, [traj], chunk_size=chunk_size)
+    chunks = tt.get_traj_chunks(topo, [traj],
+                                start=start, last=last, stride=stride,
+                                chunk_size=chunk_size)
 
     # Compile the interactions computing functions & set the number of threads
     set_num_threads(nprocs)
