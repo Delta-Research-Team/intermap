@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - scipy
   - pandas
+  - matplotlib
   - ipython
   - mdtraj
   - numba
@@ -22,3 +23,4 @@ dependencies:
      - -e .
      - numpy-indexed
      - git+https://github.com/rglez/rgpack.git@0.0.3
+     - numba_kdtree
