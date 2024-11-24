@@ -63,22 +63,22 @@ def run(args):
         # Get the chunk coords and mark the chunk object to free memory
         xyz = chunk.xyz
         N = len(xyz)
-        del chunk
+        # del chunk
 
         # Run the interactions in parallel
         hb_list, cc_list = find.inters(xyz,
                                        s1_donors, s1_hydros, s1_acc,
                                        s2_donors, s2_hydros, s2_acc,
                                        s1_indices, s2_indices)
-        del xyz
+        # del xyz
 
         # Update the intermap dictionary
         intermap_dict = find.update_intermap(intermap_dict, hb_list, 'hb',
                                              labels, frame)
-        del hb_list
+        # del hb_list
         intermap_dict = find.update_intermap(intermap_dict, cc_list, 'cc',
                                              labels, frame)
-        del cc_list
+        # del cc_list
 
         # Update the frame counter
         frame += N
