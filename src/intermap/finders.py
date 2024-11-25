@@ -203,17 +203,18 @@ def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
 # import pandas as pd
 # from numba import set_num_threads
 #
-# topo = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/A1_21bp_box_dry.prmtop'
-# traj = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/8oxoGA1_21bp_1_dry.nc'
+# topo = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.prmtop'
+# traj = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.nc'
 #
-# sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
-# sel2 = sel1
+# sel1 = "resname =~ '8OG'"
+# sel2 = "protein"
+#
 # chunk_size = 2000
 # n_cores = 8
-#
-# # %% ==========================================================================
-#
-# # Yield chunks of the trajectory
+
+# %% ==========================================================================
+
+# Yield chunks of the trajectory
 # chunks = tt.get_traj_chunks(topo, [traj], chunk_size=chunk_size)
 # chunk = next(chunks)
 # xyz = chunk.xyz
@@ -233,8 +234,8 @@ def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
 # s2_hydros = idxs['hbonds']['s2_hydros']
 # s2_donors = idxs['hbonds']['s2_donors']
 # s2_acc = idxs['hbonds']['s2_acc']
-#
-# # # %% Run the functions in parallel ============================================
+
+# # %% Run the functions in parallel ============================================
 # first_timer = time.time()
 # set_num_threads(n_cores)
 # cc1 = close_contacts(xyz[0], 0, s1_indices, s2_indices)

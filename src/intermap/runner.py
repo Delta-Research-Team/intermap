@@ -8,6 +8,11 @@ import intermap.finders as find
 import intermap.topo_trajs as tt
 from intermap.indexman import IndexManager as iman
 
+# todo: Parallelization of numba functions could be made by preallocating the
+#  array size for the interactions in the frame. Then create a List of arrays
+#  and append the arrays to the list.
+
+
 
 def run(args):
     """
@@ -73,10 +78,11 @@ def run(args):
 
     intermap_lists = np.concatenate(intermap_lists)
 
+    if intermap_lists.size == 0:
+        return None
 
     intermap = find.get_intermap(intermap_lists, labels, inter_types, n_frame,
                                  prev_cutoff=prev_cutoff)
-
     return intermap
 
 
