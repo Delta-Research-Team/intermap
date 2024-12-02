@@ -18,6 +18,8 @@ dependencies:
   - mdtraj
   - pytest
   - pytest-cov
+  - mdanalysis
+  - rdkit
 
   - pip:
      - -e .
