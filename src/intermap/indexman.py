@@ -252,18 +252,18 @@ class IndexManager:
 # =============================================================================
 # Debugging area
 # =============================================================================
-from argparse import Namespace
-import mdtraj as md
-
-topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
-traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
-sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
-sel2 = "protein"
-nprocs = 8
-chunk_size = 150
-args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
-                 chunk_size=chunk_size)
-
-master_traj = md.load_frame(args.traj, top=args.topo, index=0)
-
-self = IndexManager(sel1, sel2, master_traj)
+# from argparse import Namespace
+# import mdtraj as md
+#
+# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
+# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
+# sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
+# sel2 = "protein"
+# nprocs = 8
+# chunk_size = 150
+# args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
+#                  chunk_size=chunk_size)
+#
+# master_traj = md.load_frame(args.traj, top=args.topo, index=0)
+#
+# self = IndexManager(sel1, sel2, master_traj)

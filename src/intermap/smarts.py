@@ -87,6 +87,45 @@ def get_metalic():
     return smart_metal_acc, smart_metal_don
 
 
+def get_first_residues(u):
+    """
+    Get the first residue of each type in the Universe
+
+    Args:
+        u (mda.Universe): Universe object
+
+    Returns:
+        first_occurences (dict): Dictionary with the first
+         occurrence of each residue type
+    """
+    unique_resnames = set(u.residues.resnames)
+    first_occurences = {}
+    while unique_resnames:
+        all_resids = u.residues
+        for res in all_resids:
+            if res.resname in unique_resnames:
+                first_occurences[res.resname] = res
+                unique_resnames.remove(res.resname)
+                break
+    return first_occurences
+
+
+def query_mol(mol, query):
+    """
+    Get the atom names of the query in the molecule
+
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): Molecule object
+        query (rdkit.Chem.rdchem.Mol): Query object
+
+    Returns:
+        atom_names (str): Atom names of the query in the molecule
+    """
+    matches = mol.GetSubstructMatches(query)
+    atom_names = ' '.join(res.atoms.names[[y for x in matches for y in x]])
+    return atom_names
+
+
 class ProlifSmarts:
     """
     Class to get the SMARTS patterns of the ligand interactions from prolif
@@ -120,7 +159,8 @@ class ProlifSmarts:
             "xb_don": self.xb_don,
             "cations": self.cations,
             "anions": self.anions,
-            "rings": self.rings,
+            "rings6": self.rings[0],
+            "rings5": self.rings[1],
             "metal_acc": self.metal_acc,
             "metal_don": self.metal_don
         }
@@ -129,15 +169,45 @@ class ProlifSmarts:
 # =============================================================================
 # Debugging Smarts
 # =============================================================================
-# self = ProlifSmarts()
-# smarts = self.interactions
+self = ProlifSmarts()
+smarts = self.interactions
 
-# =============================================================================
+# %% ==========================================================================
 # Debugging sels
 # =============================================================================
 import MDAnalysis as mda
+
 topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
 traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 u = mda.Universe(topo, traj)
+u.select('protein')
 
-set(u.residues.resnames)
+unique_residues = get_first_residues(u)
+t6 = '[a&r6]1:[a&r6]:[a&r6]:[a&r6]:[a&r6]:[a&r6]:1'
+for case in unique_residues:
+    if case == 'WAT':
+        continue
+
+    res = unique_residues[case]
+    mol = res.atoms.convert_to("RDKIT", force=True)
+    ri = mol.GetRingInfo()
+    print(ri.AtomRings())
+
+    query = Chem.MolFromSmarts(t6)
+    matches = mol.GetSubstructMatches(query)
+    print(case, matches)
+
+
+
+    atom_names = query_mol(mol, query)
+    selection = 'resname {} and name {}'.format(case, atom_names)
+
+
+
+def isRingAromatic(mol, bondRing):
+        for id in bondRing:
+            if not mol.GetBondWithIdx(id).GetIsAromatic():
+                return False
+        return True
+ri = mol.GetRingInfo()
+print(isRingAromatic(mol, ri.BondRings()[2]))
