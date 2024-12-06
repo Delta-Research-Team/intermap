@@ -18,6 +18,7 @@ dependencies:
   - mdtraj
   - pytest
   - pytest-cov
+  - prolif
 
   - pip:
      - -e .
