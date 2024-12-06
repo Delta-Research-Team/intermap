@@ -183,7 +183,7 @@ u = mda.Universe(topo, traj)
 u.select('protein')
 
 unique_residues = get_first_residues(u)
-t6 = '[a&r6]1:[a&r6]:[a&r6]:[a&r6]:[a&r6]:[a&r6]:1'
+t6 ='[a&r6]1:[a&r6]:[a&r6]:[a&r6]:[a&r6]:[a&r6]:1'
 for case in unique_residues:
     if case == 'WAT':
         continue
