@@ -195,6 +195,21 @@ def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
 # %% ==========================================================================
 # Debugging area
 # =============================================================================
+# import MDAnalysis as mda
+#
+# topo = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.prmtop'
+# traj = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.nc'
+# u = mda.Universe(topo, traj)
+#
+# aroms = u.guess_TopologyAttrs(to_guess=['aromaticities'])
+#
+#
+# u.guess_TopologyAttrs('aromaticities')
+#
+#
+# a = mda.guesser.default_guesser.DefaultGuesser('aromaticities')
+# u.select_atoms("charge < 0")
+
 # import mdtraj as md
 # from intermap.indexman import IndexManager as iman
 # from intermap import topo_trajs as tt
@@ -203,8 +218,6 @@ def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
 # import pandas as pd
 # from numba import set_num_threads
 #
-# topo = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.prmtop'
-# traj = '/home/rglez/RoyHub/oxo-8/data/raw/A1/8oxoGA1_1_dry.nc'
 #
 # sel1 = "resname =~ '8OG'"
 # sel2 = "protein"

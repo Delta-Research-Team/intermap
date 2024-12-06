@@ -1,4 +1,7 @@
 # Created by gonzalezroy at 11/15/24
+from collections import defaultdict
+
+import networkx as nx
 import numpy as np
 
 # Constants and global variables
@@ -54,6 +57,7 @@ class IndexManager:
         # Get the topology, bonds and labels
         self.topo, bonds = self.traj.topology.to_dataframe()
         self.bonds = bonds.astype(int)
+        self.coords = self.traj.xyz[0]
         self.labels = self.get_labels()
 
         # Get the indices of the selections
@@ -164,23 +168,102 @@ class IndexManager:
             selection_indices['close_contacts'] = {'s1_idx': self.s1_idx,
                                                    's2_idx': self.s2_idx}
 
+        if ('aromatic' in self.inters) or ('all' in self.inters):
+            selection_indices['aromatic'] = {'s1_centroids': self.s1_idx,
+                                             's2_centroids': self.s2_idx}
+
         return selection_indices
+
+    # =========================================================================
+    # Aromatics
+    # =========================================================================
+    def get_sel_aro_idx(self, sel_idx, tolerance=25):
+        coordinates = self.coords
+        at1_in_sel = np.isin(self.bonds[:, 0], sel_idx)
+        at2_in_sel = np.isin(self.bonds[:, 1], sel_idx)
+        bonds_in_sel = self.bonds[np.bitwise_or(at1_in_sel, at2_in_sel)]
+
+        # Create a dictionary of bonds for each atom
+        topo_bonds = defaultdict(list)
+        for bond in bonds_in_sel:
+            topo_bonds[bond[0]].append(bond[1])
+
+        # Convert topo_bonds to a NetworkX graph
+        G = nx.Graph(topo_bonds)
+        all_cycles = list(nx.simple_cycles(G))
+
+        # Find all cycles in the topo_bonds graph
+        interval = range(5, 7)
+        cycles = [x for x in all_cycles if len(x) in interval]
+
+        for c in cycles:
+            if 18947 in c:
+                print(c)
+
+        cycles = [[18945, 18947, 18935, 18936, 18938, 18943]]
+
+        # Check if the cycles are planar
+        planar_cycles = []
+        for cycle in cycles:
+            num_atoms = len(cycle)
+            passing = 0
+            for i in range(num_atoms):
+                c1 = coordinates[cycle[i]]
+                c2 = coordinates[cycle[(i + 1) % num_atoms]]
+                c3 = coordinates[cycle[(i + 2) % num_atoms]]
+                c4 = coordinates[cycle[(i + 3) % num_atoms]]
+                dihedral_angle = self._calculate_dihedral_angle(c1, c2, c3, c4)
+                print(i, dihedral_angle)
+                angle1 = abs(dihedral_angle)
+                angle2 = abs(dihedral_angle - 180)
+                if (angle1 > tolerance) and (angle2 > tolerance):
+                    continue
+                else:
+                    passing += 1
+            if passing == num_atoms:
+                planar_cycles.append(cycle)
+        return planar_cycles
+
+    def _calculate_dihedral_angle(self, coords1, coords2, coords3, coords4):
+        """
+        Calculate the dihedral angle between four points in space.
+
+        Args:
+            coords1, coords2, coords3, coords4: Coordinates of the four points.
+
+        Returns:
+            Dihedral angle in degrees.
+        """
+        b1 = coords2 - coords1
+        b2 = coords3 - coords2
+        b3 = coords4 - coords3
+
+        b1xb2 = np.cross(b1, b2)
+        b2xb3 = np.cross(b2, b3)
+
+        b1xb2_x_b2xb3 = np.cross(b1xb2, b2xb3)
+
+        y = np.dot(b1xb2_x_b2xb3, b2) * (1.0 / np.linalg.norm(b2))
+        x = np.dot(b1xb2, b2xb3)
+
+        return np.degrees(np.arctan2(y, x))
+
 
 # =============================================================================
 # Debugging area
 # =============================================================================
-# from argparse import Namespace
-# import mdtraj as md
-#
-# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
-# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
-# sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
-# sel2 = "water"
-# nprocs = 8
-# chunk_size = 150
-# args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
-#                  chunk_size=chunk_size)
-#
-# master_traj = md.load_frame(args.traj, top=args.topo, index=0)
-#
-# self = IndexManager(sel1, sel2, master_traj)
+from argparse import Namespace
+import mdtraj as md
+
+topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_hmr.prmtop'
+traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A1/8oxoGA1_1_sk100.nc'
+sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
+sel2 = "protein"
+nprocs = 8
+chunk_size = 150
+args = Namespace(topo=topo, traj=traj, sel1=sel1, sel2=sel2, nprocs=nprocs,
+                 chunk_size=chunk_size)
+
+master_traj = md.load_frame(args.traj, top=args.topo, index=0)
+
+self = IndexManager(sel1, sel2, master_traj)
