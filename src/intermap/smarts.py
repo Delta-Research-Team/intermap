@@ -127,7 +127,17 @@ class ProlifSmarts:
 
 
 # =============================================================================
-# Debugging Area
+# Debugging Smarts
 # =============================================================================
-self = ProlifSmarts()
-smarts = self.interactions
+# self = ProlifSmarts()
+# smarts = self.interactions
+
+# =============================================================================
+# Debugging sels
+# =============================================================================
+import MDAnalysis as mda
+topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+u = mda.Universe(topo, traj)
+
+set(u.residues.resnames)
