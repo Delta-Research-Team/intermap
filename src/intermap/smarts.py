@@ -96,25 +96,18 @@ class ProlifSmarts:
     def __init__(self):
         # Hydrophobics
         self.hydroph = get_hydroph_smarts()
-
         # Hydrogen bonds
         self.hb_acc, self.hb_don = get_hb_smarts()
-
         # Halogen bonds
         self.xb_acc, self.xb_don = get_xb_smarts()
-
         # Cations & Anions
         self.cations, self.anions = get_ionic_smarts()
-
         # Aromatic rings
         self.rings = get_aromatic_rings()
-
         # Metalic
         self.metal_acc, self.metal_don = get_metalic()
-
         # As a dictionary
         self.interactions = {
-
             # single atoms matches
             "hydroph": self.hydroph,
             "cations": self.cations,
@@ -123,7 +116,6 @@ class ProlifSmarts:
             "metal_don": self.metal_don,
             "hb_acc": self.hb_acc,
             "xb_acc": self.xb_acc,
-
             # multiple atoms matches
             "hb_don": self.hb_don,
             "xb_don": self.xb_don,

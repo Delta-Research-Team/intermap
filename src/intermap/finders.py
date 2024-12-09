@@ -11,6 +11,8 @@ from numba_kdtree import KDTree as nckd
 from intermap.geometric import calc_angle, calc_dist
 
 
+# todo: Change param names & function names to be more descriptive
+
 @njit(parallel=False)
 def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
     """
@@ -77,6 +79,170 @@ def hbonds(xyz, k, s1_donors, s1_hydros, s1_acc, s2_donors, s2_hydros, s2_acc):
     DHA_angle_correct = calc_angle(DHA_coords[:, 0, :],
                                    DHA_coords[:, 1, :],
                                    DHA_coords[:, 2, :]) > DHA_cut
+
+    correct_DHA = DHA_labels[DA_dist_correct & DHA_angle_correct]
+
+    return correct_DHA.astype(np.int32)
+
+
+@njit(parallel=False)
+def vdw_contacts(xyz, k, contact_id, s1_indices, s2_indices, cutoff,
+                 vdw_radii):
+    """
+    Args:
+        xyz (ndarray): Coordinates of the atoms in the frame.
+        k (int): Frame identifier.
+        contact_id: Identifier for the contact type.
+        s1_indices (ndarray): Indices of the atoms in s1.
+        s2_indices (ndarray): Indices of the atoms in s2.
+        cutoff: Cutoff distance for the tree query.
+        vdw_radii: Van der Waals radii of the atoms.
+
+    Returns:
+        CC_labels (list): List of labels for each vdw contact.
+    """
+    # Create & query the trees
+    s2_tree = nckd(xyz[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz[s1_indices], cutoff)
+
+    # Find the CC
+    n_doubles = sum([len(x) for x in ball_1])
+    CC_labels = np.zeros((n_doubles, 4), dtype=np.int32)
+
+    counter = -1
+    for i, x in enumerate(ball_1):
+        X1 = s1_indices[i]
+        for j in x:
+            X2 = s2_indices[j]
+            counter += 1
+            CC_labels[counter][0] = X1
+            CC_labels[counter][1] = X2
+            CC_labels[counter][2] = k
+            CC_labels[counter][3] = contact_id
+
+    # Discard identical pairs
+    idems = CC_labels[:, 0] == CC_labels[:, 1]
+    CC_labels = CC_labels[~idems]
+
+    # Discard pairs whose distance is greater than the sum of the VdW radii
+    vdw_radii_x1 = vdw_radii[CC_labels[:, 0]]
+    vdw_radii_x2 = vdw_radii[CC_labels[:, 1]]
+    vdw_sum = (vdw_radii_x1 + vdw_radii_x2) / 10
+    dists = calc_dist(xyz[CC_labels[:, 0]], xyz[CC_labels[:, 1]])
+    vdw_contact = dists <= vdw_sum
+    CC_labels = CC_labels[vdw_contact]
+
+    return CC_labels
+
+
+@njit(parallel=False)
+def single_contacts(xyz, k, contact_id, s1_indices, s2_indices, cut=0.3):
+    """
+    Args:
+        xyz (ndarray): Coordinates of the atoms in the frame.
+        k (int): Frame identifier.
+        contact_id: Identifier for the contact type.
+        s1_indices (ndarray): Indices of the atoms in s1.
+        s2_indices (ndarray): Indices of the atoms in s2.
+        cut: Cutoff distance for the tree query.
+
+    Returns:
+        CC_labels (list): List of labels for each close contact.
+    """
+
+    # Create & query the trees
+    s2_tree = nckd(xyz[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz[s1_indices], cut)
+
+    # Find the CC
+    n_doubles = sum([len(x) for x in ball_1])
+    CC_labels = np.zeros((n_doubles, 4), dtype=np.int32)
+
+    counter = -1
+    for i, x in enumerate(ball_1):
+        X1 = s1_indices[i]
+        for j in x:
+            X2 = s2_indices[j]
+            counter += 1
+            CC_labels[counter][0] = X1
+            CC_labels[counter][1] = X2
+            CC_labels[counter][2] = k
+            CC_labels[counter][3] = contact_id
+
+    idems = CC_labels[:, 0] == CC_labels[:, 1]
+    CC_labels = CC_labels[~idems]
+    return CC_labels
+
+
+@njit(parallel=False)
+def double_contacts(xyz, k, contact_id,
+                    s1_donors, s1_hydros, s1_acc,
+                    s2_donors, s2_hydros, s2_acc,
+                    cut_HA, cut_DA, cut_DHA):
+    """
+    Args:
+        xyz: Coordinates of the atoms in the frame.
+        k (int): Frame identifier.
+        contact_id: Identifier for the contact type.
+        s1_donors: Indices of the donor atoms in s1.
+        s1_hydros: Indices of the hydrogen atoms in s1.
+        s1_acc: Indices of the acceptor atoms in s1.
+        s2_donors: Indices of the donor atoms in s2.
+        s2_hydros: Indices of the hydrogen atoms in s2.
+        s2_acc: Indices of the acceptor atoms in s2.
+        cut_HA: Cutoff distance between Hydrogen and Acceptor.
+        cut_DA: Cuttoff distance between Donor and Acceptor.
+        cut_DHA: Cutoff angle between Donor, Hydrogen and Acceptor.
+
+    Returns:
+        DHA_labels (list): List of DHA labels for each hydrogen bond.
+    """
+
+    # Create & query the trees
+    s2_A_tree = nckd(xyz[s2_acc])
+    s1_A_tree = nckd(xyz[s1_acc])
+
+    ball_1 = s2_A_tree.query_radius(xyz[s1_hydros], cut_HA)
+    ball_2 = s1_A_tree.query_radius(xyz[s2_hydros], cut_HA)
+
+    # Find the DHA candidates
+    n_triples = 0
+    for x in ball_1:
+        n_triples += x.size
+    for x in ball_2:
+        n_triples += x.size
+    DHA_labels = np.empty((n_triples, 4), dtype=np.int32)
+    DHA_coords = np.empty((n_triples, 3, 3), dtype=np.float32)
+
+    counter = -1
+    for i in range(len(ball_1)):
+        D = s1_donors[i]
+        H = s1_hydros[i]
+        for j in ball_1[i]:
+            A = s2_acc[j]
+            counter += 1
+            DHA_labels[counter] = [D, A, k, 0]
+            DHA_coords[counter][0] = xyz[D]
+            DHA_coords[counter][1] = xyz[H]
+            DHA_coords[counter][2] = xyz[A]
+
+    for i in range(len(ball_2)):
+        D = s2_donors[i]
+        H = s2_hydros[i]
+        for j in ball_2[i]:
+            A = s1_acc[j]
+            counter += 1
+            DHA_labels[counter] = [D, A, k, 0]
+            DHA_coords[counter][0] = xyz[D]
+            DHA_coords[counter][1] = xyz[H]
+            DHA_coords[counter][2] = xyz[A]
+
+    # Filter the DHA candidates
+    DA_dist_correct = calc_dist(DHA_coords[:, 0],
+                                DHA_coords[:, 2]) <= cut_DA
+    DHA_angle_correct = calc_angle(DHA_coords[:, 0, :],
+                                   DHA_coords[:, 1, :],
+                                   DHA_coords[:, 2, :]) > cut_DHA
 
     correct_DHA = DHA_labels[DA_dist_correct & DHA_angle_correct]
 

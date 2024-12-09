@@ -91,8 +91,8 @@ def run(args):
 # =============================================================================
 # from argparse import Namespace
 #
-# topo = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/A1_21bp_box_dry.prmtop'
-# traj = '/home/rglez/RoyHub/oxo-8/data/raw/oligo/A1/8oxoGA1_21bp_1_dry.nc'
+# topo = '/home/gonzalezroy/RoyHub/oxo-8/data/raw/oligo/A1/A1_21bp_box_dry.prmtop'
+# traj = '/home/gonzalezroy/RoyHub/oxo-8/data/raw/oligo/A1/8oxoGA1_21bp_1_dry.nc'
 # sel1 = "(resname =~ '(5|3)?D([ATGC])|(8OG){1}(3|5)?$')"
 # sel2 = sel1
 # nprocs = 8
