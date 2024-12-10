@@ -10,7 +10,14 @@ from rdkit.Chem import rdchem
 import intermap.smarts as smarts
 
 
-# todo: keep an eye on selections for contacts calculation
+# todo: implement pi-cation
+# todo: keep an eye on selections for contacts calculation (directed vs undirected)
+# todo: watch angular definitions for the interactions
+# todo: assign pi-type based on the angle between the planes
+# todo: test interactions
+# todo: reorganize code
+# todo: parallelize
+# todo: benchmark
 
 def get_hh_bonds(universe):
     """
@@ -251,7 +258,12 @@ class IndexManager:
                     ring = 'resname {} and name {}'.format(case, sel)
                     idx = self.renamed_universe.select_atoms(ring).indices
                     rings.extend(idx.reshape(-1, len(sel.split())))
-        return rings
+
+        padded_rings = np.full((len(rings), 7), dtype=int, fill_value=-1)
+        for i, ring in enumerate(rings):
+            padded_rings[i, :len(ring)] = ring
+            padded_rings[i, -1] = len(ring)
+        return padded_rings
 
     def get_max_vdw_dist(self):
         """
@@ -328,6 +340,7 @@ k = 0
 # =============================================================================
 # %% Start computing interactions
 # =============================================================================
+start = time.time()
 import intermap.cutoffs as cf
 
 # Selections
@@ -356,6 +369,14 @@ s2_xacc = np.intersect1d(self.s2_idx, self.xb_A)
 
 max_vdw = self.get_max_vdw_dist()
 vdw_radii = self.radii
+
+padded_rings = self.rings
+contact_id = 3
+ctd_dist = 0.6
+min_dist = 0.38
+
+sel1_rings = padded_rings[np.isin(padded_rings[:, 0], self.s1_idx)]
+sel2_rings = padded_rings[np.isin(padded_rings[:, 0], self.s2_idx)]
 
 if self.s1_idx.size and self.s2_idx.size:
     close = fnd.single_contacts(xyz, k, 0,
@@ -394,10 +415,10 @@ if self.xb_D.size and self.xb_H.size and self.xb_A.size:
                              self.xb_D, self.xb_H, self.xb_A,
                              cf.HA_cut, cf.DA_cut, cf.DHA_cut)
 
-# =============================================================================
+if sel1_rings.size and sel2_rings.size:
+    pipi = fnd.pi_stacking(xyz, k, 7, sel1_rings, sel2_rings, 0.6, 0.38, 0, 90)
+
+print(f"Computing time: {time.time() - start:.2f} s")
+# %% ==========================================================================
 #
 # =============================================================================
-padded_rings = np.full((len(self.rings), 7), dtype=int, fill_value=-1)
-for i, ring in enumerate(self.rings):
-    padded_rings[i, :len(ring)] = ring
-    padded_rings[i, -1] = len(ring)

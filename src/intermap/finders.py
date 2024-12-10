@@ -358,6 +358,135 @@ def get_intermap(inter_list, labels, inters_types, n, prev_cutoff=1):
 
     return df
 
+
+@njit(parallel=False)
+def compute_centroids(rings, xyz):
+    centroids = np.zeros((len(rings), 3), dtype=float)
+    for i, ring in enumerate(rings):
+        atoms = ring[:ring[-1]]
+        centroids[i] = xyz[atoms].sum(axis=0) / len(atoms)
+    return centroids
+
+
+@njit(parallel=False)
+def calc_min_dist(coords1, coords2):
+    """
+    Get the minimumm distance between two sets of coordinates
+
+    Args:
+        coords1: coordinates of the first residue
+        coords2: coordinates of the second residue
+
+    Returns:
+        The minimum distance between two sets of coordinates
+    """
+    # Constants
+    n1 = coords1.shape[0]
+    n2 = coords2.shape[0]
+
+    # Find minimum distance using square values to save time
+    min_dist_squared = np.inf
+    for i in range(n1):
+        for j in range(n2):
+            dist_squared = (
+                    (coords1[i][0] - coords2[j][0]) ** 2
+                    + (coords1[i][1] - coords2[j][1]) ** 2
+                    + (coords1[i][2] - coords2[j][2]) ** 2
+            )
+            if dist_squared < min_dist_squared:
+                min_dist_squared = dist_squared
+    return np.sqrt(min_dist_squared)
+
+
+@njit(parallel=False)
+def calc_normal_vector(p1, p2, p3):
+    """
+    Calculate the normal vector of a plane defined by three points
+
+    Args:
+        p1 (np.ndarray): First point
+        p2 (np.ndarray): Second point
+        p3 (np.ndarray): Third point
+
+    Returns:
+        np.ndarray: Normal vector of the plane defined by the three points
+    """
+    # Calculate vectors from points
+    v1 = p2 - p1
+    v2 = p3 - p1
+
+    # Calculate the normal vector
+    normal = np.cross(v1, v2)
+    norm = np.linalg.norm(normal)
+
+    if norm == 0:
+        return np.zeros(3, dtype=np.float32)
+
+    return (normal / norm).astype(np.float32)
+
+
+@njit(parallel=False)
+def pi_stacking(xyz, k, contact_id,
+                sel1_rings, sel2_rings,
+                cut_ctd_dist, cut_min_dist, cut_min_angle, cut_max_angle):
+    """
+    Detect pi-stacking interactions between aromatic rings
+
+    Returns:
+        rings_finals (np.ndarray): Array with the indices of the pi-stacking interactions
+
+    """
+    sel1_centroids = compute_centroids(sel1_rings, xyz)
+    sel2_centroids = compute_centroids(sel2_rings, xyz)
+    s2_tree = nckd(sel2_centroids)
+    ball_1 = s2_tree.query_radius(sel1_centroids, cut_ctd_dist)
+
+    # Find the DHA candidates
+    rings_list = []
+
+    for i, ball in enumerate(ball_1):
+        if ball.size == 0:
+            continue
+        # Detect close rings
+        ring1 = sel1_rings[i][:sel1_rings[i][-1]]
+        r1_1 = xyz[ring1[0]]
+        r1_3 = xyz[ring1[2]]
+        r1_5 = xyz[ring1[4]]
+
+        for j in ball:
+            ring2 = sel2_rings[j][:sel2_rings[j][-1]]
+
+            # Ignore adjacent ones
+            if np.intersect1d(ring1, ring2).size:
+                continue
+
+            min_ring_dist = calc_min_dist(xyz[ring1], xyz[ring2])
+            if min_ring_dist <= cut_min_dist:
+                # Detect angle-compliant rings
+                r2_1 = xyz[ring2[0]]
+                r2_3 = xyz[ring2[2]]
+                r2_5 = xyz[ring2[4]]
+                normal_ring1 = calc_normal_vector(r1_1, r1_3, r1_5)
+                normal_ring2 = calc_normal_vector(r2_1, r2_3, r2_5)
+                dot_product = np.dot(normal_ring1, normal_ring2)
+                dot_64 = np.float64(dot_product)
+
+                # Manual clipping
+                if dot_64 < -1.0:
+                    dot_64 = -1.0
+                elif dot_64 > 1.0:
+                    dot_64 = 1.0
+                angle = np.arccos(dot_64)
+
+                angle_degrees = np.degrees(angle)
+                if cut_min_angle < angle_degrees < cut_max_angle:
+                    rings_list.append((ring1[0], ring2[0]))
+
+    rings_finals = np.empty((len(rings_list), 4), dtype=np.int32)
+    for i, (r1, r2) in enumerate(rings_list):
+        rings_finals[i] = r1, r2, k, contact_id
+    return rings_finals
+
 # %% ==========================================================================
 # Debugging area
 # =============================================================================
