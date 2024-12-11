@@ -13,3 +13,6 @@ ionic = 0.45
 
 # Hydrophobic
 hydrophobic = 0.45
+
+# Metalic
+metallic = 0.28

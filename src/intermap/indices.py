@@ -10,15 +10,6 @@ from rdkit.Chem import rdchem
 import intermap.smarts as smarts
 
 
-# todo: implement pi-cation
-# todo: keep an eye on selections for contacts calculation (directed vs undirected)
-# todo: watch angular definitions for the interactions
-# todo: assign pi-type based on the angle between the planes
-# todo: test interactions
-# todo: reorganize code
-# todo: parallelize
-# todo: benchmark
-
 def get_hh_bonds(universe):
     """
     Get the hydrogen-hydrogen bonds in the Universe
@@ -102,7 +93,7 @@ class IndexManager:
         self.radii = self.get_vdw_radii()
 
         # Get the indices of the selections
-        self.s1_idx, self.s2_idx = self.get_selections_indices()
+        self.sel1_idx, self.sel2_idx = self.get_selections_indices()
 
         self.hydroph = self.get_singles('hydroph')
         self.cations = self.get_singles('cations')
@@ -274,8 +265,8 @@ class IndexManager:
             max_vdw (float): Maximum van der Waals distance between the atoms
         """
 
-        s1_elements = set(self.universe.atoms[self.s1_idx].elements)
-        s2_elements = set(self.universe.atoms[self.s2_idx].elements)
+        s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
+        s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
 
         product = it.product(s1_elements, s2_elements)
         unique_pairs = set(tuple(sorted((a, b))) for a, b in product)
@@ -300,125 +291,6 @@ class IndexManager:
         radii = np.array([pt.GetRvdw(e) for e in elements])
         return radii
 
-
-# %% ==========================================================================
-# Debugging area
-# =============================================================================
-import time
-
-start = time.time()
-topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
-sel1 = "nucleic or resname 8OG"
-sel2 = "protein"
-inters = 'all'
-self = IndexManager(topo, traj, sel1, sel2, inters)
-load_time = time.time() - start
-print(f"Loading time: {load_time:.2f} s")
-
-# %% ==========================================================================
-#
-# =============================================================================
-
-import intermap.topo_trajs as tt
-import intermap.finders as fnd
-import numpy_indexed as npi
-import itertools as it
-
-# Trajectory load
-start = 0
-last = 100
-stride = 1
-chunk_size = (last - start) // 5
-chunks = tt.get_traj_chunks(topo, [traj],
-                            start=start, last=last, stride=stride,
-                            chunk_size=chunk_size)
-chunk = next(chunks)
-xyz = chunk.xyz[0]
-k = 0
-
-# =============================================================================
-# %% Start computing interactions
-# =============================================================================
-start = time.time()
-import intermap.cutoffs as cf
-
-# Selections
-s1_donors = np.intersect1d(self.s1_idx, self.hb_D)
-s1_donors_idx = npi.indices(self.hb_D, s1_donors)
-s1_hydros = self.hb_H[s1_donors_idx]
-s1_acc = np.intersect1d(self.s1_idx, self.hb_A)
-
-s2_donors = np.intersect1d(self.s2_idx, self.hb_D)
-s2_donors_idx = npi.indices(self.hb_D, s2_donors)
-s2_hydros = self.hb_H[s2_donors_idx]
-s2_acc = np.intersect1d(self.s2_idx, self.hb_A)
-
-s1_hydroph = np.intersect1d(self.s1_idx, self.hydroph)
-s2_hydroph = np.intersect1d(self.s2_idx, self.hydroph)
-
-s1_xdonors = np.intersect1d(self.s1_idx, self.xb_D)
-s1_xdonors_idx = npi.indices(self.xb_D, s1_xdonors)
-s1_xhydros = self.xb_H[s1_xdonors_idx]
-s1_xacc = np.intersect1d(self.s1_idx, self.xb_A)
-
-s2_xdonors = np.intersect1d(self.s2_idx, self.xb_D)
-s2_xdonors_idx = npi.indices(self.xb_D, s2_xdonors)
-s2_xhydros = self.xb_H[s2_xdonors_idx]
-s2_xacc = np.intersect1d(self.s2_idx, self.xb_A)
-
-max_vdw = self.get_max_vdw_dist()
-vdw_radii = self.radii
-
-padded_rings = self.rings
-contact_id = 3
-ctd_dist = 0.6
-min_dist = 0.38
-
-sel1_rings = padded_rings[np.isin(padded_rings[:, 0], self.s1_idx)]
-sel2_rings = padded_rings[np.isin(padded_rings[:, 0], self.s2_idx)]
-
-if self.s1_idx.size and self.s2_idx.size:
-    close = fnd.single_contacts(xyz, k, 0,
-                                self.s1_idx, self.s2_idx,
-                                cut=cf.close_contacts)
-
-if self.cations.size and self.anions.size:
-    ionics = fnd.single_contacts(xyz, k, 2,
-                                 self.cations, self.anions,
-                                 cut=cf.ionic)
-
-if self.metal_don.size and self.metal_acc.size:
-    metalic = fnd.single_contacts(xyz, k, 1,
-                                  self.metal_don, self.metal_acc,
-                                  cut=cf.ionic)
-if self.s1_idx.size and self.s2_idx.size:
-    vdw = fnd.vdw_contacts(xyz, k, 1,
-                           self.s1_idx, self.s2_idx,
-                           max_vdw, vdw_radii)
-
-if s1_hydroph.size and s2_hydroph.size:
-    hydroph = fnd.single_contacts(xyz, k, 3,
-                                  s1_hydroph, s2_hydroph,
-                                  cut=cf.hydrophobic)
-
-if s1_donors.size and s1_hydros.size and s1_acc.size and \
-        s2_donors.size and s2_hydros.size and s2_acc.size:
-    hb = fnd.double_contacts(xyz, k, 0,
-                             s1_donors, s1_hydros, s1_acc,
-                             s2_donors, s2_hydros, s2_acc,
-                             cf.HA_cut, cf.DA_cut, cf.DHA_cut)
-
-if self.xb_D.size and self.xb_H.size and self.xb_A.size:
-    xb = fnd.double_contacts(xyz, k, 1,
-                             self.xb_D, self.xb_H, self.xb_A,
-                             self.xb_D, self.xb_H, self.xb_A,
-                             cf.HA_cut, cf.DA_cut, cf.DHA_cut)
-
-if sel1_rings.size and sel2_rings.size:
-    pipi = fnd.pi_stacking(xyz, k, 7, sel1_rings, sel2_rings, 0.6, 0.38, 0, 90)
-
-print(f"Computing time: {time.time() - start:.2f} s")
 # %% ==========================================================================
 #
 # =============================================================================

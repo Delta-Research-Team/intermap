@@ -1,5 +1,7 @@
 # Created by gonzalezroy at 11/14/24
+import os
 from collections import defaultdict
+from os.path import dirname, join
 
 import mdtraj as md
 import numpy as np
@@ -176,3 +178,33 @@ def get_dha_indices(trajectory, heavies_elements, atoms_to_resids):
     a_raw3 = {x: np.asarray(a_raw[x], dtype=np.int32) for x in a_raw}
     acceptors = pydict_to_numbadict(a_raw3)
     return donors, hydros, acceptors
+
+
+def mount_data_dir(proj_dir, env_var):
+    """
+    Mount the data directory to the project directory
+    """
+    data_dir = os.getenv(env_var)
+
+    # Check if the environment variable is defined
+    if not data_dir:
+        raise ValueError(f'The environment variable {env_var} is not set. '
+                         'Please define it at /etc/profile.')
+
+    # Check if the directory defined by the environment variable exists
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(
+            f'The directory defined by {env_var} does not exist: {data_dir}')
+
+    # Define the local data directory
+    local_data_dir = join(proj_dir, 'data')
+    os.unlink(local_data_dir) if os.path.exists(local_data_dir) else None
+    os.symlink(data_dir, local_data_dir)
+    return local_data_dir
+
+
+# =============================================================================
+#
+# =============================================================================
+proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+data_dir = mount_data_dir(proj_dir, "INTERMAP_DATA")
