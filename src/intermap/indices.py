@@ -1,4 +1,5 @@
 # Created by rglez at 12/8/24
+import itertools as it
 from collections import defaultdict
 
 import MDAnalysis as mda

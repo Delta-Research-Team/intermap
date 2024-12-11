@@ -3,29 +3,100 @@
 import numpy as np
 from numba import njit
 from numba_kdtree import KDTree as nckd
-
+import numpy_indexed as npi
 inter_identifiers = {'close_contacts': 0,
                      'anionic': 1,
                      'cationic': 2,
                      'hydrophobic': 3,
-                     'metal_donor': 4}
+                     'metal_donor': 4,
+                     'metal_acceptor': 5,
+                     'hb_donor': 6,
+                     'hb_acceptor': 7}
+
+
+# =============================================================================
+# Helper functions
+# =============================================================================
+@njit(parallel=False)
+def calc_dist(d, a):
+    """
+    Computes the Euclidean distance between two atoms in a molecule
+
+    Args:
+        d (ndarray): Coordinates of the first atom (n, 3).
+        a (ndarray): Coordinates of the second atom (n, 3).
+
+    Returns:
+        float: the Euclidean distance between the two atoms
+    """
+    n = d.shape[0]
+    distances = np.empty(n)
+
+    for i in range(n):
+        dx = d[i][0] - a[i][0]
+        dy = d[i][1] - a[i][1]
+        dz = d[i][2] - a[i][2]
+        distances[i] = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+
+    return distances
 
 
 @njit(parallel=False)
-def close_contacts(xyz, k, contact_id, s1_indices, s2_indices, dist_cut):
+def calc_angle(d, h, a):
+    """
+    Computes the angles between sets of three atoms.
+
+    Args:
+        d (ndarray): Coordinates of the donor atoms (n, 3).
+        h (ndarray): Coordinates of the hydrogen atoms (n, 3).
+        a (ndarray): Coordinates of the acceptor atoms (n, 3).
+
+    Returns:
+        angle_deg: Angles in degrees for each set of atoms (n,).
+    """
+    n = d.shape[0]  # Number of triplets
+    angle_deg = np.empty(n)  # Array to hold the result angles
+
+    for i in range(n):
+        # Compute vectors
+        dh = d[i] - h[i]
+        ah = a[i] - h[i]
+
+        # Compute dot product and norms
+        dot_product = dh[0] * ah[0] + dh[1] * ah[1] + dh[2] * ah[2]
+        dh_norm = np.sqrt(dh[0] ** 2 + dh[1] ** 2 + dh[2] ** 2)
+        ah_norm = np.sqrt(ah[0] ** 2 + ah[1] ** 2 + ah[2] ** 2)
+
+        # Compute angle
+        angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
+        angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
+
+    return angle_deg
+
+
+# =============================================================================
+# Interaction functions
+# =============================================================================
+@njit(parallel=False)
+def close_contacts(xyz, k, contact_id,
+                   s1_indices, s2_indices,
+                   dist_cut, vdw_radii=None):
     """
     Find the close contacts between two selections.
 
     Args:
         xyz (ndarray): Coordinates of the atoms in the frame.
         k (int): Frame identifier.
-        contact_id: Identifier for the contact type.
+        contact_id (int): Identifier for the contact type.
+
         s1_indices (ndarray): Indices of the atoms in s1.
         s2_indices (ndarray): Indices of the atoms in s2.
-        dist_cut: Cutoff distance for the tree query.
+
+        dist_cut (float): Cutoff distance for the tree query.
+        vdw_radii (ndarray): Van der Waals radii of the atoms.
 
     Returns:
-        CC_labels (list): List of labels for each close contact.
+        contact_indices (list): List of labels for each close contact.
     """
 
     # Create & query the trees
@@ -51,7 +122,77 @@ def close_contacts(xyz, k, contact_id, s1_indices, s2_indices, dist_cut):
     # Remove idems (self-contacts appearing if both selections overlap)
     idems = contact_indices[:, 0] == contact_indices[:, 1]
     contact_indices = contact_indices[~idems]
+
+    if vdw_radii is None:
+        return contact_indices
+
+    # Discard pairs whose distance is greater than the sum of the VdW radii
+    vdw_radii_X1 = vdw_radii[contact_indices[:, 0]]
+    vdw_radii_X2 = vdw_radii[contact_indices[:, 1]]
+    vdw_sum = (vdw_radii_X1 + vdw_radii_X2) / 10
+
+    dists = calc_dist(xyz[contact_indices[:, 0]], xyz[contact_indices[:, 1]])
+    vdw_contact = dists <= vdw_sum
+    contact_indices = contact_indices[vdw_contact]
+
     return contact_indices
+
+
+@njit(parallel=False)
+def dha_contacts(xyz, k, contact_id,
+                 s1_donors, s1_hydros, s2_acc,
+                 cut_HA, cut_DA, cut_DHA):
+    """
+    Args:
+        xyz: Coordinates of the atoms in the frame.
+        k (int): Frame identifier.
+        contact_id: Identifier for the contact type.
+
+        s1_donors: Indices of the donor atoms in s1.
+        s1_hydros: Indices of the hydrogen atoms in s1.
+        s2_acc: Indices of the acceptor atoms in s2.
+
+        cut_HA: Cutoff distance between Hydrogen and Acceptor.
+        cut_DA: Cuttoff distance between Donor and Acceptor.
+        cut_DHA: Cutoff angle between Donor, Hydrogen and Acceptor.
+
+    Returns:
+        DHA_labels (list): List of DHA labels for each hydrogen bond.
+    """
+
+    # Create & query the trees
+    s2_A_tree = nckd(xyz[s2_acc])
+    ball_1 = s2_A_tree.query_radius(xyz[s1_hydros], cut_HA)
+
+    # Find the DHA candidates
+    n_triples = 0
+    for x in ball_1:
+        n_triples += x.size
+    DHA_labels = np.empty((n_triples, 4), dtype=np.int32)
+    DHA_coords = np.empty((n_triples, 3, 3), dtype=np.float32)
+
+    counter = 0
+    for i in range(len(ball_1)):
+        D = s1_donors[i]
+        H = s1_hydros[i]
+        for j in ball_1[i]:
+            A = s2_acc[j]
+            DHA_labels[counter] = [D, A, k, contact_id]
+            DHA_coords[counter][0] = xyz[D]
+            DHA_coords[counter][1] = xyz[H]
+            DHA_coords[counter][2] = xyz[A]
+            counter += 1
+
+    # Filter the DHA candidates
+    DA_dist_correct = calc_dist(DHA_coords[:, 0],
+                                DHA_coords[:, 2]) <= cut_DA
+    DHA_angle_correct = calc_angle(DHA_coords[:, 0, :],
+                                   DHA_coords[:, 1, :],
+                                   DHA_coords[:, 2, :]) > cut_DHA
+
+    correct_DHA = DHA_labels[DA_dist_correct & DHA_angle_correct]
+
+    return correct_DHA.astype(np.int32)
 
 
 # %% ==========================================================================
@@ -70,8 +211,8 @@ import time
 from intermap.indices import IndexManager
 
 start_time = time.time()
-topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 sel1 = "nucleic or resname 8OG"
 sel2 = "protein"
 inters = 'all'
@@ -136,60 +277,51 @@ if s1_hp.size and s2_hp.size:
     hp = close_contacts(xyz, k, hydrop_id, s1_hp, s2_hp, cf.hydrophobic)
 
 # ==== metal donor ============================================================
-s1_met = np.intersect1d(iman.sel1_idx, iman.metal_don)
-s2_acc = np.intersect1d(iman.sel2_idx, iman.metal_acc)
+s1_met_donors = np.intersect1d(iman.sel1_idx, iman.metal_don)
+s2_met_acc = np.intersect1d(iman.sel2_idx, iman.metal_acc)
 metd_id = inter_identifiers['metal_donor']
-if s1_met.size and s2_acc.size:
-    metd = close_contacts(xyz, k, metd_id, s1_met, s2_acc, cf.metallic)
+if s1_met_donors.size and s2_met_acc.size:
+    metd = close_contacts(xyz, k, metd_id, s1_met_donors, s2_met_acc, cf.metallic)
 
-#
+# ==== metal acceptor =========================================================
+s1_acc = np.intersect1d(iman.sel1_idx, iman.metal_acc)
+s2_met = np.intersect1d(iman.sel2_idx, iman.metal_don)
+meta_id = inter_identifiers['metal_acceptor']
+if s1_acc.size and s2_met.size:
+    meta = close_contacts(xyz, k, meta_id, s1_acc, s2_met, cf.metallic)
+
+# ==== vdw contacts ===========================================================
+max_vdw = iman.get_max_vdw_dist()
+vdw_radii = iman.radii
+vdw_id = inter_identifiers['close_contacts']
+if s1_indices.size and s2_indices.size:
+    vdw = close_contacts(xyz, k, vdw_id, s1_indices, s2_indices, max_vdw,
+                         vdw_radii)
+
+# ==== hbonds acceptor ========================================================
+idx = np.isin(iman.hb_H, iman.sel2_idx)
+s2_hb_hydros = iman.hb_H[idx]
+s2_hb_donors = iman.hb_D[idx]
+s1_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel1_idx)]
+hb_acc_id = inter_identifiers['hb_acceptor']
+if s2_hb_donors.size and s1_hb_acc.size:
+    hb_a = dha_contacts(xyz, k, hb_acc_id,
+                        s2_hb_donors, s2_hb_hydros, s1_hb_acc,
+                        cf.HA_cut, cf.DA_cut, cf.DHA_cut)
+
+# ==== hbonds donor ===========================================================
+idx = np.isin(iman.hb_H, iman.sel1_idx)
+s1_hb_hydros = iman.hb_H[idx]
+s1_hb_donors = iman.hb_D[idx]
+s2_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel2_idx)]
+hb_don_id = inter_identifiers['hb_donor']
+if s1_hb_donors.size and s2_hb_acc.size:
+    hb_d = dha_contacts(xyz, k, hb_don_id,
+                        s1_hb_donors, s1_hb_hydros, s2_hb_acc,
+                        cf.HA_cut, cf.DA_cut, cf.DHA_cut)
 print(f"Computing time: {time.time() - start:.2f} s")
-# Selections
-# s1_donors = np.intersect1d(self.s1_idx, self.hb_D)
-# s1_donors_idx = npi.indices(self.hb_D, s1_donors)
-# s1_hydros = self.hb_H[s1_donors_idx]
-# s1_acc = np.intersect1d(self.s1_idx, self.hb_A)
-#
-# s2_donors = np.intersect1d(self.s2_idx, self.hb_D)
-# s2_donors_idx = npi.indices(self.hb_D, s2_donors)
-# s2_hydros = self.hb_H[s2_donors_idx]
-# s2_acc = np.intersect1d(self.s2_idx, self.hb_A)
-#
-# s1_hydroph = np.intersect1d(self.s1_idx, self.hydroph)
-# s2_hydroph = np.intersect1d(self.s2_idx, self.hydroph)
-#
-# s1_xdonors = np.intersect1d(self.s1_idx, self.xb_D)
-# s1_xdonors_idx = npi.indices(self.xb_D, s1_xdonors)
-# s1_xhydros = self.xb_H[s1_xdonors_idx]
-# s1_xacc = np.intersect1d(self.s1_idx, self.xb_A)
-#
-# s2_xdonors = np.intersect1d(self.s2_idx, self.xb_D)
-# s2_xdonors_idx = npi.indices(self.xb_D, s2_xdonors)
-# s2_xhydros = self.xb_H[s2_xdonors_idx]
-# s2_xacc = np.intersect1d(self.s2_idx, self.xb_A)
-#
-# max_vdw = self.get_max_vdw_dist()
-# vdw_radii = self.radii
-#
-# padded_rings = self.rings
-# contact_id = 3
-# ctd_dist = 0.6
-# min_dist = 0.38
-#
-# sel1_rings = padded_rings[np.isin(padded_rings[:, 0], self.s1_idx)]
-# sel2_rings = padded_rings[np.isin(padded_rings[:, 0], self.s2_idx)]
-#
-
-#
 
 
-# if self.s1_idx.size and self.s2_idx.size:
-#     vdw = fnd.vdw_contacts(xyz, k, 1,
-#                            self.s1_idx, self.s2_idx,
-#                            max_vdw, vdw_radii)
-#
-
-#
 # if s1_donors.size and s1_hydros.size and s1_acc.size and \
 #         s2_donors.size and s2_hydros.size and s2_acc.size:
 #     hb = fnd.double_contacts(xyz, k, 0,
