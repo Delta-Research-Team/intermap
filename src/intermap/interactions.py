@@ -28,6 +28,14 @@ def create_inter_ids():
     # directed 3p interactions
     inter_ids['hb_acceptor'] = 7
     inter_ids['hb_donor'] = 8
+
+    # undirected xp interactions
+    inter_ids['pi_stacking'] = 9
+    inter_ids['edge_to_face'] = 10
+    inter_ids['face_to_face'] = 11
+    inter_ids['pi_cation'] = 12
+    inter_ids['cation_pi'] = 13
+
     return inter_ids
 
 
@@ -230,10 +238,10 @@ import time
 from intermap.indices import IndexManager
 
 start_time = time.time()
-topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 sel1 = "nucleic or resname 8OG"
-sel2 = "protein"
+sel2 = sel1
 inters = 'all'
 
 iman = IndexManager(topo, traj, sel1, sel2, inters)
@@ -300,64 +308,238 @@ def isin(a, b):
 
 
 @njit(parallel=False)
-def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
+def compute_centroids(rings, xyz):
+    centroids = np.zeros((len(rings), 3), dtype=float)
+    for i, ring in enumerate(rings):
+        atoms = ring[:ring[-1]]
+        centroids[i] = xyz[atoms].sum(axis=0) / len(atoms)
+    return centroids
+
+
+@njit(parallel=False)
+def calc_normal_vector(p1, p2, p3):
+    """
+    Calculate the normal vector of a plane defined by three points
+
+    Args:
+        p1 (np.ndarray): First point
+        p2 (np.ndarray): Second point
+        p3 (np.ndarray): Third point
+
+    Returns:
+        np.ndarray: Normal vector of the plane defined by the three points
+    """
+    # Calculate vectors from points
+    v1 = p2 - p1
+    v2 = p3 - p1
+
+    # Calculate the normal vector
+    normal = np.cross(v1, v2)
+    norm = np.linalg.norm(normal)
+
+    return (normal / norm).astype(np.float32)
+
+
+@njit(parallel=False)
+def calc_min_dist(coords1, coords2):
+    """
+    Get the minimumm distance between two sets of coordinates
+
+    Args:
+        coords1: coordinates of the first residue
+        coords2: coordinates of the second residue
+
+    Returns:
+        The minimum distance between two sets of coordinates
+    """
+    # Constants
+    n1 = coords1.shape[0]
+    n2 = coords2.shape[0]
+
+    # Find minimum distance using square values to save time
+    min_dist_squared = np.inf
+    for i in range(n1):
+        for j in range(n2):
+            dist_squared = (
+                    (coords1[i][0] - coords2[j][0]) ** 2
+                    + (coords1[i][1] - coords2[j][1]) ** 2
+                    + (coords1[i][2] - coords2[j][2]) ** 2
+            )
+            if dist_squared < min_dist_squared:
+                min_dist_squared = dist_squared
+    return np.sqrt(min_dist_squared)
+
+
+@njit(parallel=False)
+def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
            cations, hydroph, metal_don, metal_acc, vdw_radii, hb_hydros,
-           hb_don, hb_acc):
+           hb_don, hb_acc, rings, to_compute='all'):
+    # =========================================================================
+    # STEP I: Find all pair of atoms (and centroids) within the cutoff distance
+    # =========================================================================
+
+    # Add aromatic centroids to xyz
+    s1_rings = rings[isin(rings[:, 0], s1_indices_raw)].astype(np.int32)
+    s2_rings = rings[isin(rings[:, 0], s2_indices_raw)].astype(np.int32)
+    sel1_centroids = compute_centroids(s1_rings, xyz)
+    sel2_centroids = compute_centroids(s2_rings, xyz)
+    xyz2 = np.concatenate((xyz, sel1_centroids, sel2_centroids), axis=0)
+
+    # Update sel1 & sel2 indices with the aromatic centroids
+    n0 = xyz.shape[0]
+    n1 = n0 + sel1_centroids.shape[0]
+    n2 = n1 + sel2_centroids.shape[0]
+    s1_rings_indices = np.arange(n0, n1)
+    s2_rings_indices = np.arange(n1, n2)
+    s1_indices = np.concatenate((s1_indices_raw, s1_rings_indices))
+    s2_indices = np.concatenate((s2_indices_raw, s2_rings_indices))
+
     # Create & query the trees
-    s2_tree = nckd(xyz[s2_indices])
-    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
+    s2_tree = nckd(xyz2[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz2[s1_indices], dist_cut)
 
     # Find the close contacts
     n_contacts = sum([len(x) for x in ball_1])
     ijf = np.zeros((n_contacts, 3), dtype=np.int32)
-
-    # Fill the ijf array
-    counter = -1
+    counter = 0
     for i, x in enumerate(ball_1):
         X1 = s1_indices[i]
         for j in x:
             X2 = s2_indices[j]
+            ijf[counter][0] = X1
+            ijf[counter][1] = X2
+            ijf[counter][2] = k
             counter += 1
-            ijf[counter][0] = X1  # i
-            ijf[counter][1] = X2  # j
-            ijf[counter][2] = k  # f
 
     # Remove idems (self-contacts appearing if both selections overlap)
     idems = ijf[:, 0] == ijf[:, 1]
     if idems.any():
         ijf = ijf[~idems]
 
-    # Compute distances & allocate angles
+    # Compute distances
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
-    dists = calc_dist(xyz[row1], xyz[row2])
+    dists = calc_dist(xyz2[row1], xyz2[row2])
 
     # Create the container for interaction types
     n_types = len(inter_ids)
-    interactions = np.zeros((n_contacts, n_types), dtype=np.bool_)
+    interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
 
-    # [CLOSE CONTACTS]
-    cc_cut = cf.close_contacts
+    # =========================================================================
+    # STEP II: Compute the interactions
+    # =========================================================================
+
+    # ---- [AROMATICS] --------------------------------------------------------
+    sel1_normals = calc_normal_vector(xyz[s1_rings[:, 0]],
+                                      xyz[s1_rings[:, 2]],
+                                      xyz[s1_rings[:, 4]])
+    sel2_normals = calc_normal_vector(xyz[s2_rings[:, 0]],
+                                      xyz[s2_rings[:, 2]],
+                                      xyz[s2_rings[:, 4]])
+
+    # Cutoffs definitions
+    stacking_cut = cf.dist_pi_stacking_centroids
+    stacking_min = cf.min_angle_pi_stacking
+    stacking_max = cf.max_angle_pi_stacking
+    stacking_min_dist = cf.min_dist_pi_stacking
+
+    etf_cut = cf.dist_edge_to_face_centroids
+    etf_min = cf.min_angle_edge_to_face
+    etf_max = cf.max_angle_edge_to_face
+    etf_min_dist = cf.min_dist_edge_to_face
+
+    ftf_cut = cf.dist_face_to_face_centroids
+    ftf_min = cf.min_angle_face_to_face
+    ftf_max = cf.max_angle_face_to_face
+    ftf_min_dist = cf.min_dist_face_to_face
+
+    # Get the ring pairs
+    s1_centroids = isin(row1, s1_rings_indices)
+    s2_centroids = isin(row2, s2_rings_indices)
+    close_centroids = s1_centroids & s2_centroids
+    ring_pairs = ijf[close_centroids]
+
+    # Compute the normal vectors
+    s1_close_rings = s1_rings[indices(s1_rings_indices, ring_pairs[:, 0])]
+    s2_close_rings = s2_rings[indices(s2_rings_indices, ring_pairs[:, 1])]
+    s1_normals = calc_normal_vector(xyz2[s1_close_rings[:, 0]],
+                                    xyz2[s1_close_rings[:, 2]],
+                                    xyz2[s1_close_rings[:, 4]])
+    s2_normals = calc_normal_vector(xyz2[s2_close_rings[:, 0]],
+                                    xyz2[s2_close_rings[:, 2]],
+                                    xyz2[s2_close_rings[:, 4]])
+
+    # Compute the angle between the normals
+    dot_products = np.einsum('ij,ij->i', s1_normals, s2_normals)
+    dot_64 = np.float64(dot_products)
+    dot_64[dot_64 < -1.0] = -1.0
+    dot_64[dot_64 > 1.0] = 1.0
+    radians = np.arccos(dot_64)
+    angles = np.degrees(radians)
+
+    # Compute the minimum distance between the rings
+    num_pairs = ring_pairs.shape[0]
+    mindists = np.zeros(num_pairs, dtype=np.float32)
+    for i in range(num_pairs):
+        r1 = s1_close_rings[i][:s1_close_rings[i][-1]]
+        r2 = s2_close_rings[i][:s2_close_rings[i][-1]]
+        mindists[i] = calc_min_dist(xyz2[r1], xyz2[r2])
+
+    # pi-stacking interactions
+    by_stacking_dist = dists[close_centroids] <= stacking_cut
+    by_stacking_angles = (angles >= stacking_min) & (angles <= stacking_max)
+    by_stacking_mindist = mindists <= stacking_min_dist
+    pi_stacking = by_stacking_dist & by_stacking_angles & by_stacking_mindist
+    interactions[close_centroids, inter_ids['pi_stacking']] = pi_stacking
+
+    # edge-to-face interactions
+    by_etf_dist = dists[close_centroids] <= etf_cut
+    by_etf_angles = (angles >= etf_min) & (angles <= etf_max)
+    by_etf_mindist = mindists <= etf_min_dist
+    etf = by_etf_dist & by_etf_angles & by_etf_mindist
+    interactions[close_centroids, inter_ids['edge_to_face']] = etf
+
+    # face-to-face interactions
+    by_ftf_dist = dists[close_centroids] <= ftf_cut
+    by_ftf_angles = (angles >= ftf_min) & (angles <= ftf_max)
+    by_ftf_mindist = mindists <= ftf_min_dist
+    ftf = by_ftf_dist & by_ftf_angles & by_ftf_mindist
+    interactions[close_centroids, inter_ids['face_to_face']] = ftf
+
+    # ---- [Pi-Cation] --------------------------------------------------------
+    # pi_cat_cut = cf.dist_cut_PiCation
+    s2_cat = isin(row2, cations)
+    # pi_cat = s1_centroids & s2_cat
+    # pi_cat_dist = dists <= pi_cat_cut
+    # compute_angles(s1)
+    # interactions[:, inter_ids['pi_cation']] = pi_cat & pi_cat_dist
+
+    # ---- [Cation-Pi] --------------------------------------------------------
+    s1_cat = isin(row1, cations)
+    # cat_pi = s1_cat & s2_centroids
+    # cat_pi_dist = dists <= pi_cat_cut
+    # interactions[:, inter_ids['cation_pi']] = cat_pi & cat_pi_dist
+
+    # ---- [CLOSE CONTACTS] ---------------------------------------------------
+    cc_cut = cf.dist_cut_CloseContacts
     cc_dist = dists <= cc_cut
     interactions[:, inter_ids['close_contacts']] = cc_dist
 
-    # [ANIONIC]
-    ionic_cut = cf.ionic
+    # ---- [ANIONIC] ----------------------------------------------------------
+    ionic_cut = cf.dist_cut_Ionic
     ionic_dist = dists <= ionic_cut
 
     s1_ani = isin(row1, anions)
-    s2_cat = isin(row2, cations)
     ani = s1_ani & s2_cat
     interactions[:, inter_ids['anionic']] = ani & ionic_dist
 
-    # [CATIONIC]
-    s1_cat = isin(row1, cations)
+    # ---- [CATIONIC]- --------------------------------------------------------
     s2_ani = isin(row2, anions)
     cat = s1_cat & s2_ani
     interactions[:, inter_ids['cationic']] = cat & ionic_dist
 
-    # [HYDROPHOBIC]
-    hp_cut = cf.hydrophobic
+    # ---- [HYDROPHOBIC] ------------------------------------------------------
+    hp_cut = cf.dist_cut_Hydroph
     hp_dist = dists <= hp_cut
 
     s1_hp = isin(row1, hydroph)
@@ -365,8 +547,8 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
     hp = s1_hp & s2_hp
     interactions[:, inter_ids['hydrophobic']] = hp & hp_dist
 
-    # [METAL DONOR]
-    met_cut = cf.metallic
+    # ---- [METAL DONOR] ------------------------------------------------------
+    met_cut = cf.dist_cut_Metalic
     met_dist = dists <= met_cut
 
     s1_met_donors = isin(row1, metal_don)
@@ -374,23 +556,23 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
     met_donors = s1_met_donors & s2_met_acc
     interactions[:, inter_ids['metal_donor']] = met_donors & met_dist
 
-    # [METAL ACCEPTOR]
+    # ---- [METAL ACCEPTOR] ---------------------------------------------------
     s1_met_acc = isin(row1, metal_acc)
     s2_met_don = isin(row2, metal_don)
     met_acc = s1_met_acc & s2_met_don
     interactions[:, inter_ids['metal_acceptor']] = met_acc & met_dist
 
-    # [VDW CONTACTS]
+    # ---- [VDW CONTACTS] -----------------------------------------------------
     row1_vdw = vdw_radii[row1]
     row2_vdw = vdw_radii[row2]
     vdw_sum = (row1_vdw + row2_vdw) / 10
     vdw_dist = dists <= vdw_sum
     interactions[:, inter_ids['vdw_contacts']] = vdw_dist
 
-    # [HBOND ACCEPTOR]
-    hb_ha_cut = cf.HA_cut
-    hb_da_cut = cf.DA_cut
-    hb_dha_cut = cf.DHA_cut
+    # ---- [HBOND ACCEPTOR] ---------------------------------------------------
+    hb_ha_cut = cf.dist_cut_HA
+    hb_da_cut = cf.dist_cut_DA
+    hb_dha_cut = cf.ang_cut_DHA
     hb_ha_dist = dists <= hb_ha_cut
     hb_da_dist = dists <= hb_da_cut
     hb_dists = hb_ha_dist & hb_da_dist
@@ -403,7 +585,7 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
     acc = row1[before_angle]
     idx = indices(hb_hydros, hydros)
     donors = hb_donors[idx]
-    angles = calc_angle(xyz[donors], xyz[hydros], xyz[acc])
+    angles = calc_angle(xyz2[donors], xyz2[hydros], xyz2[acc])
 
     count = 0
     for i in range(before_angle.size):
@@ -412,7 +594,7 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
                                                             count] > hb_dha_cut
             count += 1
 
-    # [HBOND DONORS]
+    # ---- [HBOND DONORS] -----------------------------------------------------
     s1_hb_hydros = isin(row1, hb_hydros)
     s2_hb_acc = isin(row2, hb_acc)
     before_angle = hb_dists & s1_hb_hydros & s2_hb_acc
@@ -421,7 +603,7 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
     acc = row2[before_angle]
     idx = indices(hb_acc, acc)
     donors = hb_don[idx]
-    angles = calc_angle(xyz[donors], xyz[hydros], xyz[acc])
+    angles = calc_angle(xyz2[donors], xyz2[hydros], xyz2[acc])
 
     count = 0
     for i in range(before_angle.size):
@@ -433,15 +615,18 @@ def duplex(xyz, k, inter_ids, s1_indices, s2_indices, dist_cut, anions,
 
 max_vdw = iman.get_max_vdw_dist()
 dist_cut = max([
-    cf.close_contacts,
-    cf.ionic,
-    cf.hydrophobic,
-    cf.metallic,
-    cf.hydrophobic,
+    cf.dist_cut_CloseContacts,
+    cf.dist_cut_Ionic,
+    cf.dist_cut_Hydroph,
+    cf.dist_cut_Metalic,
+    cf.dist_cut_Hydroph,
+    cf.dist_cut_EdgeToFace,
+    cf.dist_cut_FaceToFace,
+    cf.dist_cut_PiStacking,
     max_vdw])
 
-s1_indices = iman.sel1_idx
-s2_indices = iman.sel2_idx
+s1_indices_raw = iman.sel1_idx
+s2_indices_raw = iman.sel2_idx
 anions = iman.anions
 cations = iman.cations
 hydroph = iman.hydroph
@@ -452,91 +637,92 @@ vdw_radii = iman.radii
 hb_hydros = iman.hb_H
 hb_donors = iman.hb_D
 hb_acc = iman.hb_A
-
-ijf, dists, inters = duplex(xyz, k, inter_ids, s1_indices, s2_indices,
+rings = iman.rings
+ijf, dists, inters = duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw,
                             dist_cut, anions, cations, hydroph, metal_don,
-                            metal_acc, vdw_radii, hb_hydros, hb_donors, hb_acc)
+                            metal_acc, vdw_radii, hb_hydros, hb_donors, hb_acc,
+                            rings)
 
 # =============================================================================
 # %% Start computing interactions
 # =============================================================================
-start = time.time()
-import intermap.cutoffs as cf
-
-# ==== close contacts =========================================================
-s1_indices = iman.sel1_idx
-s2_indices = iman.sel2_idx
-dist_cut = cf.close_contacts
-cc_id = inter_identifiers['close_contacts']
-if s1_indices.size and s2_indices.size:
-    cc = close_contacts(xyz, k, cc_id, s1_indices, s2_indices, dist_cut)
-
-# ==== anionic ================================================================
-s1_ani = np.intersect1d(iman.sel1_idx, iman.anions)
-s2_cat = np.intersect1d(iman.sel2_idx, iman.cations)
-anionic_id = inter_identifiers['anionic']
-if s1_ani.size and s2_cat.size:
-    ani = close_contacts(xyz, k, anionic_id, s1_ani, s2_cat, cf.ionic)
-
-# ==== cationic ===============================================================
-s1_cat = np.intersect1d(iman.sel1_idx, iman.cations)
-s2_ani = np.intersect1d(iman.sel2_idx, iman.anions)
-cationic_id = inter_identifiers['cationic']
-if s1_cat.size and s2_ani.size:
-    cat = close_contacts(xyz, k, cationic_id, s1_cat, s2_ani, cf.ionic)
-
-# ==== hydrophobic ============================================================
-s1_hp = np.intersect1d(iman.sel1_idx, iman.hydroph)
-s2_hp = np.intersect1d(iman.sel2_idx, iman.hydroph)
-hydrop_id = inter_identifiers['hydrophobic']
-if s1_hp.size and s2_hp.size:
-    hp = close_contacts(xyz, k, hydrop_id, s1_hp, s2_hp, cf.hydrophobic)
-
-# ==== metal donor ============================================================
-s1_met_donors = np.intersect1d(iman.sel1_idx, iman.metal_don)
-s2_met_acc = np.intersect1d(iman.sel2_idx, iman.metal_acc)
-metd_id = inter_identifiers['metal_donor']
-if s1_met_donors.size and s2_met_acc.size:
-    metd = close_contacts(xyz, k, metd_id, s1_met_donors, s2_met_acc,
-                          cf.metallic)
-
-# ==== metal acceptor =========================================================
-s1_acc = np.intersect1d(iman.sel1_idx, iman.metal_acc)
-s2_met = np.intersect1d(iman.sel2_idx, iman.metal_don)
-meta_id = inter_identifiers['metal_acceptor']
-if s1_acc.size and s2_met.size:
-    meta = close_contacts(xyz, k, meta_id, s1_acc, s2_met, cf.metallic)
-
-# ==== vdw contacts ===========================================================
-max_vdw = iman.get_max_vdw_dist()
-vdw_radii = iman.radii
-vdw_id = inter_identifiers['vdw_contacts']
-if s1_indices.size and s2_indices.size:
-    vdw = close_contacts(xyz, k, vdw_id, s1_indices, s2_indices, max_vdw,
-                         vdw_radii)
-
-# ==== hbonds acceptor ========================================================
-idx = np.isin(iman.hb_H, iman.sel2_idx)
-s2_hb_hydros = iman.hb_H[idx]
-s2_hb_donors = iman.hb_D[idx]
-s1_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel1_idx)]
-hb_acc_id = inter_identifiers['hb_acceptor']
-if s2_hb_donors.size and s1_hb_acc.size:
-    hb_a = dha_contacts(xyz, k, hb_acc_id,
-                        s2_hb_donors, s2_hb_hydros, s1_hb_acc,
-                        cf.HA_cut, cf.DA_cut, cf.DHA_cut)
-
-# ==== hbonds donor ===========================================================
-idx = np.isin(iman.hb_H, iman.sel1_idx)
-s1_hb_hydros = iman.hb_H[idx]
-s1_hb_donors = iman.hb_D[idx]
-s2_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel2_idx)]
-hb_don_id = inter_identifiers['hb_donor']
-if s1_hb_donors.size and s2_hb_acc.size:
-    hb_d = dha_contacts(xyz, k, hb_don_id,
-                        s1_hb_donors, s1_hb_hydros, s2_hb_acc,
-                        cf.HA_cut, cf.DA_cut, cf.DHA_cut)
-print(f"Computing time: {time.time() - start:.2f} s")
+# start = time.time()
+# import intermap.cutoffs as cf
+#
+# # ==== close contacts =========================================================
+# s1_indices = iman.sel1_idx
+# s2_indices = iman.sel2_idx
+# dist_cut = cf.close_contacts
+# cc_id = inter_identifiers['close_contacts']
+# if s1_indices.size and s2_indices.size:
+#     cc = close_contacts(xyz, k, cc_id, s1_indices, s2_indices, dist_cut)
+#
+# # ==== anionic ================================================================
+# s1_ani = np.intersect1d(iman.sel1_idx, iman.anions)
+# s2_cat = np.intersect1d(iman.sel2_idx, iman.cations)
+# anionic_id = inter_identifiers['anionic']
+# if s1_ani.size and s2_cat.size:
+#     ani = close_contacts(xyz, k, anionic_id, s1_ani, s2_cat, cf.ionic)
+#
+# # ==== cationic ===============================================================
+# s1_cat = np.intersect1d(iman.sel1_idx, iman.cations)
+# s2_ani = np.intersect1d(iman.sel2_idx, iman.anions)
+# cationic_id = inter_identifiers['cationic']
+# if s1_cat.size and s2_ani.size:
+#     cat = close_contacts(xyz, k, cationic_id, s1_cat, s2_ani, cf.ionic)
+#
+# # ==== hydrophobic ============================================================
+# s1_hp = np.intersect1d(iman.sel1_idx, iman.hydroph)
+# s2_hp = np.intersect1d(iman.sel2_idx, iman.hydroph)
+# hydrop_id = inter_identifiers['hydrophobic']
+# if s1_hp.size and s2_hp.size:
+#     hp = close_contacts(xyz, k, hydrop_id, s1_hp, s2_hp, cf.hydrophobic)
+#
+# # ==== metal donor ============================================================
+# s1_met_donors = np.intersect1d(iman.sel1_idx, iman.metal_don)
+# s2_met_acc = np.intersect1d(iman.sel2_idx, iman.metal_acc)
+# metd_id = inter_identifiers['metal_donor']
+# if s1_met_donors.size and s2_met_acc.size:
+#     metd = close_contacts(xyz, k, metd_id, s1_met_donors, s2_met_acc,
+#                           cf.metallic)
+#
+# # ==== metal acceptor =========================================================
+# s1_acc = np.intersect1d(iman.sel1_idx, iman.metal_acc)
+# s2_met = np.intersect1d(iman.sel2_idx, iman.metal_don)
+# meta_id = inter_identifiers['metal_acceptor']
+# if s1_acc.size and s2_met.size:
+#     meta = close_contacts(xyz, k, meta_id, s1_acc, s2_met, cf.metallic)
+#
+# # ==== vdw contacts ===========================================================
+# max_vdw = iman.get_max_vdw_dist()
+# vdw_radii = iman.radii
+# vdw_id = inter_identifiers['vdw_contacts']
+# if s1_indices.size and s2_indices.size:
+#     vdw = close_contacts(xyz, k, vdw_id, s1_indices, s2_indices, max_vdw,
+#                          vdw_radii)
+#
+# # ==== hbonds acceptor ========================================================
+# idx = np.isin(iman.hb_H, iman.sel2_idx)
+# s2_hb_hydros = iman.hb_H[idx]
+# s2_hb_donors = iman.hb_D[idx]
+# s1_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel1_idx)]
+# hb_acc_id = inter_identifiers['hb_acceptor']
+# if s2_hb_donors.size and s1_hb_acc.size:
+#     hb_a = dha_contacts(xyz, k, hb_acc_id,
+#                         s2_hb_donors, s2_hb_hydros, s1_hb_acc,
+#                         cf.HA_cut, cf.DA_cut, cf.DHA_cut)
+#
+# # ==== hbonds donor ===========================================================
+# idx = np.isin(iman.hb_H, iman.sel1_idx)
+# s1_hb_hydros = iman.hb_H[idx]
+# s1_hb_donors = iman.hb_D[idx]
+# s2_hb_acc = iman.hb_A[np.isin(iman.hb_A, iman.sel2_idx)]
+# hb_don_id = inter_identifiers['hb_donor']
+# if s1_hb_donors.size and s2_hb_acc.size:
+#     hb_d = dha_contacts(xyz, k, hb_don_id,
+#                         s1_hb_donors, s1_hb_hydros, s2_hb_acc,
+#                         cf.HA_cut, cf.DA_cut, cf.DHA_cut)
+# print(f"Computing time: {time.time() - start:.2f} s")
 
 # if s1_donors.size and s1_hydros.size and s1_acc.size and \
 #         s2_donors.size and s2_hydros.size and s2_acc.size:
@@ -560,52 +746,52 @@ print(f"Computing time: {time.time() - start:.2f} s")
 # =============================================================================
 # Parallelize
 # =============================================================================
-import numpy as np
-from numba import njit, prange
-
-
-@njit(parallel=True)
-def get_estimation(xyz_all, n_samples, factor=2):
-    # Preallocate the arrays
-    orig_len = xyz_all.shape[0]
-    xyz_samples = xyz_all[::orig_len // n_samples]
-    real_counts = np.zeros(n_samples, dtype=np.int32)
-
-    # Use parallel loop to fill
-    for i in prange(xyz_samples.shape[0]):
-        cc = close_contacts(xyz_samples[i], 0, 0,
-                            s1_indices, s2_indices,
-                            dist_cut)
-        real_counts[i] = cc.shape[0]
-
-    # Estimate the number of contacts in the processed chunk
-    estimation = np.int32(real_counts.max() * factor)
-    return estimation
-
-
-@njit(parallel=True)
-def testing(xyz_all, n_samples):
-    # Estimate the number of contacts in the processed chunk
-    estimated = get_estimation(xyz_all, n_samples)
-    # Preallocate the arrays
-    num_frames = xyz_all.shape[0]
-    all_cc = np.zeros((num_frames, estimated, 4), dtype=np.int32)
-    real_counts = np.zeros(num_frames, dtype=np.int32)
-
-    # Use parallel loop to fill
-    for i in prange(xyz_all.shape[0]):
-        cc = close_contacts(xyz_all[i], 0, 0, s1_indices, s2_indices, dist_cut)
-        all_cc[i, :cc.shape[0]] = cc
-        real_counts[i] = cc.shape[0]
-
-    # Select the real counts
-    all_cc_real = np.zeros((real_counts.sum(), 4), dtype=np.int32)
-    counter = 0
-    for i in range(num_frames):
-        n = real_counts[i]
-        all_cc_real[counter:counter + n] = all_cc[i, :n]
-        counter += n
-    return real_counts, all_cc, all_cc_real
-
-
-real_counts, empty, good = testing(xyz_all, 5)
+# import numpy as np
+# from numba import njit, prange
+#
+#
+# @njit(parallel=True)
+# def get_estimation(xyz_all, n_samples, factor=2):
+#     # Preallocate the arrays
+#     orig_len = xyz_all.shape[0]
+#     xyz_samples = xyz_all[::orig_len // n_samples]
+#     real_counts = np.zeros(n_samples, dtype=np.int32)
+#
+#     # Use parallel loop to fill
+#     for i in prange(xyz_samples.shape[0]):
+#         cc = close_contacts(xyz_samples[i], 0, 0,
+#                             s1_indices, s2_indices,
+#                             dist_cut)
+#         real_counts[i] = cc.shape[0]
+#
+#     # Estimate the number of contacts in the processed chunk
+#     estimation = np.int32(real_counts.max() * factor)
+#     return estimation
+#
+#
+# @njit(parallel=True)
+# def testing(xyz_all, n_samples):
+#     # Estimate the number of contacts in the processed chunk
+#     estimated = get_estimation(xyz_all, n_samples)
+#     # Preallocate the arrays
+#     num_frames = xyz_all.shape[0]
+#     all_cc = np.zeros((num_frames, estimated, 4), dtype=np.int32)
+#     real_counts = np.zeros(num_frames, dtype=np.int32)
+#
+#     # Use parallel loop to fill
+#     for i in prange(xyz_all.shape[0]):
+#         cc = close_contacts(xyz_all[i], 0, 0, s1_indices, s2_indices, dist_cut)
+#         all_cc[i, :cc.shape[0]] = cc
+#         real_counts[i] = cc.shape[0]
+#
+#     # Select the real counts
+#     all_cc_real = np.zeros((real_counts.sum(), 4), dtype=np.int32)
+#     counter = 0
+#     for i in range(num_frames):
+#         n = real_counts[i]
+#         all_cc_real[counter:counter + n] = all_cc[i, :n]
+#         counter += n
+#     return real_counts, all_cc, all_cc_real
+#
+#
+# real_counts, empty, good = testing(xyz_all, 5)
