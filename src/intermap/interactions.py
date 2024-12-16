@@ -9,34 +9,83 @@ from numba_kdtree import KDTree as nckd
 import intermap.cutoffs as cf
 
 
+def parse_cutoff(cutoff_name, args):
+    """
+    Parse the cutoff name from the args or the cf module if not found in args.
+
+    Args:
+        args (Namespace): Arguments from the parser.
+        cutoff_name (str): Name of the cutoff.
+
+    Returns:
+        float: Value of the cutoff.
+    """
+    if cutoff_name not in cf.__dict__:
+        raise ValueError(f"{cutoff_name} is not a valid cutoff name.\n"
+                         f"The supported list is:\n"
+                         f"{[x for x in dir(cf) if not x.startswith("__")]}")
+    elif cutoff_name in args:
+        return getattr(args, cutoff_name)
+    else:
+        # get the value from the cf module
+        return getattr(cf, cutoff_name)
+
+
 @njit
 def create_inter_ids():
     # Create a Numba Dict with specific types
     inter_ids = numba_dict.empty(numba.types.unicode_type, numba.types.int64)
 
     # undirected 2p interactions
-    inter_ids['close_contacts'] = 0
-    inter_ids['vdw_contacts'] = 1
-    inter_ids['hydrophobic'] = 2
+    inter_ids['CloseContact'] = 0
+    inter_ids['VdWContact'] = 1
+    inter_ids['Hydrophobic'] = 2
 
     # directed 2p interactions
-    inter_ids['anionic'] = 3
-    inter_ids['cationic'] = 4
-    inter_ids['metal_donor'] = 5
-    inter_ids['metal_acceptor'] = 6
+    inter_ids['Anionic'] = 3
+    inter_ids['Cationic'] = 4
+    inter_ids['MetalDonor'] = 5
+    inter_ids['MetalAcceptor'] = 6
 
     # directed 3p interactions
-    inter_ids['hb_acceptor'] = 7
-    inter_ids['hb_donor'] = 8
+    inter_ids['HBAcceptor'] = 7
+    inter_ids['HBDonor'] = 8
+    inter_ids['XBAcceptor'] = 9
+    inter_ids['XBDonor'] = 10
 
-    # undirected xp interactions
-    inter_ids['pi_stacking'] = 9
-    inter_ids['edge_to_face'] = 10
-    inter_ids['face_to_face'] = 11
-    inter_ids['pi_cation'] = 12
-    inter_ids['cation_pi'] = 13
+    # undirected np interactions
+    inter_ids['PiStacking'] = 11
+    inter_ids['FaceToFace'] = 12
+    inter_ids['EdgeToFace'] = 13
+
+    # directed np interactions
+    inter_ids['PiCation'] = 14
+    inter_ids['CationPi'] = 15
 
     return inter_ids
+
+
+interactions = {
+    "Anionic": [parse_cutoff('dist_cut_Ionic')],
+    "CationPi": [parse_cutoff('dist_cut_PiCation')],
+    "Cationic": [parse_cutoff('dist_cut_Ionic')],
+    "CloseContact": [parse_cutoff('dist_cut_CloseContacts')],
+    "EdgeToFace": [parse_cutoff('dist_cut_EdgeToFace'),
+                   parse_cutoff('min_dist_EdgeToFace')],
+    "FaceToFace": [parse_cutoff('dist_cut_FaceToFace'),
+                   parse_cutoff('min_dist_FaceToFace')],
+    "HBAcceptor": [parse_cutoff('dist_cut_DA'), parse_cutoff('dist_cut_HA')],
+    "HBDonor": [parse_cutoff('dist_cut_DA'), parse_cutoff('dist_cut_HA')],
+    "Hydrophobic": [parse_cutoff('dist_cut_Hydroph')],
+    "MetalAcceptor": [parse_cutoff('dist_cut_Metalic')],
+    "MetalDonor": [parse_cutoff('dist_cut_Metalic')],
+    "PiCation": [parse_cutoff('dist_cut_PiCation')],
+    "PiStacking": [parse_cutoff('dist_cut_PiStacking'),
+                   parse_cutoff('min_dist_PiStacking')],
+    "VdWContact": [],
+    "XBAcceptor": [parse_cutoff('dist_cut_XA'), parse_cutoff('dist_cut_XD')],
+    "XBDonor": [parse_cutoff('dist_cut_XA'), parse_cutoff('dist_cut_XD')],
+}
 
 
 # =============================================================================
@@ -238,8 +287,8 @@ import time
 from intermap.indices import IndexManager
 
 start_time = time.time()
-topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 sel1 = "nucleic or resname 8OG"
 sel2 = sel1
 inters = 'all'
@@ -373,7 +422,7 @@ def calc_min_dist(coords1, coords2):
 @njit(parallel=False)
 def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
            cations, hydroph, metal_don, metal_acc, vdw_radii, hb_hydros,
-           hb_don, hb_acc, rings, to_compute='all'):
+           hb_don, hb_acc, rings, to_compute):
     # =========================================================================
     # STEP I: Find all pair of atoms (and centroids) within the cutoff distance
     # =========================================================================
@@ -422,7 +471,8 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
     dists = calc_dist(xyz2[row1], xyz2[row2])
 
     # Create the container for interaction types
-    n_types = len(inter_ids)
+    inter_ids_selected = [x for x in inter_ids.values() if x in to_compute]
+    n_types = len(inter_ids_selected)
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
 
     # =========================================================================
@@ -438,20 +488,20 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
                                       xyz[s2_rings[:, 4]])
 
     # Cutoffs definitions
-    stacking_cut = cf.dist_pi_stacking_centroids
-    stacking_min = cf.min_angle_pi_stacking
-    stacking_max = cf.max_angle_pi_stacking
-    stacking_min_dist = cf.min_dist_pi_stacking
+    stacking_cut = cf.dist_cut_PiStacking
+    stacking_min = cf.min_ang_PiStacking
+    stacking_max = cf.max_ang_PiStacking
+    stacking_min_dist = cf.min_dist_PiStacking
 
-    etf_cut = cf.dist_edge_to_face_centroids
-    etf_min = cf.min_angle_edge_to_face
-    etf_max = cf.max_angle_edge_to_face
-    etf_min_dist = cf.min_dist_edge_to_face
+    etf_cut = cf.dist_cut_EdgeToFace
+    etf_min = cf.min_ang_EdgeToFace
+    etf_max = cf.max_ang_EdgeToFace
+    etf_min_dist = cf.min_dist_EdgeToFace
 
-    ftf_cut = cf.dist_face_to_face_centroids
-    ftf_min = cf.min_angle_face_to_face
-    ftf_max = cf.max_angle_face_to_face
-    ftf_min_dist = cf.min_dist_face_to_face
+    ftf_cut = cf.dist_cut_FaceToFace
+    ftf_min = cf.min_ang_FaceToFace
+    ftf_max = cf.max_ang_FaceToFace
+    ftf_min_dist = cf.min_dist_FaceToFace
 
     # Get the ring pairs
     s1_centroids = isin(row1, s1_rings_indices)
@@ -614,16 +664,10 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
 
 
 max_vdw = iman.get_max_vdw_dist()
-dist_cut = max([
-    cf.dist_cut_CloseContacts,
-    cf.dist_cut_Ionic,
-    cf.dist_cut_Hydroph,
-    cf.dist_cut_Metalic,
-    cf.dist_cut_Hydroph,
-    cf.dist_cut_EdgeToFace,
-    cf.dist_cut_FaceToFace,
-    cf.dist_cut_PiStacking,
-    max_vdw])
+to_compute = 'all'
+if to_compute == 'all':
+    to_compute = interactions
+dist_cut = max([y for x in to_compute for y in interactions[x]] + [max_vdw])
 
 s1_indices_raw = iman.sel1_idx
 s2_indices_raw = iman.sel2_idx
@@ -638,10 +682,11 @@ hb_hydros = iman.hb_H
 hb_donors = iman.hb_D
 hb_acc = iman.hb_A
 rings = iman.rings
+
 ijf, dists, inters = duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw,
                             dist_cut, anions, cations, hydroph, metal_don,
                             metal_acc, vdw_radii, hb_hydros, hb_donors, hb_acc,
-                            rings)
+                            rings, to_compute)
 
 # =============================================================================
 # %% Start computing interactions
