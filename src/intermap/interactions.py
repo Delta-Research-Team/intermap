@@ -3,13 +3,13 @@
 import numba.types
 import numpy as np
 from numba import njit
-from numba.typed import Dict as numba_dict
+from numba.typed import Dict, Dict as numba_dict
 from numba_kdtree import KDTree as nckd
 
 import intermap.cutoffs as cf
 
 
-def parse_cutoff(cutoff_name, args):
+def parse_cutoff(cutoff_name, args=[]):
     """
     Parse the cutoff name from the args or the cf module if not found in args.
 
@@ -36,291 +36,51 @@ def create_inter_ids():
     # Create a Numba Dict with specific types
     inter_ids = numba_dict.empty(numba.types.unicode_type, numba.types.int64)
 
-    # undirected 2p interactions
+    # Undirected 2p interactions
     inter_ids['CloseContact'] = 0
     inter_ids['VdWContact'] = 1
     inter_ids['Hydrophobic'] = 2
-
-    # directed 2p interactions
+    # Directed 2p interactions
     inter_ids['Anionic'] = 3
     inter_ids['Cationic'] = 4
     inter_ids['MetalDonor'] = 5
     inter_ids['MetalAcceptor'] = 6
-
-    # directed 3p interactions
+    # Directed 3p interactions
     inter_ids['HBAcceptor'] = 7
     inter_ids['HBDonor'] = 8
     inter_ids['XBAcceptor'] = 9
     inter_ids['XBDonor'] = 10
-
-    # undirected np interactions
+    # Undirected np interactions
     inter_ids['PiStacking'] = 11
     inter_ids['FaceToFace'] = 12
     inter_ids['EdgeToFace'] = 13
-
-    # directed np interactions
+    # Directed np interactions
     inter_ids['PiCation'] = 14
     inter_ids['CationPi'] = 15
-
     return inter_ids
 
 
-interactions = {
-    "Anionic": [parse_cutoff('dist_cut_Ionic')],
-    "CationPi": [parse_cutoff('dist_cut_PiCation')],
-    "Cationic": [parse_cutoff('dist_cut_Ionic')],
-    "CloseContact": [parse_cutoff('dist_cut_CloseContacts')],
-    "EdgeToFace": [parse_cutoff('dist_cut_EdgeToFace'),
-                   parse_cutoff('min_dist_EdgeToFace')],
-    "FaceToFace": [parse_cutoff('dist_cut_FaceToFace'),
-                   parse_cutoff('min_dist_FaceToFace')],
-    "HBAcceptor": [parse_cutoff('dist_cut_DA'), parse_cutoff('dist_cut_HA')],
-    "HBDonor": [parse_cutoff('dist_cut_DA'), parse_cutoff('dist_cut_HA')],
-    "Hydrophobic": [parse_cutoff('dist_cut_Hydroph')],
-    "MetalAcceptor": [parse_cutoff('dist_cut_Metalic')],
-    "MetalDonor": [parse_cutoff('dist_cut_Metalic')],
-    "PiCation": [parse_cutoff('dist_cut_PiCation')],
-    "PiStacking": [parse_cutoff('dist_cut_PiStacking'),
-                   parse_cutoff('min_dist_PiStacking')],
-    "VdWContact": [],
-    "XBAcceptor": [parse_cutoff('dist_cut_XA'), parse_cutoff('dist_cut_XD')],
-    "XBDonor": [parse_cutoff('dist_cut_XA'), parse_cutoff('dist_cut_XD')],
+inter_cuts_raw = {
+    "dist_cut_CloseContacts": parse_cutoff('dist_cut_CloseContacts'),
+    "dist_cut_Hydroph": parse_cutoff('dist_cut_Hydroph'),
+    "dist_cut_Ionic": parse_cutoff('dist_cut_Ionic'),
+    "dist_cut_Metalic": parse_cutoff('dist_cut_Metalic'),
+    "dist_cut_XA": parse_cutoff('dist_cut_XA'),
+    "dist_cut_XD": parse_cutoff('dist_cut_XD'),
+    "dist_cut_DA": parse_cutoff('dist_cut_DA'),
+    "dist_cut_HA": parse_cutoff('dist_cut_HA'),
+    "dist_cut_PiStacking": parse_cutoff('dist_cut_PiStacking'),
+    "min_dist_PiStacking": parse_cutoff('min_dist_PiStacking'),
+    "dist_cut_EdgeToFace": parse_cutoff('dist_cut_EdgeToFace'),
+    "min_dist_EdgeToFace": parse_cutoff('min_dist_EdgeToFace'),
+    "dist_cut_FaceToFace": parse_cutoff('dist_cut_FaceToFace'),
+    "min_dist_FaceToFace": parse_cutoff('min_dist_FaceToFace'),
+    "dist_cut_PiCation": parse_cutoff('dist_cut_PiCation'),
 }
 
 
 # =============================================================================
 # Helper functions
-# =============================================================================
-@njit(parallel=False)
-def calc_dist(d, a):
-    """
-    Computes the Euclidean distance between two atoms in a molecule
-
-    Args:
-        d (ndarray): Coordinates of the first atom (n, 3).
-        a (ndarray): Coordinates of the second atom (n, 3).
-
-    Returns:
-        float: the Euclidean distance between the two atoms
-    """
-    n = d.shape[0]
-    distances = np.empty(n)
-
-    for i in range(n):
-        dx = d[i][0] - a[i][0]
-        dy = d[i][1] - a[i][1]
-        dz = d[i][2] - a[i][2]
-        distances[i] = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
-
-    return distances
-
-
-@njit(parallel=False)
-def calc_angle(d, h, a):
-    """
-    Computes the angles between sets of three atoms.
-
-    Args:
-        d (ndarray): Coordinates of the donor atoms (n, 3).
-        h (ndarray): Coordinates of the hydrogen atoms (n, 3).
-        a (ndarray): Coordinates of the acceptor atoms (n, 3).
-
-    Returns:
-        angle_deg: Angles in degrees for each set of atoms (n,).
-    """
-    n = d.shape[0]  # Number of triplets
-    angle_deg = np.empty(n)  # Array to hold the result angles
-
-    for i in range(n):
-        # Compute vectors
-        dh = d[i] - h[i]
-        ah = a[i] - h[i]
-
-        # Compute dot product and norms
-        dot_product = dh[0] * ah[0] + dh[1] * ah[1] + dh[2] * ah[2]
-        dh_norm = np.sqrt(dh[0] ** 2 + dh[1] ** 2 + dh[2] ** 2)
-        ah_norm = np.sqrt(ah[0] ** 2 + ah[1] ** 2 + ah[2] ** 2)
-
-        # Compute angle
-        angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
-        angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
-
-    return angle_deg
-
-
-# =============================================================================
-# Interaction functions
-# =============================================================================
-
-
-@njit(parallel=False)
-def close_contacts(xyz, k, contact_id,
-                   s1_indices, s2_indices,
-                   dist_cut, vdw_radii=None):
-    """
-    Find the close contacts between two selections.
-
-    Args:
-        xyz (ndarray): Coordinates of the atoms in the frame.
-        k (int): Frame identifier.
-        contact_id (int): Identifier for the contact type.
-
-        s1_indices (ndarray): Indices of the atoms in s1.
-        s2_indices (ndarray): Indices of the atoms in s2.
-
-        dist_cut (float): Cutoff distance for the tree query.
-        vdw_radii (ndarray): Van der Waals radii of the atoms.
-
-    Returns:
-        contact_indices (list): List of labels for each close contact.
-    """
-
-    # Create & query the trees
-    s2_tree = nckd(xyz[s2_indices])
-    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
-
-    # Find the close contacts
-    n_contacts = sum([len(x) for x in ball_1])
-    contact_indices = np.zeros((n_contacts, 4), dtype=np.int32)
-
-    # Fill the labels
-    counter = -1
-    for i, x in enumerate(ball_1):
-        X1 = s1_indices[i]
-        for j in x:
-            X2 = s2_indices[j]
-            counter += 1
-            contact_indices[counter][0] = X1
-            contact_indices[counter][1] = X2
-            contact_indices[counter][2] = k
-            contact_indices[counter][3] = contact_id
-
-    # Remove idems (self-contacts appearing if both selections overlap)
-    idems = contact_indices[:, 0] == contact_indices[:, 1]
-    contact_indices = contact_indices[~idems]
-
-    if vdw_radii is None:
-        return contact_indices
-
-    # Discard pairs whose distance is greater than the sum of the VdW radii
-    vdw_radii_X1 = vdw_radii[contact_indices[:, 0]]
-    vdw_radii_X2 = vdw_radii[contact_indices[:, 1]]
-    vdw_sum = (vdw_radii_X1 + vdw_radii_X2) / 10
-
-    dists = calc_dist(xyz[contact_indices[:, 0]], xyz[contact_indices[:, 1]])
-    vdw_contact = dists <= vdw_sum
-    contact_indices = contact_indices[vdw_contact]
-
-    return contact_indices
-
-
-@njit(parallel=False, fastmath=True)
-def dha_contacts(xyz, k, contact_id,
-                 s1_donors, s1_hydros, s2_acc,
-                 cut_HA, cut_DA, cut_DHA):
-    """
-    Args:
-        xyz: Coordinates of the atoms in the frame.
-        k (int): Frame identifier.
-        contact_id: Identifier for the contact type.
-
-        s1_donors: Indices of the donor atoms in s1.
-        s1_hydros: Indices of the hydrogen atoms in s1.
-        s2_acc: Indices of the acceptor atoms in s2.
-
-        cut_HA: Cutoff distance between Hydrogen and Acceptor.
-        cut_DA: Cuttoff distance between Donor and Acceptor.
-        cut_DHA: Cutoff angle between Donor, Hydrogen and Acceptor.
-
-    Returns:
-        DHA_labels (list): List of DHA labels for each hydrogen bond.
-    """
-
-    # Create & query the trees
-    s2_A_tree = nckd(xyz[s2_acc])
-    ball_1 = s2_A_tree.query_radius(xyz[s1_hydros], cut_HA)
-
-    # Find the DHA candidates
-    n_triples = 0
-    for x in ball_1:
-        n_triples += x.size
-    DHA_labels = np.empty((n_triples, 4), dtype=np.int32)
-    DHA_coords = np.empty((n_triples, 3, 3), dtype=np.float32)
-
-    counter = 0
-    for i in range(len(ball_1)):
-        D = s1_donors[i]
-        H = s1_hydros[i]
-        for j in ball_1[i]:
-            A = s2_acc[j]
-            DHA_labels[counter] = [D, A, k, contact_id]
-            DHA_coords[counter][0] = xyz[D]
-            DHA_coords[counter][1] = xyz[H]
-            DHA_coords[counter][2] = xyz[A]
-            counter += 1
-
-    # Filter the DHA candidates
-    DA_dist_correct = calc_dist(DHA_coords[:, 0],
-                                DHA_coords[:, 2]) <= cut_DA
-    DHA_angle_correct = calc_angle(DHA_coords[:, 0, :],
-                                   DHA_coords[:, 1, :],
-                                   DHA_coords[:, 2, :]) > cut_DHA
-
-    correct_DHA = DHA_labels[DA_dist_correct & DHA_angle_correct]
-
-    return correct_DHA.astype(np.int32)
-
-
-# %% ==========================================================================
-# Instantiate the IndexManager class
-# =============================================================================
-# todo: implement pi-cation
-# todo: keep an eye on selections for contacts calculation (directed vs undirected)
-# todo: watch angular definitions for the interactions
-# todo: assign pi-type based on the angle between the planes
-# todo: test interactions
-# todo: reorganize code
-# todo: parallelize
-# todo: benchmark
-
-import time
-from intermap.indices import IndexManager
-
-start_time = time.time()
-topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
-sel1 = "nucleic or resname 8OG"
-sel2 = sel1
-inters = 'all'
-
-iman = IndexManager(topo, traj, sel1, sel2, inters)
-load_time = time.time() - start_time
-print(f"Until setting indices via SMARTS: {load_time:.2f} s")
-
-# =============================================================================
-# Load coordinates
-# =============================================================================
-import intermap.topo_trajs as tt
-
-# Trajectory load
-start = 0
-last = 50
-stride = 1
-chunk_size = (last - start) // 1
-chunks = tt.get_traj_chunks(topo, [traj],
-                            start=start, last=last, stride=stride,
-                            chunk_size=chunk_size)
-chunk = next(chunks)
-xyz_all = chunk.xyz
-xyz = chunk.xyz[0]
-k = 0
-
-chunk_time = time.time() - start_time
-print(f"Until loading the chunk: {chunk_time:.2f} s")
-
-
-# =============================================================================
-# unified approach
 # =============================================================================
 
 
@@ -420,9 +180,117 @@ def calc_min_dist(coords1, coords2):
 
 
 @njit(parallel=False)
+def calc_dist(d, a):
+    """
+    Computes the Euclidean distance between two atoms in a molecule
+
+    Args:
+        d (ndarray): Coordinates of the first atom (n, 3).
+        a (ndarray): Coordinates of the second atom (n, 3).
+
+    Returns:
+        float: the Euclidean distance between the two atoms
+    """
+    n = d.shape[0]
+    distances = np.empty(n)
+
+    for i in range(n):
+        dx = d[i][0] - a[i][0]
+        dy = d[i][1] - a[i][1]
+        dz = d[i][2] - a[i][2]
+        distances[i] = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+
+    return distances
+
+
+@njit(parallel=False)
+def calc_angle(d, h, a):
+    """
+    Computes the angles between sets of three atoms.
+
+    Args:
+        d (ndarray): Coordinates of the donor atoms (n, 3).
+        h (ndarray): Coordinates of the hydrogen atoms (n, 3).
+        a (ndarray): Coordinates of the acceptor atoms (n, 3).
+
+    Returns:
+        angle_deg: Angles in degrees for each set of atoms (n,).
+    """
+    n = d.shape[0]  # Number of triplets
+    angle_deg = np.empty(n)  # Array to hold the result angles
+
+    for i in range(n):
+        # Compute vectors
+        dh = d[i] - h[i]
+        ah = a[i] - h[i]
+
+        # Compute dot product and norms
+        dot_product = dh[0] * ah[0] + dh[1] * ah[1] + dh[2] * ah[2]
+        dh_norm = np.sqrt(dh[0] ** 2 + dh[1] ** 2 + dh[2] ** 2)
+        ah_norm = np.sqrt(ah[0] ** 2 + ah[1] ** 2 + ah[2] ** 2)
+
+        # Compute angle
+        angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
+        angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
+
+    return angle_deg
+
+
+# %% ==========================================================================
+# Instantiate the IndexManager class
+# =============================================================================
+# todo: implement pi-cation
+# todo: keep an eye on selections for contacts calculation (directed vs undirected)
+# todo: watch angular definitions for the interactions
+# todo: assign pi-type based on the angle between the planes
+# todo: test interactions
+# todo: reorganize code
+# todo: parallelize
+# todo: benchmark
+
+import time
+from intermap.indices import IndexManager
+
+start_time = time.time()
+topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+sel1 = "nucleic or resname 8OG"
+sel2 = sel1
+inters = 'all'
+
+iman = IndexManager(topo, traj, sel1, sel2, inters)
+load_time = time.time() - start_time
+print(f"Until setting indices via SMARTS: {load_time:.2f} s")
+
+# =============================================================================
+# Load coordinates
+# =============================================================================
+import intermap.topo_trajs as tt
+
+# Trajectory load
+start = 0
+last = 50
+stride = 1
+chunk_size = (last - start) // 1
+chunks = tt.get_traj_chunks(topo, [traj],
+                            start=start, last=last, stride=stride,
+                            chunk_size=chunk_size)
+chunk = next(chunks)
+xyz_all = chunk.xyz
+xyz = chunk.xyz[0]
+k = 0
+
+chunk_time = time.time() - start_time
+print(f"Until loading the chunk: {chunk_time:.2f} s")
+
+
+# =============================================================================
+# unified approach
+# =============================================================================
+@njit(parallel=False)
 def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
            cations, hydroph, metal_don, metal_acc, vdw_radii, hb_hydros,
-           hb_don, hb_acc, rings, to_compute):
+           hb_don, hb_acc, rings, cutoffs, to_compute):
     # =========================================================================
     # STEP I: Find all pair of atoms (and centroids) within the cutoff distance
     # =========================================================================
@@ -471,7 +339,7 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
     dists = calc_dist(xyz2[row1], xyz2[row2])
 
     # Create the container for interaction types
-    inter_ids_selected = [x for x in inter_ids.values() if x in to_compute]
+    inter_ids_selected = [x for x in inter_ids.keys() if x in to_compute]
     n_types = len(inter_ids_selected)
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
 
@@ -663,6 +531,10 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
     return ijf, dists, interactions
 
 
+cutoffs = Dict()
+for x, y in inter_cuts_raw.items():
+    cutoffs[x] = y
+
 max_vdw = iman.get_max_vdw_dist()
 to_compute = 'all'
 if to_compute == 'all':
@@ -686,7 +558,7 @@ rings = iman.rings
 ijf, dists, inters = duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw,
                             dist_cut, anions, cations, hydroph, metal_don,
                             metal_acc, vdw_radii, hb_hydros, hb_donors, hb_acc,
-                            rings, to_compute)
+                            rings, cutoffs, to_compute)
 
 # =============================================================================
 # %% Start computing interactions
