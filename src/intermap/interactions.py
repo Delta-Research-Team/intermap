@@ -1,9 +1,7 @@
 # Created by rglez at 12/10/24
 
-import numba.types
 import numpy as np
 from numba import njit
-from numba.typed import Dict, Dict as numba_dict
 from numba_kdtree import KDTree as nckd
 
 import intermap.cutoffs as cf
@@ -31,52 +29,77 @@ def parse_cutoff(cutoff_name, args=[]):
         return getattr(cf, cutoff_name)
 
 
-@njit
-def create_inter_ids():
-    # Create a Numba Dict with specific types
-    inter_ids = numba_dict.empty(numba.types.unicode_type, numba.types.int64)
+cutoffs_raw = {
+    # Undirected 1D interactions
+    'CloseContacts':
+        {'distCut1': parse_cutoff('dist_cut_CloseContacts')},
+    'VdWContact':
+        {'distCut1': 0},
+    'Hydrophobic':
+        {'distCut1': parse_cutoff('dist_cut_Hydrophobic')},
 
-    # Undirected 2p interactions
-    inter_ids['CloseContact'] = 0
-    inter_ids['VdWContact'] = 1
-    inter_ids['Hydrophobic'] = 2
-    # Directed 2p interactions
-    inter_ids['Anionic'] = 3
-    inter_ids['Cationic'] = 4
-    inter_ids['MetalDonor'] = 5
-    inter_ids['MetalAcceptor'] = 6
-    # Directed 3p interactions
-    inter_ids['HBAcceptor'] = 7
-    inter_ids['HBDonor'] = 8
-    inter_ids['XBAcceptor'] = 9
-    inter_ids['XBDonor'] = 10
-    # Undirected np interactions
-    inter_ids['PiStacking'] = 11
-    inter_ids['FaceToFace'] = 12
-    inter_ids['EdgeToFace'] = 13
-    # Directed np interactions
-    inter_ids['PiCation'] = 14
-    inter_ids['CationPi'] = 15
-    return inter_ids
+    # Directed 1D interactions
+    'Anionic':
+        {'distCut1': parse_cutoff('dist_cut_Ionic')},
+    'Cationic':
+        {'distCut1': parse_cutoff('dist_cut_Ionic')},
+    'MetalDonor':
+        {'distCut1': parse_cutoff('dist_cut_Metalic')},
+    'MetalAcceptor':
+        {'distCut1': parse_cutoff('dist_cut_Metalic')},
+
+    # Directed 2D1A interactions
+    'HBAcceptor':
+        {'distCut1': parse_cutoff('dist_cut_DA'),
+         'distCut2': parse_cutoff('dist_cut_HA')},
+    'HBDonor':
+        {'distCut1': parse_cutoff('dist_cut_DA'),
+         'distCut2': parse_cutoff('dist_cut_HA')},
+    'XBAcceptor':
+        {'distCut1': parse_cutoff('dist_cut_XA'),
+         'distCut2': parse_cutoff('dist_cut_XD')},
+    'XBDonor':
+        {'distCut1': parse_cutoff('dist_cut_XA'),
+         'distCut2': parse_cutoff('dist_cut_XD')},
+
+    # Undirected 2D1A interactions
+    'PiStacking':
+        {'distCut1': parse_cutoff('dist_cut_PiStacking'),
+         'distCut2': parse_cutoff('min_dist_PiStacking')},
+    'FaceToFace':
+        {'distCut1': parse_cutoff('dist_cut_FaceToFace'),
+         'distCut2': parse_cutoff('min_dist_FaceToFace')},
+    'EdgeToFace':
+        {'distCut1': parse_cutoff('dist_cut_EdgeToFace'),
+         'distCut2': parse_cutoff('min_dist_EdgeToFace')},
+
+    # Directed 1D1A interactions
+    'PiCation':
+        {'distCut1': parse_cutoff('dist_cut_PiCation')},
+    'CationPi':
+        {'distCut1': parse_cutoff('dist_cut_PiCation')}}
 
 
-inter_cuts_raw = {
-    "dist_cut_CloseContacts": parse_cutoff('dist_cut_CloseContacts'),
-    "dist_cut_Hydroph": parse_cutoff('dist_cut_Hydroph'),
-    "dist_cut_Ionic": parse_cutoff('dist_cut_Ionic'),
-    "dist_cut_Metalic": parse_cutoff('dist_cut_Metalic'),
-    "dist_cut_XA": parse_cutoff('dist_cut_XA'),
-    "dist_cut_XD": parse_cutoff('dist_cut_XD'),
-    "dist_cut_DA": parse_cutoff('dist_cut_DA'),
-    "dist_cut_HA": parse_cutoff('dist_cut_HA'),
-    "dist_cut_PiStacking": parse_cutoff('dist_cut_PiStacking'),
-    "min_dist_PiStacking": parse_cutoff('min_dist_PiStacking'),
-    "dist_cut_EdgeToFace": parse_cutoff('dist_cut_EdgeToFace'),
-    "min_dist_EdgeToFace": parse_cutoff('min_dist_EdgeToFace'),
-    "dist_cut_FaceToFace": parse_cutoff('dist_cut_FaceToFace'),
-    "min_dist_FaceToFace": parse_cutoff('min_dist_FaceToFace'),
-    "dist_cut_PiCation": parse_cutoff('dist_cut_PiCation'),
-}
+def get_inters_cutoffs(cutoffs_raw):
+    """
+    Get the interaction names and cutoffs from the raw dictionary
+
+    Args:
+        cutoffs_raw (dict): Raw dictionary with the cutoffs.
+
+    Returns:
+
+    """
+    inter_names = np.asarray(list(cutoffs_raw.keys()))
+    cutoffs_matrix = np.zeros((2, len(inter_names)), dtype=np.float32)
+
+    for i, inter in enumerate(cutoffs_raw):
+        cutoffs_matrix[0, i] = cutoffs_raw[inter]['distCut1']
+
+        if 'distCut2' in cutoffs_raw[inter]:
+            cutoffs_matrix[1, i] = cutoffs_raw[inter]['distCut2']
+
+    return inter_names, cutoffs_matrix
 
 
 # =============================================================================
@@ -285,10 +308,75 @@ print(f"Until loading the chunk: {chunk_time:.2f} s")
 
 
 # =============================================================================
-# unified approach
+# Unified approach
 # =============================================================================
+
 @njit(parallel=False)
-def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
+def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, dist_cut_aro,
+        cutoffs, to_compute):
+
+    # =========================================================================
+    # STEP I: Find all pair of atoms (and centroids) within the cutoff distance
+    # =========================================================================
+
+    # Add aromatic centroids to xyz
+    s1_cations = s1_indices_raw[isin(s1_indices_raw, cations)]
+    s2_cations = s2_indices_raw[isin(s2_indices_raw, cations)]
+    s1_rings = rings[isin(rings[:, 0], s1_indices_raw)].astype(np.int32)
+    s2_rings = rings[isin(rings[:, 0], s2_indices_raw)].astype(np.int32)
+    s1_centroids = compute_centroids(s1_rings, xyz)
+    s2_centroids = compute_centroids(s2_rings, xyz)
+    xyz2 = np.concatenate((xyz[s1_cations], xyz[s2_cations],
+                           s1_centroids, s2_centroids), axis=0)
+
+    # Update sel1 & sel2 indices with the aromatic centroids
+    n0 = s1_cations.size + s2_cations.size
+    n1 = n0 + s1_centroids.shape[0]
+    n2 = n1 + s2_centroids.shape[0]
+    s1_rings_indices = np.arange(n0, n1)
+    s2_rings_indices = np.arange(n1, n2)
+
+    s1_indices_cations = indices(s1_indices_raw, cations)
+    s2_indices_cations = indices(s2_indices_raw, cations)
+    s1_indices = np.concatenate((s1_indices_cations, s1_rings_indices))
+    s2_indices = np.concatenate((s2_indices_cations, s2_rings_indices))
+
+
+    # Create & query the trees
+    s2_tree = nckd(xyz2[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz2[s1_indices], dist_cut_aro)
+
+    # Find the close contacts
+    n_contacts = sum([len(x) for x in ball_1])
+    ijf = np.zeros((n_contacts, 3), dtype=np.int32)
+    counter = 0
+    for i, x in enumerate(ball_1):
+        X1 = s1_indices[i]
+        for j in x:
+            X2 = s2_indices[j]
+            ijf[counter][0] = X1
+            ijf[counter][1] = X2
+            ijf[counter][2] = k
+            counter += 1
+
+    # Remove idems (self-contacts appearing if both selections overlap)
+    idems = ijf[:, 0] == ijf[:, 1]
+    if idems.any():
+        ijf = ijf[~idems]
+
+    # Compute distances
+    row1 = ijf[:, 0]
+    row2 = ijf[:, 1]
+    dists = calc_dist(xyz2[row1], xyz2[row2])
+
+    # Create the container for interaction types
+    inter_ids_selected = [x for x in inter_ids.keys() if x in to_compute]
+    n_types = len(inter_ids_selected)
+    interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
+
+
+@njit(parallel=False)
+def duplex(xyz, k, s1_indices_raw, s2_indices_raw, dist_cut, anions,
            cations, hydroph, metal_don, metal_acc, vdw_radii, hb_hydros,
            hb_don, hb_acc, rings, cutoffs, to_compute):
     # =========================================================================
@@ -531,15 +619,16 @@ def duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw, dist_cut, anions,
     return ijf, dists, interactions
 
 
-cutoffs = Dict()
-for x, y in inter_cuts_raw.items():
-    cutoffs[x] = y
-
+inters_all, cutoffs = get_inters_cutoffs(cutoffs_raw)
 max_vdw = iman.get_max_vdw_dist()
 to_compute = 'all'
 if to_compute == 'all':
-    to_compute = interactions
-dist_cut = max([y for x in to_compute for y in interactions[x]] + [max_vdw])
+    to_compute = inters_all
+
+bit_aro = [i for i, x in enumerate(inters_all) if 'Pi' in x or 'Face' in x]
+bit_not_aro = [i for i in range(cutoffs.shape[1]) if i not in bit_aro]
+dist_cut_aro = cutoffs[:, bit_aro]
+dist_cut_not_aro = cutoffs[:, bit_not_aro]
 
 s1_indices_raw = iman.sel1_idx
 s2_indices_raw = iman.sel2_idx
@@ -548,15 +637,14 @@ cations = iman.cations
 hydroph = iman.hydroph
 metal_don = iman.metal_don
 metal_acc = iman.metal_acc
-inter_ids = create_inter_ids()
 vdw_radii = iman.radii
 hb_hydros = iman.hb_H
 hb_donors = iman.hb_D
 hb_acc = iman.hb_A
 rings = iman.rings
 
-ijf, dists, inters = duplex(xyz, k, inter_ids, s1_indices_raw, s2_indices_raw,
-                            dist_cut, anions, cations, hydroph, metal_don,
+ijf, dists, inters = duplex(xyz, k, s1_indices_raw, s2_indices_raw,
+                            dist_cut_aro, anions, cations, hydroph, metal_don,
                             metal_acc, vdw_radii, hb_hydros, hb_donors, hb_acc,
                             rings, cutoffs, to_compute)
 

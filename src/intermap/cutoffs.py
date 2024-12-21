@@ -10,7 +10,7 @@ dist_cut_CloseContacts = 0.30
 dist_cut_Ionic = 0.45
 
 # ==== Hydrophobic ============================================================
-dist_cut_Hydroph = 0.45
+dist_cut_Hydrophobic = 0.45
 
 # ==== Metalic ================================================================
 dist_cut_Metalic = 0.28
