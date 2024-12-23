@@ -142,8 +142,8 @@ class IndexManager:
             s1_idx: array with the indices of the atoms in selection 1
             s2_idx: array with the indices of the atoms in selection 2
         """
-        s1_idx = self.universe.select_atoms(self.sel1).indices
-        s2_idx = self.universe.select_atoms(self.sel2).indices
+        s1_idx = self.universe.select_atoms(self.sel1).indices.astype(np.int32)
+        s2_idx = self.universe.select_atoms(self.sel2).indices.astype(np.int32)
 
         if len(s1_idx) == 0:
             raise ValueError("No atoms found for selection 1")
@@ -175,7 +175,7 @@ class IndexManager:
                 hydrophs = 'resname {} and name {}'.format(case, sel)
                 idx = self.renamed_universe.select_atoms(hydrophs).indices
                 singles.extend(idx)
-        return np.array(singles)
+        return np.array(singles).astype(np.int32)
 
     def get_doubles(self, donor_identifier, acceptor_identifier):
         """
@@ -221,9 +221,9 @@ class IndexManager:
                 idx = self.renamed_universe.select_atoms(acc).indices
                 hx_A.extend(idx)
 
-        hx_D = np.array(hx_D)
-        hx_H = np.array(hx_H)
-        hx_A = np.array(hx_A)
+        hx_D = np.array(hx_D).astype(np.int32)
+        hx_H = np.array(hx_H).astype(np.int32)
+        hx_A = np.array(hx_A).astype(np.int32)
         return hx_D, hx_H, hx_A
 
     def get_rings(self):
@@ -255,7 +255,7 @@ class IndexManager:
         for i, ring in enumerate(rings):
             padded_rings[i, :len(ring)] = ring
             padded_rings[i, -1] = len(ring)
-        return padded_rings
+        return padded_rings.astype(np.int32)
 
     def get_max_vdw_dist(self):
         """
@@ -278,7 +278,7 @@ class IndexManager:
 
         radiis = [radii[pair[0]] + radii[pair[1]] for pair in unique_pairs]
         max_vdw = max(radiis) / 10
-        return max_vdw
+        return np.float32(max_vdw)
 
     def get_vdw_radii(self):
         """
@@ -290,7 +290,7 @@ class IndexManager:
         elements = self.universe.atoms.elements
         pt = rdkit.Chem.GetPeriodicTable()
         radii = np.array([pt.GetRvdw(e) for e in elements])
-        return radii
+        return radii.astype(np.float32)
 
 # %% ==========================================================================
 #

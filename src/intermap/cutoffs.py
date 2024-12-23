@@ -37,10 +37,10 @@ max_ang_PiStacking = 90
 
 dist_cut_EdgeToFace = 0.6
 min_dist_EdgeToFace = 0.38
-min_ang_EdgeToFace = 0
+min_ang_EdgeToFace = 50
 max_ang_EdgeToFace = 90
 
 dist_cut_FaceToFace = 0.45
 min_dist_FaceToFace = 0.38
 min_ang_FaceToFace = 0
-max_ang_FaceToFace = 90
+max_ang_FaceToFace = 40
