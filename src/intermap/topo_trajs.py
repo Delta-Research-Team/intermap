@@ -143,7 +143,7 @@ def get_dha_indices(trajectory, heavies_elements, atoms_to_resids):
     df, bonds = trajectory.topology.to_dataframe()
     all_hydrogens = set(df[df.element == "H"].index)
 
-    a_raw1 = set(np.where(df.element.isin(heavies_elements))[0])
+    a_raw1 = set(np.where(df.element.isin(heavies_elements, ))[0])
 
     # Find D-H indices
     h_raw1 = []

@@ -109,7 +109,7 @@ class IndexManager:
         topo = self.topo
         bonds = self.bonds
         all_hydro = topo[topo.element == "H"].index
-        all_heavies = np.where(topo.element.isin(heavies))[0]
+        all_heavies = np.where(topo.element.isin(heavies, ))[0]
 
         ats1 = bonds[:, 0]
         ats2 = bonds[:, 1]

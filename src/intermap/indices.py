@@ -295,3 +295,11 @@ class IndexManager:
 # %% ==========================================================================
 #
 # =============================================================================
+# topo = '/home/rglez/RoyHub/intermap/data/raw/4x21.pdb'
+# traj = '/home/rglez/RoyHub/intermap/data/raw/4x21.pdb'
+#
+# sel1 = "protein"
+# sel2 = "resname 3WH"
+# interactions = 'all'
+#
+# self = IndexManager(topo, traj, sel1, sel2, interactions)
