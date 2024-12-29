@@ -1,5 +1,6 @@
 # Created by rglez at 12/8/24
 import itertools as it
+import time
 from collections import defaultdict
 
 import MDAnalysis as mda
@@ -118,7 +119,9 @@ class IndexManager:
         universe = mda.Universe(self.topo, self.traj)
 
         # Remove the hydrogen-hydrogen bonds
+        t1 = time.time()
         universe.delete_bonds(get_hh_bonds(universe))
+        print(f"Just deleting bonds: {time.time() - t1:.2f} s")
 
         # Get the unique residues, RDKit molecules and indices
         unique_residues, unique_rdmols, unique_idx = get_uniques(universe)
@@ -295,11 +298,15 @@ class IndexManager:
 # %% ==========================================================================
 #
 # =============================================================================
-# topo = '/home/rglez/RoyHub/intermap/data/raw/4x21.pdb'
-# traj = '/home/rglez/RoyHub/intermap/data/raw/4x21.pdb'
+# import time
 #
-# sel1 = "protein"
-# sel2 = "resname 3WH"
+# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+#
+# sel1 = "nucleic"
+# sel2 = "resname WAT"
 # interactions = 'all'
 #
+# start = time.time()
 # self = IndexManager(topo, traj, sel1, sel2, interactions)
+# print(f"Elapsed time: {time.time() - start:.2f} s")

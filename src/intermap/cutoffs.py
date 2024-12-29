@@ -11,42 +11,42 @@ import numpy as np
 # =============================================================================
 
 # ==== CloseContacts ==========================================================
-dist_cut_CloseContacts = 0.30
-dist_cut_Ionic = 0.45
-dist_cut_Hydrophobic = 0.45
-dist_cut_Metalic = 0.28
+dist_cut_CloseContacts = 3.0
+dist_cut_Ionic = 4.5
+dist_cut_Hydrophobic = 4.5
+dist_cut_Metalic = 2.8
 
 # ==== HBonds =================================================================
-dist_cut_HA = 0.25
-dist_cut_DA = 0.39
+dist_cut_HA = 2.5
+dist_cut_DA = 3.9
 min_ang_DHA = 130
 max_ang_DHA = 180
 
 # ==== XBonds =================================================================
-dist_cut_XA = 0.25
-dist_cut_XD = 0.39
+dist_cut_XA = 2.5
+dist_cut_XD = 3.9
 ang_cut_DXA = 90
 
 # ==== PiCation ===============================================================
-dist_cut_PiCation = 0.45
+dist_cut_PiCation = 4.5
 min_ang_PiCation = 0
 max_ang_PiCation = 30
 
 # ==== PiStacking =============================================================
-dist_cut_PiStacking = 0.6
-min_dist_PiStacking = 0.38
+dist_cut_PiStacking = 6.0
+min_dist_PiStacking = 3.8
 min_ang_PiStacking = 0
 max_ang_PiStacking = 90
 
 # ==== EdgeToFace =============================================================
-dist_cut_EdgeToFace = 0.6
-min_dist_EdgeToFace = 0.38
+dist_cut_EdgeToFace = 6.0
+min_dist_EdgeToFace = 3.8
 min_ang_EdgeToFace = 50
 max_ang_EdgeToFace = 90
 
 # ==== FaceToFace =============================================================
-dist_cut_FaceToFace = 0.45
-min_dist_FaceToFace = 0.38
+dist_cut_FaceToFace = 4.5
+min_dist_FaceToFace = 3.8
 min_ang_FaceToFace = 0
 max_ang_FaceToFace = 40
 

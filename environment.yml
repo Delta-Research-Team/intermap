@@ -21,6 +21,7 @@ dependencies:
   - prolif
   - mdanalysis
   - rdkit
+  - bitarray == 3.0.0
 
   - pip:
      - -e .

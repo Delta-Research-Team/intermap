@@ -8,7 +8,7 @@ from numba import njit, prange
 
 
 @njit(parallel=False)
-def compress(array):
+def get_compress_mask(array):
     """
     Compress the array to remove empty
 
@@ -23,7 +23,7 @@ def compress(array):
     for i in range(n):
         if array[i].any():
             mask[i] = True
-    return array[mask]
+    return mask
 
 
 @njit(parallel=False)

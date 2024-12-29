@@ -1,12 +1,17 @@
 # Created by rglez at 12/10/24
-
 import numpy as np
-from numba import njit
+from numba import njit, prange, set_num_threads
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
 import intermap.commons as cmn
 import intermap.cutoffs as cf
+
+
+# todo: Why loading all atoms instead of selected indices? (in nowat trajs will speed up)
+# todo: pack the output info as much as possible
+# todo: remove concatenation of arrays and use slicing of preallocated arrays instead
+# todo: create alert if estimation is too low
 
 
 @njit(parallel=False)
@@ -34,7 +39,7 @@ def detect_vdw(inter_name, vdw_radii, row1, row2, dists):
 
     row1_vdw = vdw_radii[row1]
     row2_vdw = vdw_radii[row2]
-    vdw_sum = (row1_vdw + row2_vdw) / 10
+    vdw_sum = (row1_vdw + row2_vdw)
     passing_dist = dists <= vdw_sum
     return inter_idx, passing_dist
 
@@ -139,7 +144,7 @@ def detect_2d1a(inter_name, dists, row1, row2, hb_acc, hb_hydros, hb_donors,
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
 
     hbonds = np.zeros(dists.size, dtype=np.bool_)
-    hbonds[passing_ha] = passing_angles
+    hbonds[passing_da] = passing_angles
     return idx_name, hbonds
 
 
@@ -209,9 +214,10 @@ def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
 
 
 @njit(parallel=False)
-def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
-            cations, hydroph, metal_don, metal_acc, vdw_radii, hb_hydros,
-            hb_donors, hb_acc, cutoffs_others, to_compute_others):
+def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
+            hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
+            to_compute_others):
     """
     Compute the interactions not related to aromatic rings
 
@@ -222,13 +228,13 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
         s2_indices_raw (ndarray): Indices of the atoms in the second selection
         anions (ndarray): Indices of the anions
         cations (ndarray): Indices of the cations
-        hydroph (ndarray): Indices of the hydrophobic atoms
-        metal_don (ndarray): Indices of the metal donors
-        metal_acc (ndarray): Indices of the metal acceptors
+        hydrophobes (ndarray): Indices of the hydrophobic atoms
+        metal_donors (ndarray): Indices of the metal donors
+        metal_acceptors (ndarray): Indices of the metal acceptors
         vdw_radii (ndarray): Van der Waals radii of the atoms
-        hb_hydros (ndarray): Indices of the hydrogen bond hydrogens
+        hb_hydrogens (ndarray): Indices of the hydrogen bond hydrogens
         hb_donors (ndarray): Indices of the hydrogen bond donors
-        hb_acc (ndarray): Indices of the hydrogen bond acceptors
+        hb_acceptors (ndarray): Indices of the hydrogen bond acceptors
         cutoffs_others (ndarray): Cutoff distances for the interactions not
         to_compute_others (ndarray): Interactions to compute
 
@@ -240,7 +246,7 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
     # Create & query the trees
     dist_cut = cutoffs_others[:2].max()
     s2_tree = nckd(xyz[s2_indices_raw])
-    ball_1 = s2_tree.query_radius_parallel(xyz[s1_indices_raw], dist_cut, p=np.inf)
+    ball_1 = s2_tree.query_radius_parallel(xyz[s1_indices_raw], dist_cut)
 
     # Get containers
     ijf, dists, interactions = cmn.get_containers(
@@ -266,8 +272,9 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
 
     inter_name = 'Hydrophobic'
     if inter_name in to_detect:
-        inter_idx, hydrophobic = detect_1d(inter_name, dists, row1, hydroph,
-                                           row2, hydroph)
+        inter_idx, hydrophobic = detect_1d(inter_name, dists, row1,
+                                           hydrophobes,
+                                           row2, hydrophobes)
         interactions[:, inter_idx] = hydrophobic
 
     # Salt bridges
@@ -288,24 +295,26 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
         interactions[:, inter_idx] = anionic
 
     # Metallic
-    exist_all = metal_don.size > 0 and metal_acc.size > 0
+    exist_all = metal_donors.size > 0 and metal_acceptors.size > 0
     find_metal_don = ('MetalDonor' in to_detect) and exist_all
     find_metal_acc = ('MetalAcceptor' in to_detect) and exist_all
 
     if find_metal_don in to_detect:
         inter_name = 'MetalDonor'
-        inter_idx, metal_donor = detect_1d(inter_name, dists, row1, metal_don,
-                                           row2, metal_acc)
+        inter_idx, metal_donor = detect_1d(inter_name, dists, row1,
+                                           metal_donors,
+                                           row2, metal_acceptors)
         interactions[:, inter_idx] = metal_donor
 
     if find_metal_acc in to_detect:
         inter_name = 'MetalAcceptor'
-        inter_idx, metal_acc = detect_1d(inter_name, dists, row1, metal_acc,
-                                         row2, metal_don)
-        interactions[:, inter_idx] = metal_acc
+        inter_idx, metal_acceptors = detect_1d(inter_name, dists, row1,
+                                               metal_acceptors,
+                                               row2, metal_donors)
+        interactions[:, inter_idx] = metal_acceptors
 
     # HBonds
-    exists_all = hb_acc.size > 0 and hb_donors.size > 0
+    exists_all = hb_acceptors.size > 0 and hb_donors.size > 0
     find_hb_acc = ('HBAcceptor' in to_detect) and exists_all
     find_hb_donor = ('HBDonor' in to_detect) and exists_all
     if find_hb_acc or find_hb_donor:
@@ -315,14 +324,16 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
         if find_hb_acc:
             inter_name = 'HBAcceptor'
             inter_idx, hb_a = detect_2d1a(inter_name, dists, row1, row2,
-                                          hb_acc, hb_hydros, hb_donors,
-                                          ha_cut, da_cut, min_ang, max_ang)
+                                          hb_acceptors, hb_hydrogens,
+                                          hb_donors, ha_cut, da_cut, min_ang,
+                                          max_ang)
             interactions[:, inter_idx] = hb_a
 
         if find_hb_donor:
             inter_name = 'HBDonor'
             inter_idx, hb_d = detect_2d1a(inter_name, dists, row1, row2,
-                                          hb_acc, hb_hydros, hb_donors, ha_cut,
+                                          hb_acceptors, hb_hydrogens,
+                                          hb_donors, ha_cut,
                                           da_cut, min_ang, max_ang)
             interactions[:, inter_idx] = hb_d
 
@@ -349,7 +360,8 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions,
                                           ha_cut, da_cut, min_ang, max_ang)
             interactions[:, inter_idx] = xb_d
 
-    return ijf, interactions
+    mask = cmn.get_compress_mask(interactions)
+    return ijf[mask], interactions[mask]
 
 
 @njit(parallel=False)
@@ -414,11 +426,11 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
 
     if s2_indices.size == 0 or s1_indices.size == 0:
         ijf = np.zeros((0, 3), dtype=np.int32)
-        inters = np.zeros((0, 1), dtype=np.bool_)
+        inters = np.zeros((0, len(to_compute_aro)), dtype=np.bool_)
         return ijf, inters
 
     s2_tree = nckd(xyz2[s2_indices])
-    ball_1 = s2_tree.query_radius_parallel(xyz2[s1_indices], dist_cut_aro, p=2)
+    ball_1 = s2_tree.query_radius_parallel(xyz2[s1_indices], dist_cut_aro)
     ijf, dists, inters = cmn.get_containers(
         xyz2, k, ext_idx, ball_1, s1_indices, s2_indices, to_compute_aro)
 
@@ -489,23 +501,27 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
                                               mindists,
                                               s1_normals, s2_normals)
                 inters[pairs, idx] = ftf_stacking
-    return ijf, inters
+
+    mask = cmn.get_compress_mask(inters)
+    return ijf[mask], inters[mask]
 
 
 # %% ==========================================================================
 # Debugging Area
 # =============================================================================
-
 import time
 from intermap.indices import IndexManager
+import intermap.topo_trajs as tt
 
 start_time = time.time()
 topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
 traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 sel1 = "nucleic"
 sel2 = "resname WAT"
-inters = 'all'
 
+inters = 'all'
+nprocs = 8
+set_num_threads(nprocs)
 iman = IndexManager(topo, traj, sel1, sel2, inters)
 load_time = time.time() - start_time
 print(f"Until setting indices via SMARTS: {load_time:.2f} s")
@@ -513,19 +529,25 @@ print(f"Until setting indices via SMARTS: {load_time:.2f} s")
 # =============================================================================
 # Load coordinates
 # =============================================================================
-import intermap.topo_trajs as tt
 
-# Trajectory load
-start = 0
-last = 50
+
+u = iman.universe
+num_atoms = u.atoms.n_atoms
+init = 0
+last = 150
 stride = 1
-chunk_size = (last - start) // 1
-chunks = tt.get_traj_chunks(topo, [traj],
-                            start=start, last=last, stride=stride,
-                            chunk_size=chunk_size)
-chunk = next(chunks)
-xyz_all = chunk.xyz
-xyz = chunk.xyz[0]
+chunk_size = 50
+
+# Set the chunks that will be processed
+traj_len = len(u.trajectory)
+last = tt.parse_last_param(last, traj_len)
+traj_frames = np.arange(init, last, stride)
+num_frames = traj_frames.size
+iter_chunks = tt.split_in_chunks(traj_frames, chunk_size)
+chunk = next(iter_chunks)
+xyz_all = np.empty((chunk.size, num_atoms, 3), dtype=float)
+for j, index in enumerate(chunk):
+    xyz_all[j] = u.trajectory[index].positions
 k = 0
 
 chunk_time = time.time() - start_time
@@ -570,65 +592,157 @@ xb_donors = iman.xb_D
 xb_acceptors = iman.xb_A
 rings = iman.rings
 
+xyz = xyz_all[0]
+
+
 # %% ==========================================================================
-ijf_aro, inters_aro = aro(xyz, k, s1_indices_raw, s2_indices_raw, cations,rings, cutoffs_aro, to_compute_aro)
-ijf_others, inters_others = not_aro(xyz, k, s1_indices_raw, s2_indices_raw,anions, cations, hydrophobes, metal_donors,metal_acceptors, vdw_radii, hb_hydrogens,hb_donors, hb_acceptors, cutoffs_others,to_compute_others)
+# ijf_aro, inters_aro = aro(xyz[:1], k, s1_indices_raw, s2_indices_raw, cations,
+#                           rings, cutoffs_aro, to_compute_aro)
+# ijf_others, inters_others = not_aro(xyz[:1], k, s1_indices_raw, s2_indices_raw,
+#                                     anions, cations, hydrophobes, metal_donors,
+#                                     metal_acceptors, vdw_radii, hb_hydrogens,
+#                                     hb_donors, hb_acceptors, cutoffs_others,
+#                                     to_compute_others)
+#
+# print('Aro', inters_aro.sum(axis=0))
+# print('Not-Aro', inters_others.sum(axis=0))
 
-%timeit ijf_aro, inters_aro = aro(xyz, k, s1_indices_raw, s2_indices_raw, cations,rings, cutoffs_aro, to_compute_aro)
-%timeit ijf_others, inters_others = not_aro(xyz, k, s1_indices_raw, s2_indices_raw,anions, cations, hydrophobes, metal_donors,metal_acceptors, vdw_radii, hb_hydrogens,hb_donors, hb_acceptors, cutoffs_others,to_compute_others)
 
-print('Aro', inters_aro.sum(axis=0))
-print('Not-Aro', inters_others.sum(axis=0))
-
-# =============================================================================
+# %% ==========================================================================
 # Parallelize
 # =============================================================================
-# import numpy as np
-# from numba import njit, prange
+
+def get_estimation(xyz_all, n_samples, factor=1.5):
+    """
+    Estimate the number of contacts in the processed chunk
+
+    Args:
+        xyz_all (ndarray): Coordinates of the atoms in the system
+        n_samples (int): Number of samples to use for the estimation
+        factor (float): Factor to multiply the maximum number of contacts
+
+    Returns:
+        estimation (int): Estimated number of contacts in the chunk
+    """
+    # Preallocate the arrays
+    n_frames = xyz_all.shape[0]
+    samples = xyz_all[::n_frames // n_samples]
+    num_detected = np.zeros(n_samples, dtype=np.int32)
+
+    # Use parallel loop to fill
+    N = samples.shape[0]
+    for i in prange(N):
+        xyz = samples[i]
+        ijf_aro, inters_aro = aro(
+            xyz, i, s1_indices_raw, s2_indices_raw, cations, rings,
+            cutoffs_aro, to_compute_aro)
+        ijf_others, inters_others = not_aro(
+            xyz, i, s1_indices_raw, s2_indices_raw, anions, cations,
+            hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
+            to_compute_others)
+        num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
+
+    # Estimate the number of contacts
+    ijf_vert = np.int32(num_detected.max() * factor)
+    inters_hori = inters_others.shape[1] + inters_aro.shape[1]
+    ijf_template = np.empty((n_frames, ijf_vert, 3), dtype=np.int32)
+    inters_template = np.empty((n_frames, ijf_vert, inters_hori),
+                               dtype=np.bool_)
+    ijf_template.fill(0)
+    inters_template.fill(False)
+    return ijf_template, inters_template
+
+
+@njit(parallel=True)
+def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
+                 s1_indices_raw, s2_indices_raw, anions, cations,
+                 hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+                 hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
+                 to_compute_others):
+    num_frames = xyz_all.shape[0]
+    limits = np.zeros(num_frames, dtype=np.int32)
+
+    # Use parallel loop to fill
+    for i in prange(num_frames):
+        xyz = xyz_all[i]
+
+        # Compute the non-aromatic interactions
+        ijf_others, inters_others = not_aro(
+            xyz, i, s1_indices_raw, s2_indices_raw, anions, cations,
+            hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
+            to_compute_others)
+
+        # Compute the aromatic interactions
+        ijf_aro, inters_aro = aro(
+            xyz, i, s1_indices_raw, s2_indices_raw, cations, rings,
+            cutoffs_aro, to_compute_aro)
+
+        # Fill the templates
+        num_others = ijf_others.shape[0]
+        num_aro = ijf_aro.shape[0]
+        limits[i] = num_others + num_aro
+
+        ijf_template[i, :num_others] = ijf_others
+        ijf_template[i, num_others:limits[i]] = ijf_aro
+
+        inters_template[i, :num_others, :len_others] = inters_others
+        inters_template[i, num_others:limits[i], len_others:] = inters_aro
+
+    # Compress the chunks to the final size
+    num_pairs = limits.sum()
+    ijf_final = np.empty((num_pairs, 3), dtype=np.int32)
+    inters_final = np.empty((num_pairs, len_others + len_aro), dtype=np.bool_)
+
+    for i in range(num_frames):
+        start = limits[:i].sum()
+        end = limits[:i + 1].sum()
+
+        ijf_final[start:end] = ijf_template[i, :limits[i]]
+        inters_final[start:end] = inters_template[i, :limits[i]]
+    return ijf_final, inters_final
+
+
+n_samples = 5
+len_others = to_compute_others.shape[0]
+len_aro = to_compute_aro.shape[0]
+ijf_template, inters_template = get_estimation(xyz_all, n_samples)
+
+tt = time.time()
+_, __ = run_parallel(xyz_all[:1][:1], ijf_template, inters_template,
+                     len_others, len_aro, s1_indices_raw, s2_indices_raw,
+                     anions, cations,
+                     hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+                     hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
+                     to_compute_others)
+print('Until compiling the functions:', time.time() - tt)
+
+# ijfs, inters = run_parallel(xyz_all, ijf_template, inters_template, len_others,
+#                             len_aro)
 #
+# inter_dict = InterDict(num_frames)
+# inter_dict.fill(ijfs, inters)
 #
-# @njit(parallel=True)
-# def get_estimation(xyz_all, n_samples, factor=2):
-#     # Preallocate the arrays
-#     orig_len = xyz_all.shape[0]
-#     xyz_samples = xyz_all[::orig_len // n_samples]
-#     real_counts = np.zeros(n_samples, dtype=np.int32)
+# prevalences = inter_dict.get_prevalence()
 #
-#     # Use parallel loop to fill
-#     for i in prange(xyz_samples.shape[0]):
-#         cc = close_contacts(xyz_samples[i], 0, 0,
-#                             s1_indices, s2_indices,
-#                             dist_cut)
-#         real_counts[i] = cc.shape[0]
+# inter_dict.compress()
+# =============================================================================
 #
-#     # Estimate the number of contacts in the processed chunk
-#     estimation = np.int32(real_counts.max() * factor)
-#     return estimation
+# =============================================================================
 #
+# x_ = [1, 4, 8, 16, 32]
+# y_ = [13, 3.7, 2.0, 1.58, 1.37]
+# x_label = 'Number of threads'
+# y_label = 'Time (s)'
+# title = 'Time vs Threads'
+# plt.plot(x_, y_, marker='o', color='gray', linestyle='--', linewidth=1,
+#          markersize=8, markerfacecolor='r', markeredgewidth=1,
+#          markeredgecolor='k')
+# plt.xticks(x_)
 #
-# @njit(parallel=True)
-# def testing(xyz_all, n_samples):
-#     # Estimate the number of contacts in the processed chunk
-#     estimated = get_estimation(xyz_all, n_samples)
-#     # Preallocate the arrays
-#     num_frames = xyz_all.shape[0]
-#     all_cc = np.zeros((num_frames, estimated, 4), dtype=np.int32)
-#     real_counts = np.zeros(num_frames, dtype=np.int32)
-#
-#     # Use parallel loop to fill
-#     for i in prange(xyz_all.shape[0]):
-#         cc = close_contacts(xyz_all[i], 0, 0, s1_indices, s2_indices, dist_cut)
-#         all_cc[i, :cc.shape[0]] = cc
-#         real_counts[i] = cc.shape[0]
-#
-#     # Select the real counts
-#     all_cc_real = np.zeros((real_counts.sum(), 4), dtype=np.int32)
-#     counter = 0
-#     for i in range(num_frames):
-#         n = real_counts[i]
-#         all_cc_real[counter:counter + n] = all_cc[i, :n]
-#         counter += n
-#     return real_counts, all_cc, all_cc_real
-#
-#
-# real_counts, empty, good = testing(xyz_all, 5)
+# plt.xlabel(x_label)
+# plt.ylabel(y_label)
+# plt.title(title)
+# plt.savefig('time_vs_threads2.png', dpi=300, bbox_inches='tight')
+# plt.close()
