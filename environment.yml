@@ -3,28 +3,26 @@ channels:
   - defaults
   - conda-forge
 dependencies:
+  # not necessary for the package. Remove when published.
+  - prolif
+  - matplotlib
+  - ipython
+  - pytest
+  - pytest-cov
+
   - python>=3.6
   - pip
   - numpy
-  - scipy
   - pandas
-  - matplotlib
-  - ipython
-  - mdtraj
-  - numba
-  - netcdf4
   - tqdm
+
   - numba
-  - mdtraj
-  - pytest
-  - pytest-cov
-  - prolif
   - mdanalysis
   - rdkit
   - bitarray == 3.0.0
 
   - pip:
-     - -e .
-     - numpy-indexed
-     - git+https://github.com/rglez/rgpack.git@0.0.3
-     - numba_kdtree
+      - -e .
+      - numba_kdtree
+      - openpyxl
+      - git+https://github.com/rglez/rgpack.git@0.0.3

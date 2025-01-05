@@ -1,21 +1,18 @@
 # Created by rglez at 12/10/24
 import numpy as np
-from numba import njit, prange, set_num_threads
+from numba import njit, prange
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
 import intermap.commons as cmn
-import intermap.cutoffs as cf
 
 
 # todo: Why loading all atoms instead of selected indices? (in nowat trajs will speed up)
-# todo: pack the output info as much as possible
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
-# todo: create alert if estimation is too low
 
 
-@njit(parallel=False)
-def detect_vdw(inter_name, vdw_radii, row1, row2, dists):
+@njit(parallel=False,  cache=True)
+def detect_vdw(inter_name, vdw_radii, row1, row2, dists, to_compute_others):
     """
     Detect the Van der Waals interactions
 
@@ -26,6 +23,7 @@ def detect_vdw(inter_name, vdw_radii, row1, row2, dists):
         row2 (ndarray): Indices of the atoms in the second selection
         dists (ndarray): Distances between the atoms in the first and second
                          selections
+        to_compute_others (ndarray): Interactions to compute
 
     Returns:
         inter_idx (int): Index of the interaction in the to_compute_others array
@@ -44,8 +42,9 @@ def detect_vdw(inter_name, vdw_radii, row1, row2, dists):
     return inter_idx, passing_dist
 
 
-@njit(parallel=False)
-def detect_1d(inter_name, dists, row1, type1, row2, type2):
+@njit(parallel=False,  cache=True)
+def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
+              to_compute_others):
     """
     Detect the 1D interactions (only one distance involved)
 
@@ -80,9 +79,10 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2):
         return inter_idx, passing_dists & are_type
 
 
-@njit(parallel=False)
-def detect_2d1a(inter_name, dists, row1, row2, hb_acc, hb_hydros, hb_donors,
-                ha_cut, da_cut, min_ang, max_ang):
+@njit(parallel=False,  cache=True)
+def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
+                hb_donors,
+                ha_cut, da_cut, min_ang, max_ang, to_compute_others):
     """
     Detect the 2D1A interactions (two distances and one angle involved)
 
@@ -148,8 +148,9 @@ def detect_2d1a(inter_name, dists, row1, row2, hb_acc, hb_hydros, hb_donors,
     return idx_name, hbonds
 
 
-@njit(parallel=False)
-def stackings(inter_name, dists, mindists, s1_normals, s2_normals):
+@njit(parallel=False,  cache=True)
+def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
+              to_compute_aro):
     """
     Helper function to compute the pi-stacking interactions
 
@@ -171,9 +172,9 @@ def stackings(inter_name, dists, mindists, s1_normals, s2_normals):
     return idx, stacking
 
 
-@njit(parallel=False)
+@njit(parallel=False,  cache=True)
 def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
-              to_compute_aro):
+              cutoffs_aro, to_compute_aro):
     """
     Helper function to compute the pi-cation // cation-pi interactions
 
@@ -213,11 +214,11 @@ def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
         return idx, pairs, pairs
 
 
-@njit(parallel=False)
+@njit(parallel=False,  cache=True)
 def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
-            to_compute_others):
+            hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
+            xb_acceptors, cutoffs_others, to_compute_others):
     """
     Compute the interactions not related to aromatic rings
 
@@ -235,6 +236,9 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
         hb_hydrogens (ndarray): Indices of the hydrogen bond hydrogens
         hb_donors (ndarray): Indices of the hydrogen bond donors
         hb_acceptors (ndarray): Indices of the hydrogen bond acceptors
+        xb_acceptors (ndarray): Indices of the halogen bond acceptors
+        xb_donors (ndarray): Indices of the halogen bond donors
+        xb_halogens (ndarray): Indices of the halogen atoms
         cutoffs_others (ndarray): Cutoff distances for the interactions not
         to_compute_others (ndarray): Interactions to compute
 
@@ -246,7 +250,7 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     # Create & query the trees
     dist_cut = cutoffs_others[:2].max()
     s2_tree = nckd(xyz[s2_indices_raw])
-    ball_1 = s2_tree.query_radius_parallel(xyz[s1_indices_raw], dist_cut)
+    ball_1 = s2_tree.query_radius(xyz[s1_indices_raw], dist_cut)
 
     # Get containers
     ijf, dists, interactions = cmn.get_containers(
@@ -261,20 +265,22 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     # Contacts
     inter_name = 'VdWContact'
     if inter_name in to_detect:
-        inter_idx, vdw = detect_vdw(inter_name, vdw_radii, row1, row2, dists)
+        inter_idx, vdw = detect_vdw(inter_name, vdw_radii, row1, row2, dists,
+                                    to_compute_others)
         interactions[:, inter_idx] = vdw
 
     inter_name = 'CloseContacts'
     if inter_name in to_detect:
         inter_idx, close_contacts = detect_1d(inter_name, dists, row1, row1,
-                                              row2, row2)
+                                              row2, row2, cutoffs_others,
+                                              to_compute_others)
         interactions[:, inter_idx] = close_contacts
 
     inter_name = 'Hydrophobic'
     if inter_name in to_detect:
         inter_idx, hydrophobic = detect_1d(inter_name, dists, row1,
-                                           hydrophobes,
-                                           row2, hydrophobes)
+                                           hydrophobes, row2, hydrophobes,
+                                           cutoffs_others, to_compute_others)
         interactions[:, inter_idx] = hydrophobic
 
     # Salt bridges
@@ -285,13 +291,15 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     if find_cationic:
         inter_name = 'Cationic'
         inter_idx, cationic = detect_1d(inter_name, dists, row1, cations, row2,
-                                        anions)
+                                        anions, cutoffs_others,
+                                        to_compute_others)
         interactions[:, inter_idx] = cationic
 
     if find_anionic in to_detect:
         inter_name = 'Anionic'
         inter_idx, anionic = detect_1d(inter_name, dists, row1, anions, row2,
-                                       cations)
+                                       cations, cutoffs_others,
+                                       to_compute_others)
         interactions[:, inter_idx] = anionic
 
     # Metallic
@@ -302,15 +310,16 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     if find_metal_don in to_detect:
         inter_name = 'MetalDonor'
         inter_idx, metal_donor = detect_1d(inter_name, dists, row1,
-                                           metal_donors,
-                                           row2, metal_acceptors)
+                                           metal_donors, row2, metal_acceptors,
+                                           cutoffs_others, to_compute_others)
         interactions[:, inter_idx] = metal_donor
 
     if find_metal_acc in to_detect:
         inter_name = 'MetalAcceptor'
         inter_idx, metal_acceptors = detect_1d(inter_name, dists, row1,
-                                               metal_acceptors,
-                                               row2, metal_donors)
+                                               metal_acceptors, row2,
+                                               metal_donors, cutoffs_others,
+                                               to_compute_others)
         interactions[:, inter_idx] = metal_acceptors
 
     # HBonds
@@ -318,23 +327,24 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     find_hb_acc = ('HBAcceptor' in to_detect) and exists_all
     find_hb_donor = ('HBDonor' in to_detect) and exists_all
     if find_hb_acc or find_hb_donor:
-        idx_both = cmn.indices(to_compute, ['HBAcceptor'])[0]
+        idx_both = cmn.indices(to_compute_others, ['HBAcceptor'])[0]
         da_cut, ha_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
 
         if find_hb_acc:
             inter_name = 'HBAcceptor'
-            inter_idx, hb_a = detect_2d1a(inter_name, dists, row1, row2,
+            inter_idx, hb_a = detect_2d1a(inter_name, dists, xyz, row1, row2,
                                           hb_acceptors, hb_hydrogens,
                                           hb_donors, ha_cut, da_cut, min_ang,
-                                          max_ang)
+                                          max_ang, to_compute_others)
             interactions[:, inter_idx] = hb_a
 
         if find_hb_donor:
             inter_name = 'HBDonor'
-            inter_idx, hb_d = detect_2d1a(inter_name, dists, row1, row2,
+            inter_idx, hb_d = detect_2d1a(inter_name, dists, xyz, row1, row2,
                                           hb_acceptors, hb_hydrogens,
                                           hb_donors, ha_cut,
-                                          da_cut, min_ang, max_ang)
+                                          da_cut, min_ang, max_ang,
+                                          to_compute_others)
             interactions[:, inter_idx] = hb_d
 
     # XBonds
@@ -343,28 +353,30 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     find_xb_donor = ('XBDonor' in to_detect) and exists_all
 
     if find_xb_acc or find_xb_donor:
-        idx_both = cmn.indices(to_compute, ['XBAcceptor'])[0]
+        idx_both = cmn.indices(to_compute_others, ['XBAcceptor'])[0]
         da_cut, ha_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
 
         if find_xb_acc:
             inter_name = 'XBAcceptor'
-            inter_idx, xb_a = detect_2d1a(inter_name, dists, row1, row2,
+            inter_idx, xb_a = detect_2d1a(inter_name, dists, xyz, row1, row2,
                                           xb_acceptors, xb_halogens, xb_donors,
-                                          ha_cut, da_cut, min_ang, max_ang)
+                                          ha_cut, da_cut, min_ang, max_ang,
+                                          to_compute_others)
             interactions[:, inter_idx] = xb_a
 
         if find_xb_donor:
             inter_name = 'XBDonor'
-            inter_idx, xb_d = detect_2d1a(inter_name, dists, row1, row2,
+            inter_idx, xb_d = detect_2d1a(inter_name, dists, xyz, row1, row2,
                                           xb_acceptors, xb_halogens, xb_donors,
-                                          ha_cut, da_cut, min_ang, max_ang)
+                                          ha_cut, da_cut, min_ang, max_ang,
+                                          to_compute_others)
             interactions[:, inter_idx] = xb_d
 
     mask = cmn.get_compress_mask(interactions)
     return ijf[mask], interactions[mask]
 
 
-@njit(parallel=False)
+@njit(parallel=False,  cache=True)
 def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
         to_compute_aro):
     """
@@ -442,14 +454,14 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
     if 'PiCation' in set_aro:
         idx, pairs, pi_cat = pications('PiCation', ijf, dists, xyz2, s1_norm,
                                        s1_rings_idx, s2_cat_idx,
-                                       to_compute_aro)
+                                       cutoffs_aro, to_compute_aro)
         if pairs.any():
             inters[pairs, idx] = pi_cat
 
     if 'CationPi' in set_aro:
         idx, pairs, cat_pi = pications('CationPi', ijf, dists, xyz2, s2_norm,
                                        s2_rings_idx, s1_cat_idx,
-                                       to_compute_aro)
+                                       cutoffs_aro, to_compute_aro)
         if pairs.any():
             inters[pairs, idx] = cat_pi
 
@@ -486,144 +498,35 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
 
             if find_PiStacking:
                 idx, pi_stacking = stackings('PiStacking', ring_dists,
-                                             mindists,
-                                             s1_normals, s2_normals)
+                                             mindists, s1_normals, s2_normals,
+                                             cutoffs_aro, to_compute_aro)
                 inters[pairs, idx] = pi_stacking
 
             if find_EdgeToFace:
                 idx, etf_stacking = stackings('EdgeToFace', ring_dists,
                                               mindists,
-                                              s1_normals, s2_normals)
+                                              s1_normals, s2_normals,
+                                              cutoffs_aro, to_compute_aro)
                 inters[pairs, idx] = etf_stacking
 
             if find_FaceToFace:
                 idx, ftf_stacking = stackings('FaceToFace', ring_dists,
                                               mindists,
-                                              s1_normals, s2_normals)
+                                              s1_normals, s2_normals,
+                                              cutoffs_aro, to_compute_aro)
                 inters[pairs, idx] = ftf_stacking
 
     mask = cmn.get_compress_mask(inters)
     return ijf[mask], inters[mask]
 
 
-# %% ==========================================================================
-# Debugging Area
-# =============================================================================
-import time
-from intermap.indices import IndexManager
-import intermap.topo_trajs as tt
+def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,
+                   rings, cutoffs_aro, to_compute_aro, anions, hydrophobes,
+                   metal_donors, metal_acceptors, vdw_radii, hb_hydrogens,
+                   hb_donors, hb_acceptors, xb_halogens, xb_donors,
+                   xb_acceptors, cutoffs_others, to_compute_others,
+                   factor=1.5):
 
-start_time = time.time()
-topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
-sel1 = "nucleic"
-sel2 = "resname WAT"
-
-inters = 'all'
-nprocs = 8
-set_num_threads(nprocs)
-iman = IndexManager(topo, traj, sel1, sel2, inters)
-load_time = time.time() - start_time
-print(f"Until setting indices via SMARTS: {load_time:.2f} s")
-
-# =============================================================================
-# Load coordinates
-# =============================================================================
-
-
-u = iman.universe
-num_atoms = u.atoms.n_atoms
-init = 0
-last = 150
-stride = 1
-chunk_size = 50
-
-# Set the chunks that will be processed
-traj_len = len(u.trajectory)
-last = tt.parse_last_param(last, traj_len)
-traj_frames = np.arange(init, last, stride)
-num_frames = traj_frames.size
-iter_chunks = tt.split_in_chunks(traj_frames, chunk_size)
-chunk = next(iter_chunks)
-xyz_all = np.empty((chunk.size, num_atoms, 3), dtype=float)
-for j, index in enumerate(chunk):
-    xyz_all[j] = u.trajectory[index].positions
-k = 0
-
-chunk_time = time.time() - start_time
-print(f"Until loading the chunk: {chunk_time:.2f} s")
-
-# %% ==========================================================================
-# Runner (to put there later)
-# =============================================================================
-import re
-
-# Parse the cutoffs & select the interactions to compute
-parsed_cutoffs = cf.parse_cutoffs(args=())
-all_inters, all_cutoffs = cf.get_inters_cutoffs(parsed_cutoffs)
-
-to_compute = 'all'
-if to_compute == 'all':
-    to_compute = all_inters
-else:
-    to_compute = to_compute
-
-bit_aro = [i for i, x in enumerate(to_compute) if re.search(r'Pi|Face', x)]
-bit_others = [i for i in range(all_cutoffs.shape[1]) if i not in bit_aro]
-to_compute_aro = to_compute[bit_aro]
-to_compute_others = to_compute[bit_others]
-cutoffs_aro = all_cutoffs[:, bit_aro]
-cutoffs_others = all_cutoffs[:, bit_others]
-
-# Get the indices from the IndexManager object
-s1_indices_raw = iman.sel1_idx
-s2_indices_raw = iman.sel2_idx
-vdw_radii = iman.radii
-hydrophobes = iman.hydroph
-anions = iman.anions
-cations = iman.cations
-metal_donors = iman.metal_don
-metal_acceptors = iman.metal_acc
-hb_hydrogens = iman.hb_H
-hb_donors = iman.hb_D
-hb_acceptors = iman.hb_A
-xb_halogens = iman.xb_H
-xb_donors = iman.xb_D
-xb_acceptors = iman.xb_A
-rings = iman.rings
-
-xyz = xyz_all[0]
-
-
-# %% ==========================================================================
-# ijf_aro, inters_aro = aro(xyz[:1], k, s1_indices_raw, s2_indices_raw, cations,
-#                           rings, cutoffs_aro, to_compute_aro)
-# ijf_others, inters_others = not_aro(xyz[:1], k, s1_indices_raw, s2_indices_raw,
-#                                     anions, cations, hydrophobes, metal_donors,
-#                                     metal_acceptors, vdw_radii, hb_hydrogens,
-#                                     hb_donors, hb_acceptors, cutoffs_others,
-#                                     to_compute_others)
-#
-# print('Aro', inters_aro.sum(axis=0))
-# print('Not-Aro', inters_others.sum(axis=0))
-
-
-# %% ==========================================================================
-# Parallelize
-# =============================================================================
-
-def get_estimation(xyz_all, n_samples, factor=1.5):
-    """
-    Estimate the number of contacts in the processed chunk
-
-    Args:
-        xyz_all (ndarray): Coordinates of the atoms in the system
-        n_samples (int): Number of samples to use for the estimation
-        factor (float): Factor to multiply the maximum number of contacts
-
-    Returns:
-        estimation (int): Estimated number of contacts in the chunk
-    """
     # Preallocate the arrays
     n_frames = xyz_all.shape[0]
     samples = xyz_all[::n_frames // n_samples]
@@ -631,16 +534,18 @@ def get_estimation(xyz_all, n_samples, factor=1.5):
 
     # Use parallel loop to fill
     N = samples.shape[0]
-    for i in prange(N):
+    for i in range(N):
         xyz = samples[i]
+
         ijf_aro, inters_aro = aro(
             xyz, i, s1_indices_raw, s2_indices_raw, cations, rings,
             cutoffs_aro, to_compute_aro)
+
         ijf_others, inters_others = not_aro(
             xyz, i, s1_indices_raw, s2_indices_raw, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
-            to_compute_others)
+            hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
+            xb_acceptors, cutoffs_others, to_compute_others)
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
     # Estimate the number of contacts
@@ -654,12 +559,13 @@ def get_estimation(xyz_all, n_samples, factor=1.5):
     return ijf_template, inters_template
 
 
-@njit(parallel=True)
+@njit(parallel=True,  cache=True)
 def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                  s1_indices_raw, s2_indices_raw, anions, cations,
                  hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-                 hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
-                 to_compute_others):
+                 hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
+                 xb_acceptors, rings, cutoffs_others, to_compute_others,
+                 cutoffs_aro, to_compute_aro):
     num_frames = xyz_all.shape[0]
     limits = np.zeros(num_frames, dtype=np.int32)
 
@@ -671,8 +577,8 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
         ijf_others, inters_others = not_aro(
             xyz, i, s1_indices_raw, s2_indices_raw, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-            hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
-            to_compute_others)
+            hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
+            xb_acceptors, cutoffs_others, to_compute_others)
 
         # Compute the aromatic interactions
         ijf_aro, inters_aro = aro(
@@ -686,7 +592,6 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
 
         ijf_template[i, :num_others] = ijf_others
         ijf_template[i, num_others:limits[i]] = ijf_aro
-
         inters_template[i, :num_others, :len_others] = inters_others
         inters_template[i, num_others:limits[i], len_others:] = inters_aro
 
@@ -695,54 +600,9 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
     ijf_final = np.empty((num_pairs, 3), dtype=np.int32)
     inters_final = np.empty((num_pairs, len_others + len_aro), dtype=np.bool_)
 
-    for i in range(num_frames):
+    for i in prange(num_frames):
         start = limits[:i].sum()
         end = limits[:i + 1].sum()
-
         ijf_final[start:end] = ijf_template[i, :limits[i]]
         inters_final[start:end] = inters_template[i, :limits[i]]
     return ijf_final, inters_final
-
-
-n_samples = 5
-len_others = to_compute_others.shape[0]
-len_aro = to_compute_aro.shape[0]
-ijf_template, inters_template = get_estimation(xyz_all, n_samples)
-
-tt = time.time()
-_, __ = run_parallel(xyz_all[:1][:1], ijf_template, inters_template,
-                     len_others, len_aro, s1_indices_raw, s2_indices_raw,
-                     anions, cations,
-                     hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-                     hb_hydrogens, hb_donors, hb_acceptors, cutoffs_others,
-                     to_compute_others)
-print('Until compiling the functions:', time.time() - tt)
-
-# ijfs, inters = run_parallel(xyz_all, ijf_template, inters_template, len_others,
-#                             len_aro)
-#
-# inter_dict = InterDict(num_frames)
-# inter_dict.fill(ijfs, inters)
-#
-# prevalences = inter_dict.get_prevalence()
-#
-# inter_dict.compress()
-# =============================================================================
-#
-# =============================================================================
-#
-# x_ = [1, 4, 8, 16, 32]
-# y_ = [13, 3.7, 2.0, 1.58, 1.37]
-# x_label = 'Number of threads'
-# y_label = 'Time (s)'
-# title = 'Time vs Threads'
-# plt.plot(x_, y_, marker='o', color='gray', linestyle='--', linewidth=1,
-#          markersize=8, markerfacecolor='r', markeredgewidth=1,
-#          markeredgecolor='k')
-# plt.xticks(x_)
-#
-# plt.xlabel(x_label)
-# plt.ylabel(y_label)
-# plt.title(title)
-# plt.savefig('time_vs_threads2.png', dpi=300, bbox_inches='tight')
-# plt.close()

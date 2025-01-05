@@ -64,8 +64,6 @@ def get_cutoff(cutoff_name, args=()):
     Returns:
         float: Value of the cutoff.
     """
-    if args is None:
-        args = []
     if cutoff_name not in cf.__dict__:
         raise ValueError(f"{cutoff_name} is not a valid cutoff name.\n"
                          f"The supported list is:\n"

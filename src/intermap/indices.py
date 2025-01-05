@@ -1,15 +1,32 @@
 # Created by rglez at 12/8/24
 import itertools as it
+import logging
 import time
 from collections import defaultdict
+from pprint import pformat
 
 import MDAnalysis as mda
 import numpy as np
 import rdkit
 from rdkit import Chem
-from rdkit.Chem import rdchem
 
 import intermap.smarts as smarts
+
+logger = logging.getLogger('InterMapLogger')
+
+
+def any_hh_bonds(universe):
+    """
+    Get the hydrogen-hydrogen bonds in the Universe
+
+    Returns:
+        bonds (list): List of hydrogen-hydrogen bonds
+    """
+    bonds = universe.bonds
+    for bond in bonds:
+        atom1, atom2 = bond
+        if (atom1.element == 'H') and (atom2.element == 'H'):
+            return True
 
 
 def get_hh_bonds(universe):
@@ -54,6 +71,8 @@ def get_uniques(universe):
     unique_mda_res = {}
     unique_rdmols = {}
     unique_idx = {}
+
+    stamp = time.time()
     for i, indices in enumerate(unique_indices, 1):
         # Get the label of representative residues
         representative = indices[0]
@@ -65,12 +84,16 @@ def get_uniques(universe):
 
         # Convert the residue to an RDKit molecule
         try:
+            unique_rdmols[label] = res.atoms.convert_to("RDKIT", force=False)
+        except AttributeError:
             unique_rdmols[label] = res.atoms.convert_to("RDKIT", force=True)
-        except rdchem.AtomValenceException:
-            raise rdchem.AtomValenceException()
+            logger.warning(f" No H atoms found in {label}."
+                           f" Convertion to RDKit enforced.")
 
         # Get the indices of the unique residues
         unique_idx[label] = indices
+    rdkit = time.time() - stamp
+    logger.info(f"Time to convert residues to Rdkit format: {rdkit:.2f} s")
     return unique_mda_res, unique_rdmols, unique_idx
 
 
@@ -87,26 +110,47 @@ class IndexManager:
         self.sel2 = sel2
         self.interactions = interactions
         self.smarts_patterns = smarts.ProlifSmarts().interactions
+        logger.debug(f"Using the following SMARTS patterns:\n"
+                     f" {pformat(self.smarts_patterns)}")
 
         # Initialize the trajectory attributes
         self.unique_residues = None
         self.unique_rdmols = None
+        stamp = time.time()
         self.universe, self.renamed_universe = self.load_traj()
-        self.radii = self.get_vdw_radii()
+        load_time = time.time() - stamp
+        self.n_atoms = self.universe.atoms.n_atoms
+        self.n_frames = len(self.universe.trajectory)
+        logger.info(f'System loaded in {load_time:.2f} s.\n'
+                    f'Total number of atoms: {self.n_atoms}\n'
+                    f'Total number of frames: {self.n_frames}')
 
         # Get the indices of the selections
+        self.radii = self.get_vdw_radii()
         self.sel1_idx, self.sel2_idx = self.get_selections_indices()
-
         self.hydroph = self.get_singles('hydroph')
         self.cations = self.get_singles('cations')
         self.anions = self.get_singles('anions')
         self.metal_acc = self.get_singles('metal_acc')
         self.metal_don = self.get_singles('metal_don')
-
         self.hb_D, self.hb_H, self.hb_A = self.get_doubles('hb_don', 'hb_acc')
         self.xb_D, self.xb_H, self.xb_A = self.get_doubles('xb_don', 'xb_acc')
-
         self.rings = self.get_rings()
+        logger.debug(f"Detected atom types:\n"
+                     f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
+                     f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
+                     f"Hydrophobic: {len(self.hydroph)}\n"
+                     f"Cations: {len(self.cations)}\n"
+                     f"Anions: {len(self.anions)}\n"
+                     f"Metal acceptors: {len(self.metal_acc)}\n"
+                     f"Metal donors: {len(self.metal_don)}\n"
+                     f"Hydrogen bond donors: {len(self.hb_D)}\n"
+                     f"Hydrogen bond hydrogens: {len(self.hb_H)}\n"
+                     f"Hydrogen bond acceptors: {len(self.hb_A)}\n"
+                     f"Halogen bond donors: {len(self.xb_D)}\n"
+                     f"Halogens: {len(self.xb_H)}\n"
+                     f"Halogen bond acceptors: {len(self.xb_A)}\n"
+                     f"Aromatic rings: {len(self.rings)}")
 
     def load_traj(self):
         """
@@ -119,9 +163,13 @@ class IndexManager:
         universe = mda.Universe(self.topo, self.traj)
 
         # Remove the hydrogen-hydrogen bonds
-        t1 = time.time()
+        stamp = time.time()
+        are_hh = any_hh_bonds(universe)
         universe.delete_bonds(get_hh_bonds(universe))
-        print(f"Just deleting bonds: {time.time() - t1:.2f} s")
+        del_time = time.time() - stamp
+        if are_hh:
+            logger.warning(f"This universe contains H-H bonds.\n"
+                           f"Time to remove H-H bonds: {del_time:.2f} s")
 
         # Get the unique residues, RDKit molecules and indices
         unique_residues, unique_rdmols, unique_idx = get_uniques(universe)

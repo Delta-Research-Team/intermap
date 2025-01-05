@@ -7,10 +7,19 @@ class InterDict:
     A dictionary to store InterMap interactions
     """
 
-    def __init__(self, num_frames):
-        self.n_frames = num_frames
-        self.template = bu.zeros(num_frames)
+    def __init__(self, format_, min_prevalence, frames_id, atom_names,
+                 inter_names):
+
+        # Parse arguments
+        self.format = format_
+        self.min_prevalence = min_prevalence
+        self.atom_names = atom_names
+        self.inter_names = inter_names
+        self.n_frames = frames_id.size
+
+        # Initialize containers
         self.dict = {}
+        self.template = bu.zeros(self.n_frames)
 
     def fill(self, ijfs, inters):
         """
@@ -30,20 +39,30 @@ class InterDict:
 
                 self.dict[(i, j, inter)]['time'][f] = True
 
-    def get_prevalence(self):
+    def pack(self):
         """
         Get the prevalence of the interactions
         """
-        prevalence = {}
-        for key in self.dict:
-            count = self.dict[key]['time'].count()
-            percentage = round(count / self.n_frames * 100, 2)
-            self.dict[key]['prevalence'] = percentage
-        return prevalence
 
-    def compress(self):
-        """
-        Compress the bit dictionary
-        """
-        for key in self.dict:
-            self.dict[key]['time'] = bu.sc_encode(self.dict[key]['time'])
+        packed_dict = {}
+        keys = list(self.dict.keys())
+        for key in keys:
+            s1_id, s2_id, inter_id = key
+            s1_name = self.atom_names[s1_id]
+            s2_name = self.atom_names[s2_id]
+            inter_name = self.inter_names[inter_id]
+            time = self.dict[key]['time']
+            prevalence = round(time.count() / self.n_frames * 100, 2)
+            del self.dict[key]
+
+            if prevalence < self.min_prevalence:
+                continue
+
+            if self.format == 'extended':
+                packed = bu.sc_encode(time)
+                packed_dict[(s1_name, s2_name, inter_name)] = {
+                    'time': packed, 'prevalence': prevalence}
+            else:
+                packed_dict[(s1_name, s2_name, inter_name)] = prevalence
+
+        self.dict = packed_dict

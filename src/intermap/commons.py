@@ -2,12 +2,79 @@
 """
 Common functions used in the different modules of the package
 """
+import logging
+import os
+import re
 
 import numpy as np
 from numba import njit, prange
 
+logger = logging.getLogger('InterMapLogger')
 
-@njit(parallel=False)
+
+def start_logger(log_path):
+    """
+    Start the logger for the InterMap run.
+
+    Args:
+        log_path (str): Path to the log file.
+
+    Returns:
+        logger (logging.Logger): Logger object.
+    """
+
+    logger = logging.getLogger('InterMapLogger')
+    logger.setLevel("DEBUG")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel("DEBUG")
+    formatter = logging.Formatter(
+        ">>>>>>>> {asctime} - {levelname} - {message}\n",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel("DEBUG")
+    logger.addHandler(file_handler)
+    return logger
+
+
+def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
+    """
+    Get the cutoffs and interactions to compute
+
+    Args:
+        to_compute (ndarray): All interactions to compute
+        all_inters (ndarray): All interactions
+        all_cutoffs (ndarray): All cutoffs
+
+    Returns:
+        to_compute_aro (ndarray): Aromatic interactions to compute
+        to_compute_others (ndarray): Non-aromatic interactions to compute
+        cutoffs_aro (ndarray): Cutoffs for the aromatic interactions
+        cutoffs_others (ndarray): Cutoffs for the non-aromatic interactions
+    """
+
+    # Parse aromatics
+    bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
+               indices(all_inters, [x])]
+    to_compute_aro = np.asarray([all_inters[x] for x in bit_aro])
+
+    # Parse non-aromatics
+    bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
+                  in indices(all_inters, [x])]
+    to_compute_others = np.asarray([all_inters[x] for x in bit_others])
+
+    # Get the cutoffs
+    cutoffs_aro = all_cutoffs[:, bit_aro]
+    cutoffs_others = all_cutoffs[:, bit_others]
+
+    return to_compute_aro, to_compute_others, cutoffs_aro, cutoffs_others
+
+
+@njit(parallel=False, cache=True)
 def get_compress_mask(array):
     """
     Compress the array to remove empty
@@ -26,7 +93,7 @@ def get_compress_mask(array):
     return mask
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def indices(full, subset):
     """
     Find the indices of the subset elements in the full array.
@@ -47,7 +114,7 @@ def indices(full, subset):
     return indices
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def isin(full, subset):
     """
     Check if the elements of the subset are in the full array.
@@ -69,7 +136,7 @@ def isin(full, subset):
     return result
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_dist(d, a):
     """
     Computes the Euclidean distance between two atoms in a molecule
@@ -82,7 +149,7 @@ def calc_dist(d, a):
         float: the Euclidean distance between the two atoms
     """
     n = d.shape[0]
-    distances = np.empty(n)
+    distances = np.empty(n, dtype=np.float32)
 
     for i in prange(n):
         dx = d[i][0] - a[i][0]
@@ -93,7 +160,7 @@ def calc_dist(d, a):
     return distances
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_min_dist(coords1, coords2):
     """
     Get the minimumm distance between two sets of coordinates
@@ -122,7 +189,7 @@ def calc_min_dist(coords1, coords2):
     return np.sqrt(min_dist_squared)
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_angles_2v(vectors1, vectors2):
     """
     Computes the angles between two arrays of 3D vectors using arctan2.
@@ -169,7 +236,7 @@ def calc_angles_2v(vectors1, vectors2):
     return angles_degrees
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_angle(d, h, a):
     """
     Computes the angles between sets of three atoms.
@@ -202,7 +269,7 @@ def calc_angle(d, h, a):
     return angle_deg
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_centroids(rings, xyz):
     """
     Calculate the centroid of each ring
@@ -221,7 +288,7 @@ def calc_centroids(rings, xyz):
     return centroids.astype(np.float32)
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def calc_normal_vector(p1, p2, p3):
     """
     Calculate the normal vector of a plane defined by three points
@@ -246,7 +313,7 @@ def calc_normal_vector(p1, p2, p3):
     return (normal / norm).astype(np.float32)
 
 
-@njit(parallel=False)
+@njit(parallel=False, cache=True)
 def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
                    to_compute):
     """
@@ -294,3 +361,52 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     n_types = to_compute.size
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
     return ijf, dists, interactions
+
+
+def check_path(path, check_exist=True):
+    """
+    Check if a path exists and return it if it does
+
+    Args:
+        path: path to check
+        check_exist: check if the path exists or not
+
+    Returns:
+        path: path to the file or directory
+    """
+    path_exists = os.path.exists(path)
+    if check_exist and path_exists:
+        return path
+    elif (not check_exist) and (not path_exists):
+        return path
+    elif (not check_exist) and path_exists:
+        return path  # todo: check this behaviour
+    elif check_exist and (not path_exists):
+        raise ValueError(f'\nNo such file or directory: {path}')
+    else:
+        pass
+        raise ValueError(
+            f'\nPath already exists and will not be overwritten: {path}')
+
+
+def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
+    """
+    Check if a value is of a certain type and within a range
+
+    Args:
+        arg_name: name of the argument to check
+        value: value to check
+        dtype: type of the value
+        minim: minimum value
+        maxim: maximum value
+
+    Returns:
+        value: value of the correct type and within the range
+    """
+    if not isinstance(value, dtype):
+        raise TypeError(f'Param "{arg_name}" must be of type {dtype}')
+
+    if not minim <= value <= maxim:
+        raise ValueError(f'Param "{value}" out of [{minim}, {maxim}]')
+
+    return dtype(value)
