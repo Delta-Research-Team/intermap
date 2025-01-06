@@ -346,15 +346,10 @@ class IndexManager:
 # %% ==========================================================================
 #
 # =============================================================================
-# import time
-#
 # topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
 # traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 #
 # sel1 = "nucleic"
-# sel2 = "resname WAT"
+# sel2 = "protein"
 # interactions = 'all'
-#
-# start = time.time()
 # self = IndexManager(topo, traj, sel1, sel2, interactions)
-# print(f"Elapsed time: {time.time() - start:.2f} s")

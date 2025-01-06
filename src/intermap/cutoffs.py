@@ -69,7 +69,7 @@ def get_cutoff(cutoff_name, args=()):
                          f"The supported list is:\n"
                          f"{[x for x in dir(cf) if not x.startswith("__")]}")
     elif cutoff_name in args:
-        return getattr(args, cutoff_name)
+        return args[cutoff_name]
     else:
         # get the value from the cf module
         return getattr(cf, cutoff_name)

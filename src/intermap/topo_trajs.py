@@ -249,6 +249,5 @@ def get_coordinates(u, chunk, num_atoms):
 # =============================================================================
 #
 # =============================================================================
-# todo: comment this out once published
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
 data_dir = mount_data_dir(proj_dir, "INTERMAP_DATA")

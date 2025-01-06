@@ -2,17 +2,15 @@
 import configparser
 import os
 import sys
-from collections import Counter
 from os.path import abspath, dirname, isabs, join, normpath
 
 import intermap.commons as cmn
+import intermap.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
 
 #: Allowed section templates in the config file
-allowed_templates = {'standard':
-                         {'generals', 'topo-traj', 'interactions', 'cutoffs'}}
 
 #:  Allowed keys in the config file (dtypes & expected values)
 allowed_parameters = {
@@ -20,7 +18,8 @@ allowed_parameters = {
     'generals': {
         'output_dir': {'dtype': 'path', 'check_exist': False},
         'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
-        'job_name': {'dtype': 'path', 'check_exist': False}},
+        'job_name': {'dtype': 'path', 'check_exist': False},
+    },
     # ____ topo-traj
     'topo-traj': {
         'topology': {'dtype': 'path', 'check_exist': True},
@@ -31,8 +30,9 @@ allowed_parameters = {
         'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
     # ____ interactions
     'interactions': {
-        'selection_1': {'dtype': str},
-        'selection_2': {'dtype': str},
+        'selection_1': {'dtype': str, 'values': None},
+        'selection_2': {'dtype': str, 'values': None},
+        'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
         'interactions': {'dtype': str,
                          'values': {'all', 'CloseContacts', 'VdWContact',
                                     'Hydrophobic', 'Anionic', 'Cationic',
@@ -40,7 +40,9 @@ allowed_parameters = {
                                     'HBAcceptor',
                                     'HBDonor', 'XBAcceptor', 'XBDonor',
                                     'PiStacking', 'FaceToFace', 'EdgeToFace',
-                                    'PiCation', 'CationPi'}}},
+                                    'PiCation', 'CationPi'}},
+        'format': {'dtype': str, 'values': {'simple', 'extended'}}},
+
     # ____ cutoffs
     'cutoffs': None
 }
@@ -104,25 +106,21 @@ class Config:
     Base class for config file parsing
     """
 
-    def __init__(self, config_path, legal_params, legal_templates):
+    def __init__(self, config_path, legal_params):
 
         # Parse class args
         self.config_path = cmn.check_path(config_path)
         self.legal_params = legal_params
-        self.legal_templates = legal_templates
 
         # Parsing from class args
         self.config_dir = abspath(dirname(self.config_path))
         self.keyless_sections = self.detect_keyless_sections()
         self.config_obj = self.read_config_file()
-        self.template = self.detect_template()
 
         # Run checks
         self.check_missing_keys()
         self.config_args = self.check_params()
         self.parse_and_check_constraints()
-        self.config_args['template'] = self.template
-        self.check_hydrogens_presence()
 
     def detect_keyless_sections(self):
         """
@@ -148,49 +146,6 @@ class Config:
         config_obj.read(self.config_path)
         return config_obj
 
-    def detect_template(self):
-        """
-        Detect the template of the configuration file
-
-        Raises:
-            ValueError: if the workflow or sections are not valid
-
-        Returns:
-            workflow: the workflow specified in the configuration
-        """
-        # Check if the workflow is valid
-        try:
-            workflow = self.config_obj['generals']['workflow']
-        except KeyError:
-            raise KeyError(
-                'The configuration file must have a [generals] section with'
-                ' a "workflow" key specifying the workflow to run.')
-
-        legal_workflows = self.legal_templates.keys()
-        if workflow not in legal_workflows:
-            raise ValueError(
-                f'Workflow "{workflow}" is not a valid one. '
-                f'Currently allowed workflows are: {legal_workflows}')
-
-        # Check if the sections are valid
-        valid_sections = self.legal_templates[workflow]
-        current_sections = set(self.config_obj.sections())
-
-        # Check if the sections are valid for the workflow specified
-        diff1 = set.difference(valid_sections, current_sections)
-        if diff1:
-            raise ValueError(
-                f'The configuration file is not valid for the workflow'
-                f' "{workflow}". The following sections are missing: {diff1}')
-
-        diff2 = set.difference(current_sections, valid_sections)
-        if diff2:
-            raise ValueError(
-                f'The configuration file is not valid for the workflow'
-                f' "{workflow}". The following sections are unnecesary: {diff2}')
-
-        return workflow
-
     def check_missing_keys(self):
         """
         Check for missing keys in the configuration file
@@ -198,8 +153,9 @@ class Config:
         Raises:
             KeyError: if a key is missing in the configuration file
         """
-        current_template = self.legal_templates[self.template].copy()
         current_params = self.legal_params
+        current_template = list(current_params.keys())
+
         [current_template.remove(x) for x in self.keyless_sections if
          x in current_template]
 
@@ -229,7 +185,13 @@ class Config:
             items = self.config_obj[section].items()
             for key, value in items:
 
-                param_info = self.legal_params[section][key]
+
+                try:
+                    param_info = self.legal_params[section][key]
+                except KeyError:
+                    raise KeyError(
+                        f'Key "{key}" is not avilable in the section "{section}".')
+
                 dtype = param_info['dtype']
                 if dtype in {float, int}:
                     param_obj = NumericParam(key, dtype(value), **param_info)
@@ -255,31 +217,19 @@ class Config:
         raise NotImplementedError
 
 
-class STDConfig(Config):
+class InterMapConfig(Config):
     """
     Specific parser for STDock's config files. It inherits from a more general
     config parser and then perform STDock-related checkings.
     """
 
     def parse_and_check_constraints(self):
-        config_sections = self.config_obj.sections()
-
-        # 1. todo: Check [docking] section
-
-        # 2. Check [std-spectra] sectioan
-        if 'std-spectra' in config_sections:
-            self.config_args['std-spectra'] = self.parse_spectra()
-
-        # 3. Check [std-regions] section
-        if 'std-regions' in config_sections:
-            self.config_args['std-regions'] = self.parse_regions()
-
-        # 4. Check [std-epitopes] section
-        if 'std-epitope' in config_sections:
-            self.config_args['std-epitopes'] = self.parse_epitopes()
-
-        # 1. Build dir hierarchy
+        # 1. Build the directory hierarchy
         self.build_dir_hierarchy()
+
+        # 2. Parse the cutoffs
+        self.parse_cutoffs()
+
 
     def build_dir_hierarchy(self):
         """
@@ -289,179 +239,39 @@ class STDConfig(Config):
         outdir = self.config_args['output_dir']
 
         try:
-            os.makedirs(outdir)
+            os.makedirs(outdir, exist_ok=True)
         except FileExistsError:
             raise FileExistsError(
                 f'The output directory {outdir} already exists. Please, '
-                f'choose another one, or delete the existing one.')
-
-        for dir_name in ['STD', 'DOCKING']:
-            self.config_args[dir_name] = join(outdir, dir_name)
-            os.makedirs(self.config_args[dir_name])
+                f'choose another one, or delete the existing.')
 
         # Write the configuration file for reproducibility
-        stdock_config = join(self.config_args['output_dir'], 'stdock-job.cfg')
+        stdock_config = join(self.config_args['output_dir'], 'InterMap-job.cfg')
         with open(stdock_config, 'wt') as ini:
             self.config_obj.write(ini)
 
-    def parse_spectra(self):
+    def parse_cutoffs(self):
         """
-        Parse the [std-spectra] section
-
-        Returns:
-            spectra_dict: a nested dict with ligand concentrations and
-                          saturation times respectively
+        Parse the cutoffs
         """
-        # Extract keys and values
-        config = self.config_obj
-        keys = list(config['std-spectra'].keys())
-        spectra = [x.strip() for x in list(config['std-spectra'].values())]
+        prefixes = ('min', 'max', 'dist', 'ang')
+        internal_names = [x for x in dir(cf) if x.startswith(prefixes)]
 
-        # Perform path validity checks for spectra files
-        spectra_paths = [cmn.check_path(x) for x in spectra]
-
-        # Get types, times & concentrations in the [std-spectra] section
-        types, times, concs = [], [], []
-        for key in keys:
-            splitted = key.split('_')
-            if len(splitted) != 3:
+        cutoffs = self.config_obj['cutoffs']
+        config_cutoffs = dict()
+        for key, value in cutoffs.items():
+            if key not in cf.__dict__:
                 raise ValueError(
-                    'Keys of the [std-spectra] section of the config file must'
-                    ' be labeled as [on, off or diff]_[ligand_concentration]_[saturation_time].'
-                    ' For example: on_0.1_0.5, off_0.1_0.5, diff_0.1_0.5')
+                    f"{key} is not a valid cutoff name.\n"
+                    f"The supported list is:\n"
+                    f"{internal_names}")
+            config_cutoffs.update({key: float(value)})
 
-            types.append(splitted[0])
-            times.append(float(splitted[1]))
-            concs.append(float(splitted[2]))
-
-        # Check types of spectra are: on, off or diff
-        types_counts = Counter(types)
-        valid_types = ['on', 'off', 'diff']
-        types_are_valid = all([x in valid_types for x in types_counts.keys()])
-        if not types_are_valid:
-            raise ValueError(
-                f'Invalid spectrum types in the [std-spectra] of the '
-                f'config file. Valid types are: {valid_types}')
-
-        # Check only two types are present
-        if len(types_counts) != 2:
-            raise ValueError(
-                'There must be only two types of spectrum specified in the '
-                '[std-spectra] section of the config file: (on and off) OR'
-                ' (diff and off)')
-
-        # Check types number consistency
-        if len(set(types_counts.values())) != 1:
-            raise ValueError(
-                'There must be the same number of (on and off) OR (diff and off)'
-                ' spectra specified in the [std-spectra] section of the config'
-                ' file')
-
-        # Check types consistency
-        conc_times = Counter(list(zip(concs, times))).values()
-        if set(conc_times) != {2}:
-            raise ValueError(
-                'There must be two spectrum per each'
-                ' (concentration/saturation_time) level')
-
-        # Check times consistency
-        if len(set(times)) < 2:
-            raise ValueError(
-                'There must be at least two different saturation times for each '
-                'ligand concentration specified')
-
-        # Check concs consistency
-        if len(set(concs)) < 1:
-            raise ValueError(
-                'There must be at least one ligand concentration specified')
-
-        if len(set(Counter(concs).values())) != 1:
-            raise ValueError(
-                'There must be the same number of spectra for each ligand '
-                'concentration specified in the [std-spectra] section of the '
-                'config file')
-
-        # Get all the spectra organized as a dict
-        spectra_dict = cmn.recursive_defaultdict()
-        for i, key in enumerate(keys):
-            splitted = key.split('_')
-            type_ = splitted[0]
-            lig_conc, sat_time = map(float, splitted[2:0:-1])
-            spectra_dict[lig_conc][sat_time][type_] = spectra_paths[i]
-        return spectra_dict
-
-    def parse_regions(self):
-        """
-        Parse the [std-regions] section
-
-        Returns:
-            regions_dict: a dict with regions limits to integrate
-        """
-
-        # Extract keys and values
-        config = self.config_obj
-        keys_raw = list(config['std-regions'].keys())
-        keys = [cmn.check_epitope_label(x) for x in keys_raw]
-        values_raw = list(config['std-regions'].values())
-
-        # Get all the integral regions organized as a dict
-        regions_dict = {}
-        for i, key in enumerate(keys):
-            upper_raw, lower_raw = values_raw[i].split(',')
-            if (upper := float(upper_raw)) > (lower := float(lower_raw)):
-                regions_dict.update(
-                    {i: {'label': key, 'upper': upper, 'lower': lower}})
-            else:
-                raise ValueError(
-                    f'Upper limit must be greater than the lower limit in the'
-                    f' {key} region.')
-        return regions_dict
-
-    def parse_epitopes(self):
-        """
-        Parse the [std-epitope] section
-
-        Returns:
-            epitope: a dict with the epitope values
-        """
-        config = self.config_obj
-        keys_raw = list(config['std-epitope'].keys())
-        keys = [cmn.check_epitope_label(x) for x in keys_raw]
-        values_raw = [float(x) for x in config['std-epitope'].values()]
-        epitope = dict(zip(keys, values_raw))
-        return epitope
+        parsed_cutoffs = cf.parse_cutoffs(config_cutoffs)
+        self.config_args.update({'cutoffs': parsed_cutoffs})
 
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# configs = {
-#     # 'map-from-spectra':
-#     #     '/home/gonzalezroy/RoyHub/stdock/tests/paper/trolls/config.cfg',
-#     # 'map-from-spectra-then-dock-small':
-#     #     '/home/gonzalezroy/RoyHub/stdock/tests/paper/imaging-docking/config_kd_docking.cfg',
-#     'map-from-spectra-then-dock-small':
-#         '/home/gonzalezroy/RoyHub/stdock/tests/paper/imaging-docking/config_kd_docking.cfg',
-# }
-#
-#
-# def check_workflow(workflow, configs):
-#     """
-#     Check a specific workflow
-#
-#     Args:
-#         workflow: stdock workflow
-#         configs: dict with the config files
-#
-#     Returns:
-#
-#     """
-#     params = allowed_parameters
-#     templates = allowed_templates
-#     config_path = configs[workflow]
-#     self = STDConfig(config_path, params, templates)
-#     args = self.config_args
-#     return args
-#
-#
-# workflow = 'map-from-spectra-then-dock-small'
-# args = check_workflow(workflow, configs)
+# config_path = '/home/rglez/RoyHub/intermap/example/imap.cfg'
+# self = InterMapConfig(config_path, allowed_parameters)
