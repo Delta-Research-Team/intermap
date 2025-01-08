@@ -4,6 +4,8 @@ import os
 import sys
 from os.path import abspath, dirname, isabs, join, normpath
 
+import numpy as np
+
 import intermap.commons as cmn
 import intermap.cutoffs as cf
 
@@ -34,13 +36,7 @@ allowed_parameters = {
         'selection_2': {'dtype': str, 'values': None},
         'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
         'interactions': {'dtype': str,
-                         'values': {'all', 'CloseContacts', 'VdWContact',
-                                    'Hydrophobic', 'Anionic', 'Cationic',
-                                    'MetalDonor', 'MetalAcceptor',
-                                    'HBAcceptor',
-                                    'HBDonor', 'XBAcceptor', 'XBDonor',
-                                    'PiStacking', 'FaceToFace', 'EdgeToFace',
-                                    'PiCation', 'CationPi'}},
+                         'values': None},
         'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 
     # ____ cutoffs
@@ -185,7 +181,6 @@ class Config:
             items = self.config_obj[section].items()
             for key, value in items:
 
-
                 try:
                     param_info = self.legal_params[section][key]
                 except KeyError:
@@ -230,6 +225,8 @@ class InterMapConfig(Config):
         # 2. Parse the cutoffs
         self.parse_cutoffs()
 
+        # 3. Parse the interactions
+        self.parse_interactions()
 
     def build_dir_hierarchy(self):
         """
@@ -246,7 +243,8 @@ class InterMapConfig(Config):
                 f'choose another one, or delete the existing.')
 
         # Write the configuration file for reproducibility
-        stdock_config = join(self.config_args['output_dir'], 'InterMap-job.cfg')
+        stdock_config = join(self.config_args['output_dir'],
+                             'InterMap-job.cfg')
         with open(stdock_config, 'wt') as ini:
             self.config_obj.write(ini)
 
@@ -270,8 +268,23 @@ class InterMapConfig(Config):
         parsed_cutoffs = cf.parse_cutoffs(config_cutoffs)
         self.config_args.update({'cutoffs': parsed_cutoffs})
 
+    def parse_interactions(self):
+        raw_inters = self.config_obj['interactions']['interactions']
+        if raw_inters != 'all':
+            parsed_inters = [x.strip() for x in raw_inters.split(',')]
+            parsed_inters = np.asarray(parsed_inters)
+            implemented = set(self.config_args['cutoffs'].keys())
+            for inter in parsed_inters:
+                if inter not in implemented:
+                    raise ValueError(
+                        f"Invalid interaction specified: {inter}. The list of"
+                        f" currently implemented interactions is:\n {implemented}\n")
+
+            self.config_args.update({'interactions': parsed_inters})
+
+
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/rglez/RoyHub/intermap/example/imap.cfg'
+# config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
 # self = InterMapConfig(config_path, allowed_parameters)

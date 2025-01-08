@@ -21,9 +21,9 @@ from intermap.indices import IndexManager
 # todo: remove prolif dependency by copying the SMARTS patterns
 # todo: check docstrings
 # todo: come up with an idea for loading just the necessary indices into memory
+# todo: put a logger when potentially time-consuming tasks starts
 
-
-def run():
+def run(mode='production'):
     """
     Main function to run InterMap
     """
@@ -31,12 +31,17 @@ def run():
     # Starting logger
     # =========================================================================
     start_time = time.time()
-    if len(sys.argv) != 2:
-        raise ValueError('\nInterMap syntax is: '
-                         'intermap path-to-config-file')
-    config_path = sys.argv[1]
 
-    # config_path = '/home/rglez/RoyHub/intermap/example/imap.cfg'
+    if mode == 'production':
+        if len(sys.argv) != 2:
+            raise ValueError(
+                '\nInterMap syntax is: intermap path-to-config-file')
+        config_path = sys.argv[1]
+    elif mode == 'debug':
+        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
+    else:
+        raise ValueError('Only modes allowed are production and running')
+
     config = conf.InterMapConfig(config_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
     log_path = join(dirname(args.trajectory), f"{args.job_name}_InterMap.log")
@@ -62,7 +67,7 @@ def run():
     # =========================================================================
     parsed_cutoffs = cf.parse_cutoffs(args=args)
     all_inters, all_cutoffs = cf.get_inters_cutoffs(parsed_cutoffs)
-    if args.interactions == 'all':
+    if isinstance(args.interactions, str) and args.interactions == 'all':
         to_compute = all_inters
     else:
         to_compute = args.interactions
@@ -80,9 +85,7 @@ def run():
     # =========================================================================
     iman = IndexManager(args.topology, args.trajectory, args.selection_1,
                         args.selection_2, args.interactions)
-    universe = iman.universe
-    n_atoms = iman.n_atoms
-    s1_indices_raw, s2_indices_raw = iman.sel1_idx, iman.sel2_idx
+
     vdw_radii = iman.radii
     hydrophobes = iman.hydroph
     anions, cations = iman.anions, iman.cations
@@ -103,9 +106,12 @@ def run():
     # =========================================================================
     # Naming all atoms and interactions
     # =========================================================================
-    atnames = universe.atoms.names
-    resnames = universe.atoms.resnames
-    resids = universe.atoms.resids
+    universe = iman.universe
+    sel_idx = iman.sel_idx
+    atnames = universe.atoms.names[sel_idx]
+    resnames = universe.atoms.resnames[sel_idx]
+    resids = universe.atoms.resids[sel_idx]
+    n_atoms = sel_idx.size
     names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in range(n_atoms)]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
@@ -115,13 +121,17 @@ def run():
     stamp = time.time()
     logger.info(f"Starting to compute InterMap interactions")
 
+    s1_indices_raw = np.arange(iman.sel1_idx.size)
+    s2_indices_raw = np.arange(iman.sel1_idx.size,
+                               iman.sel1_idx.size + iman.sel2_idx.size)
     inter_dict = idt.InterDict(args.format, args.min_prevalence, traj_frames,
                                names, inters)
     set_num_threads(args.n_procs)
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
     max_allocated = 0
     for i, frames_chunk in enumerate(chunks):
-        xyz_chunk = tt.get_coordinates(universe, frames_chunk, n_atoms)
+        xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
+                                       n_atoms)
 
         # Estimating the number of interactions per chunk to allocate memory
         if i == 0:
@@ -144,7 +154,7 @@ def run():
             hb_acceptors, xb_halogens, xb_donors, xb_acceptors, rings,
             cutoffs_others, selected_others, cutoffs_aro, selected_aro)
 
-        # Raise if not enogh space has been allocated
+        # Raise if not enough space has been allocated
         if (occupancy := ijf_chunk.shape[0] / max_allocated) >= 0.98:
             raise ValueError(f"Chunk {i} occupancy: {round(occupancy, 2)}")
         elif occupancy >= 0.90:
@@ -168,3 +178,5 @@ def run():
     gnl.pickle_to_file(inter_dict.dict, pickle_path)
     tot = round(time.time() - start_time, 2)
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
+
+# run(mode='debug')

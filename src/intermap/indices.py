@@ -11,6 +11,7 @@ import rdkit
 from rdkit import Chem
 
 import intermap.smarts as smarts
+import intermap.commons as cmn
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -126,16 +127,44 @@ class IndexManager:
                     f'Total number of frames: {self.n_frames}')
 
         # Get the indices of the selections
-        self.radii = self.get_vdw_radii()
         self.sel1_idx, self.sel2_idx = self.get_selections_indices()
-        self.hydroph = self.get_singles('hydroph')
-        self.cations = self.get_singles('cations')
-        self.anions = self.get_singles('anions')
-        self.metal_acc = self.get_singles('metal_acc')
-        self.metal_don = self.get_singles('metal_don')
-        self.hb_D, self.hb_H, self.hb_A = self.get_doubles('hb_don', 'hb_acc')
-        self.xb_D, self.xb_H, self.xb_A = self.get_doubles('xb_don', 'xb_acc')
-        self.rings = self.get_rings()
+        self.sel_idx = np.concatenate((self.sel1_idx, self.sel2_idx))
+
+        radii = self.get_vdw_radii()
+        self.radii = radii[self.sel_idx]
+
+        hydroph = self.get_singles('hydroph')
+        self.hydroph = cmn.indices(self.sel_idx, hydroph)
+
+        cations = self.get_singles('cations')
+        self.cations = cmn.indices(self.sel_idx, cations)
+
+        anions = self.get_singles('anions')
+        self.anions = cmn.indices(self.sel_idx, anions)
+
+        metal_acc = self.get_singles('metal_acc')
+        self.metal_acc = cmn.indices(self.sel_idx, metal_acc)
+
+        metal_don = self.get_singles('metal_don')
+        self.metal_don = cmn.indices(self.sel_idx, metal_don)
+
+        hb_D, hb_H, hb_A = self.get_doubles('hb_don', 'hb_acc')
+        self.hb_D = cmn.indices(self.sel_idx, hb_D)
+        self.hb_H = cmn.indices(self.sel_idx, hb_H)
+        self.hb_A = cmn.indices(self.sel_idx, hb_A)
+
+        xb_D, xb_H, xb_A = self.get_doubles('xb_don', 'xb_acc')
+        self.xb_D = cmn.indices(self.sel_idx, xb_D)
+        self.xb_H = cmn.indices(self.sel_idx, xb_H)
+        self.xb_A = cmn.indices(self.sel_idx, xb_A)
+
+        rings = self.get_rings()
+        babel_rings = rings.copy()
+        for i, ring in enumerate(rings):
+            idx_part = ring[:ring[-1]]
+            babel_rings[i, :ring[-1]] = cmn.indices(self.sel_idx, idx_part)
+        self.rings = babel_rings[babel_rings[:, 0] != -1]
+
         logger.debug(f"Detected atom types:\n"
                      f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
                      f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
@@ -346,8 +375,8 @@ class IndexManager:
 # %% ==========================================================================
 #
 # =============================================================================
-# topo = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-# traj = '/media/rglez/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+# topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
+# traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 #
 # sel1 = "nucleic"
 # sel2 = "protein"
