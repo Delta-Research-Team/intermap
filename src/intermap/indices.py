@@ -10,8 +10,8 @@ import numpy as np
 import rdkit
 from rdkit import Chem
 
-import intermap.smarts as smarts
 import intermap.commons as cmn
+import intermap.smarts as smarts
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -190,6 +190,13 @@ class IndexManager:
         """
         # Load the trajectory
         universe = mda.Universe(self.topo, self.traj)
+        try:
+            any_bond = universe.bonds[0]
+        except:
+            logger.warning(f'The passed topology does not contain bonds. '
+                           f'MDTraj will guess them automatically.')
+            universe = mda.Universe(self.topo, self.traj, guess_bonds=True)
+            any_bond = universe.bonds[0]
 
         # Remove the hydrogen-hydrogen bonds
         stamp = time.time()
@@ -372,13 +379,17 @@ class IndexManager:
         radii = np.array([pt.GetRvdw(e) for e in elements])
         return radii.astype(np.float32)
 
+
 # %% ==========================================================================
 #
 # =============================================================================
 # topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
 # traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
 #
-# sel1 = "nucleic"
+# topo = '/home/gonzalezroy/RoyHub/intermap/tests/data/traj_1MF.pdb'
+# traj = '/home/gonzalezroy/RoyHub/intermap/tests/data/traj_1MF_cut.dcd'
+#
+# sel1 = "protein"
 # sel2 = "protein"
 # interactions = 'all'
 # self = IndexManager(topo, traj, sel1, sel2, interactions)

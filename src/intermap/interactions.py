@@ -247,6 +247,11 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
         interactions (ndarray): Container for the interactions
     """
 
+    if to_compute_others.size == 0:
+        ijf = np.zeros((0, 3), dtype=np.int32)
+        inters = np.zeros((0, len(to_compute_others)), dtype=np.bool_)
+        return ijf, inters
+
     # Create & query the trees
     dist_cut = cutoffs_others[:2].max()
     s2_tree = nckd(xyz[s2_indices_raw])
@@ -399,6 +404,10 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
     # =========================================================================
     # STEP I: Find all pair of atoms/centroids within the max cutoff distance
     # =========================================================================
+    if to_compute_aro.size == 0:
+        ijf = np.zeros((0, 3), dtype=np.int32)
+        inters = np.zeros((0, len(to_compute_aro)), dtype=np.bool_)
+        return ijf, inters
 
     # Get cations
     s1_cat = s1_indices_raw[cmn.isin(s1_indices_raw, cations)]
