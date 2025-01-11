@@ -113,7 +113,10 @@ def parse_cutoffs(args=()):
              'maxAng1': get_cutoff('max_ang_DHA', args)},
         'HBDonor':
             {'distCut1': get_cutoff('dist_cut_DA', args),
-             'distCut2': get_cutoff('dist_cut_HA', args)},
+             'distCut2': get_cutoff('dist_cut_HA', args),
+             'minAng1': get_cutoff('min_ang_DHA', args),
+             'maxAng1': get_cutoff('max_ang_DHA', args)},
+
         'XBAcceptor':
             {'distCut1': get_cutoff('dist_cut_XA', args),
              'distCut2': get_cutoff('dist_cut_XD', args)},

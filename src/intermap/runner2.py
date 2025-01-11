@@ -38,7 +38,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -65,8 +65,7 @@ def run(mode='production'):
     # =========================================================================
     # Parsing the interactions & cutoffs
     # =========================================================================
-    parsed_cutoffs = cf.parse_cutoffs(args=args)
-    all_inters, all_cutoffs = cf.get_inters_cutoffs(parsed_cutoffs)
+    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
     if isinstance(args.interactions, str) and args.interactions == 'all':
         to_compute = all_inters
     else:
@@ -75,8 +74,7 @@ def run(mode='production'):
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
 
     len_others, len_aro = len(selected_others), len(selected_aro)
-    cutoffs_str = {x: parsed_cutoffs[x] for x in parsed_cutoffs if
-                   x in to_compute}
+    cutoffs_str = {x: args.cutoffs[x] for x in args.cutoffs if x in to_compute}
     logger.info(f"Interactions to compute:\n {pformat(to_compute)}")
     logger.debug(f"Cutoffs parsed:\n {pformat(cutoffs_str)}")
 

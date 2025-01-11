@@ -27,7 +27,7 @@ allowed_parameters = {
         'topology': {'dtype': 'path', 'check_exist': True},
         'trajectory': {'dtype': 'path', 'check_exist': True},
         'start': {'dtype': int, 'min': 0, 'max': inf_int},
-        'last': {'dtype': int, 'min': 0, 'max': inf_int},
+        'last': {'dtype': int, 'min': -1, 'max': inf_int},
         'stride': {'dtype': int, 'min': 1, 'max': inf_int},
         'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
     # ____ interactions
@@ -286,5 +286,5 @@ class InterMapConfig(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
-# self = InterMapConfig(config_path, allowed_parameters)
+config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+self = InterMapConfig(config_path, allowed_parameters)
