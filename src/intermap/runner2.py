@@ -109,8 +109,8 @@ def run(mode='production'):
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
-    n_atoms = sel_idx.size
-    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in range(n_atoms)]
+    n_sel_atoms = sel_idx.size
+    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in range(n_sel_atoms)]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
     # %% ======================================================================
@@ -129,7 +129,7 @@ def run(mode='production'):
     max_allocated = 0
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
-                                       n_atoms)
+                                       n_sel_atoms)
 
         # Estimating the number of interactions per chunk to allocate memory
         if i == 0:

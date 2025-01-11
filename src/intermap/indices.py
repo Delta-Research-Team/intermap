@@ -109,7 +109,7 @@ class IndexManager:
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
-        self.interactions = interactions
+        # self.interactions = interactions
         self.smarts_patterns = smarts.ProlifSmarts().interactions
         logger.debug(f"Using the following SMARTS patterns:\n"
                      f" {pformat(self.smarts_patterns)}")
@@ -117,47 +117,50 @@ class IndexManager:
         # Initialize the trajectory attributes
         self.unique_residues = None
         self.unique_rdmols = None
+
         stamp = time.time()
         self.universe, self.renamed_universe = self.load_traj()
         load_time = time.time() - stamp
+
         self.n_atoms = self.universe.atoms.n_atoms
         self.n_frames = len(self.universe.trajectory)
         logger.info(f'System loaded in {load_time:.2f} s.\n'
                     f'Total number of atoms: {self.n_atoms}\n'
                     f'Total number of frames: {self.n_frames}')
 
-        # Get the indices of the selections
-        self.sel1_idx, self.sel2_idx = self.get_selections_indices()
-        self.sel_idx = np.concatenate((self.sel1_idx, self.sel2_idx))
+        # General selections
+        sel1_idx, sel2_idx = self.get_selections_indices()
+        uniques = set(sel1_idx).union(set(sel2_idx))
+        self.sel_idx = np.asarray(list(uniques))
 
-        radii = self.get_vdw_radii()
-        self.radii = radii[self.sel_idx]
+        self.sel1_idx = cmn.indices(self.sel_idx, sel1_idx)
+        self.sel2_idx = cmn.indices(self.sel_idx, sel2_idx)
+        if -1 in self.sel1_idx:
+            raise ValueError("Some atoms in selection 1 are not in the universe")
+        if -1 in self.sel2_idx:
+            raise ValueError("Some atoms in selection 2 are not in the universe")
 
-        hydroph = self.get_singles('hydroph')
-        self.hydroph = cmn.indices(self.sel_idx, hydroph)
+        # VDW radii
+        self.radii = self.get_vdw_radii()
 
-        cations = self.get_singles('cations')
-        self.cations = cmn.indices(self.sel_idx, cations)
+        # Single interactions
+        self.hydroph = self.get_singles('hydroph', self.sel_idx)
+        self.cations = self.get_singles('cations', self.sel_idx)
+        self.anions = self.get_singles('anions', self.sel_idx)
+        self.metal_acc = self.get_singles('metal_acc', self.sel_idx)
+        self.metal_don = self.get_singles('metal_don', self.sel_idx)
 
-        anions = self.get_singles('anions')
-        self.anions = cmn.indices(self.sel_idx, anions)
+        # Double interactions (H-bonds)
+        self.hb_D, self.hb_H, hb_A = self.get_doubles(
+            'hb_don', 'hb_acc', self.sel_idx)
+        self.hb_A = np.unique(hb_A)
 
-        metal_acc = self.get_singles('metal_acc')
-        self.metal_acc = cmn.indices(self.sel_idx, metal_acc)
+        # Double interactions (Halogen bonds)
+        self.xb_D, self.xb_H, xb_A = self.get_doubles(
+            'xb_don', 'xb_acc', self.sel_idx)
+        self.xb_A = np.unique(xb_A)
 
-        metal_don = self.get_singles('metal_don')
-        self.metal_don = cmn.indices(self.sel_idx, metal_don)
-
-        hb_D, hb_H, hb_A = self.get_doubles('hb_don', 'hb_acc')
-        self.hb_D = cmn.indices(self.sel_idx, hb_D)
-        self.hb_H = cmn.indices(self.sel_idx, hb_H)
-        self.hb_A = cmn.indices(self.sel_idx, hb_A)
-
-        xb_D, xb_H, xb_A = self.get_doubles('xb_don', 'xb_acc')
-        self.xb_D = cmn.indices(self.sel_idx, xb_D)
-        self.xb_H = cmn.indices(self.sel_idx, xb_H)
-        self.xb_A = cmn.indices(self.sel_idx, xb_A)
-
+        # Rings
         rings = self.get_rings()
         babel_rings = rings.copy()
         for i, ring in enumerate(rings):
@@ -197,6 +200,9 @@ class IndexManager:
                            f'MDTraj will guess them automatically.')
             universe = mda.Universe(self.topo, self.traj, guess_bonds=True)
             any_bond = universe.bonds[0]
+        if any_bond is None:
+            raise ValueError(
+                "No bonds found in topology and MDAnalysis did not guess them.")
 
         # Remove the hydrogen-hydrogen bonds
         stamp = time.time()
@@ -238,7 +244,7 @@ class IndexManager:
             raise ValueError("No atoms found for selection 2")
         return s1_idx, s2_idx
 
-    def get_singles(self, identifier):
+    def get_singles(self, identifier, selection):
         """
         Get the indices associated with the single interactions
 
@@ -262,9 +268,12 @@ class IndexManager:
                 hydrophs = 'resname {} and name {}'.format(case, sel)
                 idx = self.renamed_universe.select_atoms(hydrophs).indices
                 singles.extend(idx)
-        return np.array(singles).astype(np.int32)
 
-    def get_doubles(self, donor_identifier, acceptor_identifier):
+        selected_raw = cmn.indices(selection, np.asarray(singles))
+        selected = selected_raw[selected_raw != -1]
+        return selected.astype(np.int32)
+
+    def get_doubles(self, donor_identifier, acceptor_identifier, selection):
         """
         Get the indices associated with the hydrogen bonds
 
@@ -308,9 +317,13 @@ class IndexManager:
                 idx = self.renamed_universe.select_atoms(acc).indices
                 hx_A.extend(idx)
 
-        hx_D = np.array(hx_D).astype(np.int32)
-        hx_H = np.array(hx_H).astype(np.int32)
-        hx_A = np.array(hx_A).astype(np.int32)
+        hx_D_raw = cmn.indices(selection, np.asarray(hx_D)).astype(np.int32)
+        hx_H_raw = cmn.indices(selection, np.asarray(hx_H)).astype(np.int32)
+        hx_A_raw = cmn.indices(selection, np.asarray(hx_A)).astype(np.int32)
+        hx_D = hx_D_raw[hx_D_raw != -1]
+        hx_H = hx_H_raw[hx_H_raw != -1]
+        hx_A = hx_A_raw[hx_A_raw != -1]
+        assert len(hx_D) == len(hx_H), "Donors and Hydrogens do not match"
         return hx_D, hx_H, hx_A
 
     def get_rings(self):
@@ -353,8 +366,8 @@ class IndexManager:
             max_vdw (float): Maximum van der Waals distance between the atoms
         """
 
-        s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
-        s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
+        # s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
+        # s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
 
         product = it.product(s1_elements, s2_elements)
         unique_pairs = set(tuple(sorted((a, b))) for a, b in product)
@@ -383,13 +396,12 @@ class IndexManager:
 # %% ==========================================================================
 #
 # =============================================================================
-# topo = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1.prmtop'
-# traj = '/media/gonzalezroy/Expansion/RoyData/oxo-8/raw/water/A2/8oxoGA2_1_sk100.nc'
+# import prolif as plf
 #
-# topo = '/home/gonzalezroy/RoyHub/intermap/tests/data/traj_1MF.pdb'
-# traj = '/home/gonzalezroy/RoyHub/intermap/tests/data/traj_1MF_cut.dcd'
-#
-# sel1 = "protein"
-# sel2 = "protein"
-# interactions = 'all'
+# topo = plf.datafiles.TOP
+# traj = plf.datafiles.TRAJ
+# sel1 = "resid 119:152"
+# sel2 = "protein and (not resid 119:152)"
+# # sel2 = 'resid 119:152'
+# interactions = "HBDonor, HBAcceptor, PiStacking, PiCation, CationPi, Anionic, Cationic"
 # self = IndexManager(topo, traj, sel1, sel2, interactions)
