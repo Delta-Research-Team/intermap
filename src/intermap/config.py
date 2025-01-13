@@ -286,5 +286,5 @@ class InterMapConfig(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
-self = InterMapConfig(config_path, allowed_parameters)
+# config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+# self = InterMapConfig(config_path, allowed_parameters)

@@ -11,7 +11,7 @@ import intermap.commons as cmn
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def detect_vdw(inter_name, vdw_radii, row1, row2, dists, to_compute_others):
     """
     Detect the Van der Waals interactions
@@ -42,7 +42,7 @@ def detect_vdw(inter_name, vdw_radii, row1, row2, dists, to_compute_others):
     return inter_idx, passing_dist
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
               to_compute_others):
     """
@@ -79,7 +79,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
         return inter_idx, passing_dists & are_type
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
                 hb_donors,
                 ha_cut, da_cut, min_ang, max_ang, to_compute_others):
@@ -148,7 +148,7 @@ def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
     return idx_name, hbonds
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
               to_compute_aro):
     """
@@ -172,7 +172,7 @@ def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
     return idx, stacking
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
               cutoffs_aro, to_compute_aro):
     """
@@ -214,7 +214,7 @@ def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
         return idx, pairs, pairs
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
             hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
@@ -381,7 +381,7 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     return ijf[mask], interactions[mask]
 
 
-@njit(parallel=False,  cache=True)
+@njit(parallel=False, cache=True)
 def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
         to_compute_aro):
     """
@@ -535,7 +535,6 @@ def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,
                    hb_donors, hb_acceptors, xb_halogens, xb_donors,
                    xb_acceptors, cutoffs_others, to_compute_others,
                    factor=1.5):
-
     # Preallocate the arrays
     n_frames = xyz_all.shape[0]
     samples = xyz_all[::n_frames // n_samples]
@@ -559,6 +558,9 @@ def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,
 
     # Estimate the number of contacts
     ijf_vert = np.int32(num_detected.max() * factor)
+    if ijf_vert.size == 0:
+        raise ValueError("No interactions detected in the sampled trajectory")
+
     inters_hori = inters_others.shape[1] + inters_aro.shape[1]
     ijf_template = np.empty((n_frames, ijf_vert, 3), dtype=np.int32)
     inters_template = np.empty((n_frames, ijf_vert, inters_hori),
@@ -568,7 +570,7 @@ def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,
     return ijf_template, inters_template
 
 
-@njit(parallel=True,  cache=True)
+@njit(parallel=True, cache=True)
 def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                  s1_indices_raw, s2_indices_raw, anions, cations,
                  hydrophobes, metal_donors, metal_acceptors, vdw_radii,
@@ -609,9 +611,107 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
     ijf_final = np.empty((num_pairs, 3), dtype=np.int32)
     inters_final = np.empty((num_pairs, len_others + len_aro), dtype=np.bool_)
 
-    for i in prange(num_frames):
+    for i in range(num_frames):
         start = limits[:i].sum()
         end = limits[:i + 1].sum()
         ijf_final[start:end] = ijf_template[i, :limits[i]]
         inters_final[start:end] = inters_template[i, :limits[i]]
     return ijf_final, inters_final
+
+
+# =============================================================================
+# Debuging area
+# =============================================================================
+# import intermap.config as conf
+# from argparse import Namespace
+# import intermap.topo_trajs as tt
+# from intermap.indices import IndexManager
+# import intermap.cutoffs as cf
+# from numba import set_num_threads
+# from intermap import interdict as idt
+#
+# # Load the configuration
+# config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+# config = conf.InterMapConfig(config_path, conf.allowed_parameters)
+# args = Namespace(**config.config_args)
+#
+# # Parsing the interactions & cutoffs
+# all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+# if isinstance(args.interactions, str) and args.interactions == 'all':
+#     to_compute = all_inters
+# else:
+#     to_compute = args.interactions
+# selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
+#     cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
+#
+# len_others, len_aro = len(selected_others), len(selected_aro)
+# cutoffs_str = {x: args.cutoffs[x] for x in args.cutoffs if x in to_compute}
+#
+# # Load the necessary indices for detecting each interaction
+# iman = IndexManager(args.topology, args.trajectory, args.selection_1,
+#                     args.selection_2, args.interactions)
+# vdw_radii = iman.radii
+# hydrophobes = iman.hydroph
+# anions, cations = iman.anions, iman.cations
+# metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
+# hb_hydrogens, hb_donors, hb_acceptors = iman.hb_H, iman.hb_D, iman.hb_A
+# xb_halogens, xb_donors, xb_acceptors = iman.xb_H, iman.xb_D, iman.xb_A
+# rings = iman.rings
+#
+# # Load & trim the trajectory
+# n_frames = iman.n_frames
+# last = tt.parse_last_param(args.last, n_frames)
+# traj_frames = np.arange(args.start, last, args.stride)
+#
+# # Naming all atoms and interactions
+# universe = iman.universe
+# sel_idx = iman.sel_idx
+# atnames = universe.atoms.names[sel_idx]
+# resnames = universe.atoms.resnames[sel_idx]
+# resids = universe.atoms.resids[sel_idx]
+# n_sel_atoms = sel_idx.size
+# names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in
+#          range(n_sel_atoms)]
+# inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
+#
+# # TESTING
+# k = 0
+# set_num_threads(12)
+# s1_indices = iman.sel1_idx
+# s2_indices = iman.sel2_idx
+# self = idt.InterDict(
+#     args.format, args.min_prevalence, traj_frames, names, inters)
+#
+# max_allocated = 0
+# chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
+# for i, frames_chunk in enumerate(chunks):
+#     xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
+#                                    n_sel_atoms)
+#
+#     # Estimating the number of interactions per chunk to allocate memory
+#     if i == 0:
+#         print('Estimating the number of interactions per chunk')
+#         ijf_template, inters_template = get_estimation(
+#             xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
+#             cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
+#             metal_acceptors, vdw_radii, hb_hydrogens, hb_donors,
+#             hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
+#             cutoffs_others, selected_others)
+#
+#     # Parallel computing of the interactions
+#     ijf_chunk, inters_chunk = run_parallel(
+#         xyz_chunk, ijf_template, inters_template, len_others, len_aro,
+#         s1_indices, s2_indices, anions, cations, hydrophobes,
+#         metal_donors, metal_acceptors, vdw_radii, hb_hydrogens, hb_donors,
+#         hb_acceptors, xb_halogens, xb_donors, xb_acceptors, rings,
+#         cutoffs_others, selected_others, cutoffs_aro, selected_aro)
+#
+#     # Raise if not enough space has been allocated
+#     if (occupancy := ijf_chunk.shape[0] / max_allocated) >= 0.98:
+#         raise ValueError(f"Chunk {i} occupancy: {round(occupancy, 2)}")
+#     elif occupancy >= 0.90:
+#         print('WARNING: Allocations almost full')
+#
+#     # Filling the interaction dictionary
+#     ijf_chunk[:, 2] = frames_chunk[ijf_chunk[:, 2]]
+#     self.fill(ijf_chunk, inters_chunk, traj_frames)

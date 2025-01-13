@@ -1,7 +1,11 @@
 # Created by rglez at 12/29/24
+import itertools as it
+from collections import defaultdict
+from multiprocessing import Pool
+import pandas as pd
 import bitarray.util as bu
-
-
+import numpy as np
+from scipy.sparse import csr_matrix
 class InterDict:
     """
     A dictionary to store InterMap interactions
@@ -21,6 +25,7 @@ class InterDict:
         self.dict = {}
         self.template = bu.zeros(self.n_frames)
 
+    @profile
     def fill(self, ijfs, inters):
         """
         Fill the dictionary with the interactions
@@ -29,15 +34,14 @@ class InterDict:
             ijfs (ndarray): indexes of the interactions and the frames
             inters (ndarray): interactions types detected in the frames
         """
-        for idx, (i, j, f) in enumerate(ijfs):
-            inters_types = inters[idx].nonzero()[0]
-            for inter in inters_types:
-                if (i, j, inter) not in self.dict:
-                    zeros = self.template.copy()
-                    zeros[f] = True
-                    self.dict[(i, j, inter)] = {'time': zeros}
 
-                self.dict[(i, j, inter)]['time'][f] = True
+
+        # self.dict = defaultdict(self.template.copy)
+        # i, j, f = ijfs.T
+        # for idx in range(ijfs.shape[0]):
+        #     inters_types = inters[idx].nonzero()[0]
+        #     for inter in inters_types:
+        #         self.dict[(i[idx], j[idx], inter)][f[idx]] = True
 
     def pack(self):
         """
@@ -51,7 +55,7 @@ class InterDict:
             s1_name = self.atom_names[s1_id]
             s2_name = self.atom_names[s2_id]
             inter_name = self.inter_names[inter_id]
-            time = self.dict[key]['time']
+            time = self.dict[key]
             prevalence = round(time.count() / self.n_frames * 100, 2)
             del self.dict[key]
 
