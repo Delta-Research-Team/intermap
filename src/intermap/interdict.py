@@ -6,6 +6,9 @@ import pandas as pd
 import bitarray.util as bu
 import numpy as np
 from scipy.sparse import csr_matrix
+import numpy_indexed as npi
+
+
 class InterDict:
     """
     A dictionary to store InterMap interactions
@@ -25,23 +28,39 @@ class InterDict:
         self.dict = {}
         self.template = bu.zeros(self.n_frames)
 
-    @profile
+    # @profile
+    # def fill(self, ijfs, inters):
+    #     """
+    #     Fill the dictionary with the interactions
+    #
+    #     Args:
+    #         ijfs (ndarray): indexes of the interactions and the frames
+    #         inters (ndarray): interactions types detected in the frames
+    #     """
+    #     self.dict = defaultdict(self.template.copy)
+    #     i, j, f = ijfs.T
+    #     for idx in range(ijfs.shape[0]):
+    #         inters_types = inters[idx].nonzero()[0]
+    #         for inter in inters_types:
+    #             self.dict[(i[idx], j[idx], inter)][f[idx]] = True
+
+    # @profile
     def fill(self, ijfs, inters):
-        """
-        Fill the dictionary with the interactions
+        groups = npi.group_by(ijfs[:, :2])
+        sorter = groups.index.sorter
+        slices = groups.index.slices
+        indices = iter(np.split(sorter, slices[1:-1]))
 
-        Args:
-            ijfs (ndarray): indexes of the interactions and the frames
-            inters (ndarray): interactions types detected in the frames
-        """
+        self.dict = defaultdict(self.template.copy)
+        for index in indices:
+            sel_ijfs = ijfs[index]
+            sel_inters = inters[index]
+            i, j, _ = sel_ijfs[0]
 
-
-        # self.dict = defaultdict(self.template.copy)
-        # i, j, f = ijfs.T
-        # for idx in range(ijfs.shape[0]):
-        #     inters_types = inters[idx].nonzero()[0]
-        #     for inter in inters_types:
-        #         self.dict[(i[idx], j[idx], inter)][f[idx]] = True
+            inters_to_assign = np.any(sel_inters, axis=0).nonzero()[0]
+            for inter in inters_to_assign:
+                frames = sel_ijfs[:, 2][sel_inters[:, inter]].tolist()
+                self.dict[(i, j, inter)][frames] = True
 
     def pack(self):
         """

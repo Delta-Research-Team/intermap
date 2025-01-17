@@ -38,7 +38,8 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+        # config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -201,4 +202,4 @@ def run(mode='production'):
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
 
 
-run(mode='debug')
+# run(mode='debug')

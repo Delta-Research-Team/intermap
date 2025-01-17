@@ -529,12 +529,7 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
     return ijf[mask], inters[mask]
 
 
-def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,
-                   rings, cutoffs_aro, to_compute_aro, anions, hydrophobes,
-                   metal_donors, metal_acceptors, vdw_radii, hb_hydrogens,
-                   hb_donors, hb_acceptors, xb_halogens, xb_donors,
-                   xb_acceptors, cutoffs_others, to_compute_others,
-                   factor=1.5):
+def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,rings, cutoffs_aro, to_compute_aro, anions, hydrophobes,metal_donors, metal_acceptors, vdw_radii, hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors, xb_acceptors, cutoffs_others, to_compute_others, factor=1.5):
     # Preallocate the arrays
     n_frames = xyz_all.shape[0]
     samples = xyz_all[::n_frames // n_samples]
