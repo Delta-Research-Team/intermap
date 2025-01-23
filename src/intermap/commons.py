@@ -65,7 +65,7 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
     # Parse non-aromatics
     bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
                   in indices(all_inters, [x])]
-    to_compute_others = np.asarray([all_inters[x] for x in bit_others])
+    to_compute_others = np.asarray([all_inters[x] for x in bit_others], dtype=str)
 
     # Get the cutoffs
     cutoffs_aro = all_cutoffs[:, bit_aro]

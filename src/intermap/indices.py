@@ -130,9 +130,9 @@ class IndexManager:
 
         # General selections
         sel1_idx, sel2_idx = self.get_selections_indices()
-        uniques = set(sel1_idx).union(set(sel2_idx))
-        self.sel_idx = np.asarray(list(uniques))
+        uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
 
+        self.sel_idx = np.asarray(uniques)
         self.sel1_idx = cmn.indices(self.sel_idx, sel1_idx)
         self.sel2_idx = cmn.indices(self.sel_idx, sel2_idx)
         if -1 in self.sel1_idx:
@@ -141,7 +141,8 @@ class IndexManager:
             raise ValueError("Some atoms in selection 2 are not in the universe")
 
         # VDW radii
-        self.radii = self.get_vdw_radii()
+        all_radii = self.get_vdw_radii()
+        self.radii = all_radii[self.sel_idx]
 
         # Single interactions
         self.hydroph = self.get_singles('hydroph', self.sel_idx)
@@ -151,14 +152,12 @@ class IndexManager:
         self.metal_don = self.get_singles('metal_don', self.sel_idx)
 
         # Double interactions (H-bonds)
-        self.hb_D, self.hb_H, hb_A = self.get_doubles(
+        self.hb_D, self.hb_H, self.hb_A = self.get_doubles(
             'hb_don', 'hb_acc', self.sel_idx)
-        self.hb_A = np.unique(hb_A)
 
         # Double interactions (Halogen bonds)
-        self.xb_D, self.xb_H, xb_A = self.get_doubles(
+        self.xb_D, self.xb_H, self.xb_A = self.get_doubles(
             'xb_don', 'xb_acc', self.sel_idx)
-        self.xb_A = np.unique(xb_A)
 
         # Rings
         rings = self.get_rings()
@@ -322,7 +321,7 @@ class IndexManager:
         hx_A_raw = cmn.indices(selection, np.asarray(hx_A)).astype(np.int32)
         hx_D = hx_D_raw[hx_D_raw != -1]
         hx_H = hx_H_raw[hx_H_raw != -1]
-        hx_A = hx_A_raw[hx_A_raw != -1]
+        hx_A = np.unique(hx_A_raw[hx_A_raw != -1])
         assert len(hx_D) == len(hx_H), "Donors and Hydrogens do not match"
         return hx_D, hx_H, hx_A
 
@@ -366,8 +365,8 @@ class IndexManager:
             max_vdw (float): Maximum van der Waals distance between the atoms
         """
 
-        # s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
-        # s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
+        s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
+        s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
 
         product = it.product(s1_elements, s2_elements)
         unique_pairs = set(tuple(sorted((a, b))) for a, b in product)
@@ -377,7 +376,7 @@ class IndexManager:
         radii = {x: pt.GetRvdw(x) for x in unique_elements}
 
         radiis = [radii[pair[0]] + radii[pair[1]] for pair in unique_pairs]
-        max_vdw = max(radiis) / 10
+        max_vdw = max(radiis)
         return np.float32(max_vdw)
 
     def get_vdw_radii(self):

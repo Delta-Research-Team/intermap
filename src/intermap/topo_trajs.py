@@ -240,7 +240,7 @@ def split_in_chunks(array, chunk_size):
 
 
 def get_coordinates(u, chunk, sel_idx, num_atoms):
-    xyz_chunk = np.empty((chunk.size, num_atoms, 3), dtype=float)
+    xyz_chunk = np.empty((chunk.size, num_atoms, 3), dtype=np.float32)
     for i, frame in enumerate(chunk):
         xyz_chunk[i] = u.trajectory[frame].positions[sel_idx]
     return xyz_chunk

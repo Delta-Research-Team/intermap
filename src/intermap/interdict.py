@@ -1,14 +1,12 @@
 # Created by rglez at 12/29/24
-import itertools as it
 from collections import defaultdict
-from multiprocessing import Pool
-import pandas as pd
+
 import bitarray.util as bu
 import numpy as np
-from scipy.sparse import csr_matrix
 import numpy_indexed as npi
 
 
+# todo: numba the fill method of InterDict
 class InterDict:
     """
     A dictionary to store InterMap interactions
@@ -49,9 +47,9 @@ class InterDict:
         groups = npi.group_by(ijfs[:, :2])
         sorter = groups.index.sorter
         slices = groups.index.slices
-        indices = iter(np.split(sorter, slices[1:-1]))
 
         self.dict = defaultdict(self.template.copy)
+        indices = iter(np.split(sorter, slices[1:-1]))
         for index in indices:
             sel_ijfs = ijfs[index]
             sel_inters = inters[index]

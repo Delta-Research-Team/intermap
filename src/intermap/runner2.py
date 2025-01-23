@@ -38,8 +38,9 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        # config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
-        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imap_lig-prot.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imap_prot-prot.cfg'
+        # config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -86,6 +87,7 @@ def run(mode='production'):
                         args.selection_2, args.interactions)
 
     vdw_radii = iman.radii
+    max_vdw = iman.get_max_vdw_dist()
     hydrophobes = iman.hydroph
     anions, cations = iman.anions, iman.cations
     metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
@@ -108,27 +110,26 @@ def run(mode='production'):
     # =========================================================================
     universe = iman.universe
     sel_idx = iman.sel_idx
+    s1_indices = iman.sel1_idx
+    s2_indices = iman.sel2_idx
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
     n_sel_atoms = sel_idx.size
-    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in
-             range(n_sel_atoms)]
+    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in sel_idx]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
     # =========================================================================
     # Fill the interaction dictionary
     # =========================================================================
     stamp = time.time()
-    set_num_threads(args.n_procs)
     logger.info(f"Starting to compute InterMap interactions")
-    s1_indices = iman.sel1_idx
-    s2_indices = iman.sel2_idx
-    self = idt.InterDict(
+    set_num_threads(args.n_procs)
+    inter_dict = idt.InterDict(
         args.format, args.min_prevalence, traj_frames, names, inters)
 
-    max_allocated = 1000
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
+    to_allocate = 0
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
                                        n_sel_atoms)
@@ -136,21 +137,13 @@ def run(mode='production'):
         if i == 0:
             # Compiling main functions
             logger.info("Compiling main functions")
-            _, _ = its.aro(
-                xyz_chunk[0], i, s1_indices, s2_indices, cations,
-                rings, cutoffs_aro, selected_aro)
-            _, _ = its.not_aro(
-                xyz_chunk[0], i, s1_indices, s2_indices, anions,
-                cations, hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-                hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
-                xb_acceptors, cutoffs_others, selected_others)
 
             # Estimating memory allocation
             logger.info(f"Estimating memory allocation")
             ijf_template, inters_template = its.get_estimation(
                 xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
                 cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
-                metal_acceptors, vdw_radii, hb_hydrogens, hb_donors,
+                metal_acceptors, vdw_radii, max_vdw, hb_hydrogens, hb_donors,
                 hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
                 cutoffs_others, selected_others)
 
@@ -158,48 +151,48 @@ def run(mode='production'):
             _, _ = its.run_parallel(
                 xyz_chunk[:1], ijf_template, inters_template, len_others,
                 len_aro, s1_indices, s2_indices, anions, cations, hydrophobes,
-                metal_donors, metal_acceptors, vdw_radii, hb_hydrogens,
+                metal_donors, metal_acceptors, vdw_radii, max_vdw,
+                hb_hydrogens,
                 hb_donors, hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
                 rings, cutoffs_others, selected_others, cutoffs_aro,
                 selected_aro)
 
             to_allocate = ijf_template.shape[0] * ijf_template.shape[1]
-            max_allocated = max(max_allocated, to_allocate)
-            logger.debug(f"Number of allocated cells: {max_allocated}")
+            logger.debug(f"Number of allocated cells: {to_allocate}")
 
         logger.info(f"Computing chunk {i}")
         ijf_chunk, inters_chunk = its.run_parallel(
             xyz_chunk, ijf_template, inters_template, len_others, len_aro,
             s1_indices, s2_indices, anions, cations, hydrophobes,
-            metal_donors, metal_acceptors, vdw_radii, hb_hydrogens, hb_donors,
+            metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydrogens,
+            hb_donors,
             hb_acceptors, xb_halogens, xb_donors, xb_acceptors, rings,
             cutoffs_others, selected_others, cutoffs_aro, selected_aro)
 
         # Raise if not enough space has been allocated
-        if (occupancy := ijf_chunk.shape[0] / max_allocated) >= 0.98:
+        if (occupancy := ijf_chunk.shape[0] / to_allocate) >= 0.98:
             raise ValueError(f"Chunk {i} occupancy: {round(occupancy, 2)}")
         elif occupancy >= 0.90:
             logger.warning(f"Chunk {i} occupancy: {round(occupancy, 2)}")
 
         # %% Filling the interaction dictionary
         logger.info(f"Filling the interaction dictionary")
-        ijf_chunk[:, 2] = frames_chunk[ijf_chunk[:, 2]]
-        self.fill(ijf_chunk, inters_chunk)
+        inter_dict.fill(ijf_chunk, inters_chunk)
     #
     computing = round(time.time() - stamp, 2)
-    n_ints = len(self.dict)
+    n_ints = len(inter_dict.dict)
     logger.info(f"Total interactions detected in {computing} s: {n_ints}")
 
     # =========================================================================
     # Saving
     # =========================================================================
-    self.pack()
+    inter_dict.pack()
     job_name = basename(args.job_name)
     pickle_name = f"{job_name}_InterMap.pickle"
     pickle_path = join(args.output_dir, pickle_name)
-    gnl.pickle_to_file(self.dict, pickle_path)
+    gnl.pickle_to_file(inter_dict.dict, pickle_path)
     tot = round(time.time() - start_time, 2)
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
 
 
-run(mode='production')
+run(mode='debug')

@@ -11,7 +11,7 @@ import intermap.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
-
+proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
 #: Allowed section templates in the config file
 
 #:  Allowed keys in the config file (dtypes & expected values)
@@ -243,9 +243,8 @@ class InterMapConfig(Config):
                 f'choose another one, or delete the existing.')
 
         # Write the configuration file for reproducibility
-        stdock_config = join(self.config_args['output_dir'],
-                             'InterMap-job.cfg')
-        with open(stdock_config, 'wt') as ini:
+        config = join(self.config_args['output_dir'], 'InterMap-job.cfg')
+        with open(config, 'wt') as ini:
             self.config_obj.write(ini)
 
     def parse_cutoffs(self):
@@ -282,9 +281,8 @@ class InterMapConfig(Config):
 
             self.config_args.update({'interactions': parsed_inters})
 
-
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
+# config_path = '/home/rglez/RoyHub/intermap/tests/imap_lig-prot.cfg'
 # self = InterMapConfig(config_path, allowed_parameters)
