@@ -191,7 +191,8 @@ class Config:
                 if dtype in {float, int}:
                     param_obj = NumericParam(key, dtype(value), **param_info)
                 elif dtype == 'path':
-                    value = value if isabs(value) else join(config_dir, value)
+                    absolute = normpath(join(dirname(self.config_path), value))
+                    value = value if isabs(value) else absolute
                     param_obj = PathParam(key, value, **param_info)
                 elif dtype == str:
                     param_obj = ChoiceParam(key, value, **param_info)
