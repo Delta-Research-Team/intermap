@@ -172,7 +172,6 @@ class Config:
         """
         config_args = dict()
 
-        config_dir = self.config_dir
         parsed_sections = self.config_obj.sections().copy()
         [parsed_sections.remove(x) for x in self.keyless_sections if
          x in parsed_sections]
@@ -255,7 +254,11 @@ class InterMapConfig(Config):
         prefixes = ('min', 'max', 'dist', 'ang')
         internal_names = [x for x in dir(cf) if x.startswith(prefixes)]
 
-        cutoffs = self.config_obj['cutoffs']
+        try:
+            cutoffs = self.config_obj['cutoffs']
+        except KeyError:
+            cutoffs = {}
+
         config_cutoffs = dict()
         for key, value in cutoffs.items():
             if key not in cf.__dict__:
@@ -285,5 +288,5 @@ class InterMapConfig(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/rglez/RoyHub/intermap/tests/imap_lig-prot.cfg'
+# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
 # self = InterMapConfig(config_path, allowed_parameters)

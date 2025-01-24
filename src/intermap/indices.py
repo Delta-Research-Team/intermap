@@ -28,6 +28,7 @@ def any_hh_bonds(universe):
         atom1, atom2 = bond
         if (atom1.element == 'H') and (atom2.element == 'H'):
             return True
+    return False
 
 
 def get_hh_bonds(universe):
@@ -93,8 +94,8 @@ def get_uniques(universe):
 
         # Get the indices of the unique residues
         unique_idx[label] = indices
-    rdkit = time.time() - stamp
-    logger.info(f"Time to convert residues to Rdkit format: {rdkit:.2f} s")
+    rdkit_ = time.time() - stamp
+    logger.info(f"Time to convert residues to Rdkit format: {rdkit_:.2f} s")
     return unique_mda_res, unique_rdmols, unique_idx
 
 
