@@ -45,14 +45,14 @@ def save_config(conf_obj, conf_path):
 
 class TestConfig:
 
-    def test_parsing_with_cutoffs_section(
-            self, conf_obj, conf_path, parameters):
+    def test_parsing_with_cutoffs_section(self, conf_obj, conf_path,
+                                          parameters):
         """Configuration file with a [cutoffs] section is parsed"""
         parsed = conf.InterMapConfig(conf_path, parameters)
         assert 'cutoffs' in parsed.config_args
 
-    def test_parsing_without_cutoffs_section(
-            self, conf_obj, conf_path, parameters):
+    def test_parsing_without_cutoffs_section(self, conf_obj, conf_path,
+                                             parameters):
         """
         Configuration file without [cutoffs] section is parsed and that
         section is inferred from internals
