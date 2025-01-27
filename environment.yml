@@ -24,5 +24,6 @@ dependencies:
   - pip:
       - -e .
       - numba_kdtree
+      - pytest-randomly
       - openpyxl
       - git+https://github.com/rglez/rgpack.git@0.0.3

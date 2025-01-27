@@ -3,14 +3,13 @@ import itertools as it
 import logging
 import time
 from collections import defaultdict
-from pprint import pformat
 
 import MDAnalysis as mda
 import numpy as np
+import numpy_indexed as npi
 import rdkit
 from rdkit import Chem
 
-import intermap.commons as cmn
 import intermap.smarts as smarts
 
 logger = logging.getLogger('InterMapLogger')
@@ -110,10 +109,10 @@ class IndexManager:
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
-        # self.interactions = interactions
+        self.interactions = interactions
         self.smarts_patterns = smarts.ProlifSmarts().interactions
-        logger.debug(f"Using the following SMARTS patterns:\n"
-                     f" {pformat(self.smarts_patterns)}")
+        # logger.debug(f"Using the following SMARTS patterns:\n"
+        #              f" {pformat(self.smarts_patterns)}")
 
         # Initialize the trajectory attributes
         self.unique_residues = None
@@ -125,21 +124,23 @@ class IndexManager:
 
         self.n_atoms = self.universe.atoms.n_atoms
         self.n_frames = len(self.universe.trajectory)
-        logger.info(f'System loaded in {load_time:.2f} s.\n'
-                    f'Total number of atoms: {self.n_atoms}\n'
-                    f'Total number of frames: {self.n_frames}')
+        # logger.info(f'System loaded in {load_time:.2f} s.\n'
+        #             f'Total number of atoms: {self.n_atoms}\n'
+        #             f'Total number of frames: {self.n_frames}')
 
         # General selections
         sel1_idx, sel2_idx = self.get_selections_indices()
         uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
 
         self.sel_idx = np.asarray(uniques)
-        self.sel1_idx = cmn.indices(self.sel_idx, sel1_idx)
-        self.sel2_idx = cmn.indices(self.sel_idx, sel2_idx)
+        self.sel1_idx = npi.indices(self.sel_idx, sel1_idx)
+        self.sel2_idx = npi.indices(self.sel_idx, sel2_idx)
         if -1 in self.sel1_idx:
-            raise ValueError("Some atoms in selection 1 are not in the universe")
+            raise ValueError(
+                "Some atoms in selection 1 are not in the universe")
         if -1 in self.sel2_idx:
-            raise ValueError("Some atoms in selection 2 are not in the universe")
+            raise ValueError(
+                "Some atoms in selection 2 are not in the universe")
 
         # VDW radii
         all_radii = self.get_vdw_radii()
@@ -165,9 +166,9 @@ class IndexManager:
         babel_rings = rings.copy()
         for i, ring in enumerate(rings):
             idx_part = ring[:ring[-1]]
-            babel_rings[i, :ring[-1]] = cmn.indices(self.sel_idx, idx_part)
+            babel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, idx_part,
+                                                    missing=-1)
         self.rings = babel_rings[babel_rings[:, 0] != -1]
-
         logger.debug(f"Detected atom types:\n"
                      f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
                      f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
@@ -269,7 +270,7 @@ class IndexManager:
                 idx = self.renamed_universe.select_atoms(hydrophs).indices
                 singles.extend(idx)
 
-        selected_raw = cmn.indices(selection, np.asarray(singles))
+        selected_raw = npi.indices(selection, np.asarray(singles), missing=-1)
         selected = selected_raw[selected_raw != -1]
         return selected.astype(np.int32)
 
@@ -317,9 +318,13 @@ class IndexManager:
                 idx = self.renamed_universe.select_atoms(acc).indices
                 hx_A.extend(idx)
 
-        hx_D_raw = cmn.indices(selection, np.asarray(hx_D)).astype(np.int32)
-        hx_H_raw = cmn.indices(selection, np.asarray(hx_H)).astype(np.int32)
-        hx_A_raw = cmn.indices(selection, np.asarray(hx_A)).astype(np.int32)
+        hx_D_raw = npi.indices(selection, np.asarray(hx_D), missing=-1).astype(
+            np.int32)
+
+        hx_H_raw = npi.indices(selection, np.asarray(hx_H), missing=-1).astype(
+            np.int32)
+        hx_A_raw = npi.indices(selection, np.asarray(hx_A), missing=-1).astype(
+            np.int32)
         hx_D = hx_D_raw[hx_D_raw != -1]
         hx_H = hx_H_raw[hx_H_raw != -1]
         hx_A = np.unique(hx_A_raw[hx_A_raw != -1])
@@ -391,7 +396,6 @@ class IndexManager:
         pt = rdkit.Chem.GetPeriodicTable()
         radii = np.array([pt.GetRvdw(e) for e in elements])
         return radii.astype(np.float32)
-
 
 # %% ==========================================================================
 #
