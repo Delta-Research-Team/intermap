@@ -45,6 +45,7 @@ def iman_universes(universes):
     return iman_unis
 
 
+@pytest.mark.slow
 def test_get_uniques(iman_universes):
     """
     """

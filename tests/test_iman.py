@@ -40,6 +40,7 @@ def imans(topo_trajs_fix):
     return imans
 
 
+@pytest.mark.slow
 def test_iman_smarts(imans):
     """
     """
@@ -96,8 +97,10 @@ def test_iman_smarts(imans):
         assert len(imans[label].anions) == expected_values[label]['anions']
         assert len(imans[label].cations) == expected_values[label]['cations']
         assert len(imans[label].hydroph) == expected_values[label]['hydroph']
-        assert len(imans[label].metal_acc) == expected_values[label]['metal_acc']
-        assert len(imans[label].metal_don) == expected_values[label]['metal_don']
+        assert len(imans[label].metal_acc) == expected_values[label][
+            'metal_acc']
+        assert len(imans[label].metal_don) == expected_values[label][
+            'metal_don']
         assert len(imans[label].radii) == expected_values[label]['radii']
         assert len(imans[label].rings) == expected_values[label]['rings']
         assert len(imans[label].hb_A) == expected_values[label]['hb_A']
