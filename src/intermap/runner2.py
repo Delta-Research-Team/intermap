@@ -38,9 +38,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/rglez/RoyHub/intermap/tests/imap_lig-prot.cfg'
-        config_path = '/home/rglez/RoyHub/intermap/tests/imap_prot-prot.cfg'
-        # config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
+        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -63,6 +61,20 @@ def run(mode='production'):
                 f"\n Min prevalence: {args.min_prevalence}"
                 f"\n Report's format: {args.format}"
                 )
+    # =========================================================================
+    # Load the necessary indices for detecting each interaction
+    # =========================================================================
+    iman = IndexManager(args.topology, args.trajectory, args.selection_1,
+                        args.selection_2, args.interactions)
+
+    vdw_radii = iman.radii
+    max_vdw = iman.get_max_vdw_dist()
+    hydrophobes = iman.hydroph
+    anions, cations = iman.anions, iman.cations
+    metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
+    hb_hydrogens, hb_donors, hb_acceptors = iman.hb_H, iman.hb_D, iman.hb_A
+    xb_halogens, xb_donors, xb_acceptors = iman.xb_H, iman.xb_D, iman.xb_A
+    rings = iman.rings
 
     # =========================================================================
     # Parsing the interactions & cutoffs
@@ -79,21 +91,6 @@ def run(mode='production'):
     cutoffs_str = {x: args.cutoffs[x] for x in args.cutoffs if x in to_compute}
     logger.info(f"Interactions to compute:\n {pformat(to_compute)}")
     logger.debug(f"Cutoffs parsed:\n {pformat(cutoffs_str)}")
-
-    # =========================================================================
-    # Load the necessary indices for detecting each interaction
-    # =========================================================================
-    iman = IndexManager(args.topology, args.trajectory, args.selection_1,
-                        args.selection_2, args.interactions)
-
-    vdw_radii = iman.radii
-    max_vdw = iman.get_max_vdw_dist()
-    hydrophobes = iman.hydroph
-    anions, cations = iman.anions, iman.cations
-    metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
-    hb_hydrogens, hb_donors, hb_acceptors = iman.hb_H, iman.hb_D, iman.hb_A
-    xb_halogens, xb_donors, xb_acceptors = iman.xb_H, iman.xb_D, iman.xb_A
-    rings = iman.rings
 
     # =========================================================================
     # Load & trim the trajectory
