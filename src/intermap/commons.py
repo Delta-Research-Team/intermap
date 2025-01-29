@@ -8,6 +8,7 @@ import os
 import re
 
 import numpy as np
+import numpy_indexed as npi
 from numba import njit, prange
 
 logger = logging.getLogger('InterMapLogger')
@@ -80,12 +81,12 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
 
     # Parse aromatics
     bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
-               indices(all_inters, [x])]
+               npi.indices(all_inters, [x])]
     to_compute_aro = np.asarray([all_inters[x] for x in bit_aro])
 
     # Parse non-aromatics
     bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
-                  in indices(all_inters, [x])]
+                  in npi.indices(all_inters, [x])]
     to_compute_others = np.asarray([all_inters[x] for x in bit_others],
                                    dtype=str)
 

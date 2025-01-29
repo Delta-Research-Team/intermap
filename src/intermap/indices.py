@@ -10,6 +10,7 @@ import numpy_indexed as npi
 import rdkit
 from rdkit import Chem
 
+import intermap.cutoffs as cf
 import intermap.smarts as smarts
 
 logger = logging.getLogger('InterMapLogger')
@@ -109,7 +110,9 @@ class IndexManager:
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
-        self.interactions = interactions
+        self.raw_inters = [x.strip() for x in interactions.split(',')]
+
+        # Initialize the SMARTS patterns
         self.smarts_patterns = smarts.ProlifSmarts().interactions
         # logger.debug(f"Using the following SMARTS patterns:\n"
         #              f" {pformat(self.smarts_patterns)}")
@@ -117,11 +120,9 @@ class IndexManager:
         # Initialize the trajectory attributes
         self.unique_residues = None
         self.unique_rdmols = None
-
         stamp = time.time()
         self.universe, self.renamed_universe = self.load_traj()
         load_time = time.time() - stamp
-
         self.n_atoms = self.universe.atoms.n_atoms
         self.n_frames = len(self.universe.trajectory)
         # logger.info(f'System loaded in {load_time:.2f} s.\n'
@@ -184,6 +185,9 @@ class IndexManager:
                      f"Halogens: {len(self.xb_H)}\n"
                      f"Halogen bond acceptors: {len(self.xb_A)}\n"
                      f"Aromatic rings: {len(self.rings)}")
+
+        # Possible interactions
+        self.interactions = self.get_interactions()
 
     def load_traj(self):
         """
@@ -396,6 +400,66 @@ class IndexManager:
         pt = rdkit.Chem.GetPeriodicTable()
         radii = np.array([pt.GetRvdw(e) for e in elements])
         return radii.astype(np.float32)
+
+    def get_interactions(self):
+        """
+        Get the possible interactions between the selections in the trajectory
+
+        Returns:
+
+        """
+
+        len_s1, len_s2 = len(self.sel1_idx), len(self.sel2_idx)
+        len_hp = len(self.hydroph)
+        len_an, len_ca = len(self.anions), len(self.cations)
+        len_ma, len_md = len(self.metal_acc), len(self.metal_don)
+        len_hbd, len_hba, len_hbh = len(self.hb_D), len(self.hb_A), len(
+            self.hb_H)
+        len_xbd, len_xba, len_xbh = len(self.xb_D), len(self.xb_A), len(
+            self.xb_H)
+        len_rings = len(self.rings)
+
+        is_possible = {
+            'CloseContacts': (len_s1 > 0) and (len_s2 > 0),
+            'VdWContact': (len_s1 > 0) and (len_s2 > 0),
+            'Hydrophobic': len_hp > 0,
+            'Anionic': (len_an > 0) and (len_ca > 0),
+            'Cationic': (len_an > 0) and (len_ca > 0),
+            'MetalAcceptor': (len_ma > 0) and (len_md > 0),
+            'MetalDonor': (len_ma > 0) and (len_md > 0),
+            'HBDonor': (len_hbd > 0) and (len_hba > 0) and (len_hbh > 0),
+            'HBAcceptor': (len_hbd > 0) and (len_hba > 0) and (len_hbh > 0),
+            'XBDonor': (len_xbd > 0) and (len_xba > 0) and (len_xbh > 0),
+            'XBAcceptor': (len_xbd > 0) and (len_xba > 0) and (len_xbh > 0),
+            'PiStacking': len_rings > 0,
+            'PiCation': (len_rings > 0) and (len_ca > 0),
+            'CationPi': (len_rings > 0) and (len_ca > 0),
+            'FaceToFace': len_rings > 0,
+            'EdgeToFace': len_rings > 0,
+        }
+
+        raw = self.raw_inters
+        for x in raw:
+            if x == 'all':
+                requested = list(cf.parse_cutoffs().keys())
+            else:
+                requested = raw
+
+        to_compute = []
+        to_skip = []
+        for x in requested:
+            if not is_possible[x]:
+                to_skip.append(x)
+            else:
+                to_compute.append(x)
+
+        if to_skip:
+            logger.warning(
+                f"Skipping the following interactions because there "
+                f"are no atoms to compute them under the current "
+                f"selections for the given system:\n"
+                f"{to_skip} ")
+        return to_compute
 
 # %% ==========================================================================
 #
