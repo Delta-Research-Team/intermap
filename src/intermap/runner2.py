@@ -18,9 +18,7 @@ from intermap import commons as cmn
 from intermap.indices import IndexManager
 
 
-# todo: remove prolif dependency by copying the SMARTS patterns
 # todo: check docstrings
-# todo: come up with an idea for loading just the necessary indices into memory
 # todo: put a logger when potentially time-consuming tasks starts
 
 def run(mode='production'):
@@ -38,7 +36,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/gonzalezroy/RoyHub/intermap/example/imap.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -137,12 +135,26 @@ def run(mode='production'):
 
             # Estimating memory allocation
             logger.info(f"Estimating memory allocation")
-            ijf_template, inters_template = its.get_estimation(
-                xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
-                cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
-                metal_acceptors, vdw_radii, max_vdw, hb_hydrogens, hb_donors,
-                hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
-                cutoffs_others, selected_others)
+            ijf_template, inters_template = its.get_estimation(xyz_chunk, 5,
+                                                               s1_indices,
+                                                               s2_indices,
+                                                               cations, rings,
+                                                               cutoffs_aro,
+                                                               selected_aro,
+                                                               anions,
+                                                               hydrophobes,
+                                                               metal_donors,
+                                                               metal_acceptors,
+                                                               vdw_radii,
+                                                               max_vdw,
+                                                               hb_hydrogens,
+                                                               hb_donors,
+                                                               hb_acceptors,
+                                                               xb_halogens,
+                                                               xb_donors,
+                                                               xb_acceptors,
+                                                               cutoffs_others,
+                                                               selected_others)
 
             # Compiling the parallel function
             _, _ = its.run_parallel(

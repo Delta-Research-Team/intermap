@@ -137,12 +137,23 @@ for i, frames_chunk in enumerate(chunks):
 
         # Estimating memory allocation
         logger.info(f"Estimating memory allocation")
-        ijf_template, inters_template = its.get_estimation(
-            xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
-            cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
-            metal_acceptors, vdw_radii, max_vdw, hb_hydrogens, hb_donors,
-            hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
-            cutoffs_others, selected_others)
+        ijf_template, inters_template = its.get_estimation(xyz_chunk, 5,
+                                                           s1_indices,
+                                                           s2_indices, cations,
+                                                           rings, cutoffs_aro,
+                                                           selected_aro,
+                                                           anions, hydrophobes,
+                                                           metal_donors,
+                                                           metal_acceptors,
+                                                           vdw_radii, max_vdw,
+                                                           hb_hydrogens,
+                                                           hb_donors,
+                                                           hb_acceptors,
+                                                           xb_halogens,
+                                                           xb_donors,
+                                                           xb_acceptors,
+                                                           cutoffs_others,
+                                                           selected_others)
 
         # Compiling the parallel function
         _, _ = its.run_parallel(

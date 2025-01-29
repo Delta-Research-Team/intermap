@@ -404,8 +404,7 @@ class IndexManager:
 #
 # topo = plf.datafiles.TOP
 # traj = plf.datafiles.TRAJ
-# sel1 = "resid 119:152"
-# sel2 = "protein and (not resid 119:152)"
-# # sel2 = 'resid 119:152'
-# interactions = "HBDonor, HBAcceptor, PiStacking, PiCation, CationPi, Anionic, Cationic"
+# sel1 = "all"
+# sel2 = "all"
+# interactions = "all"
 # self = IndexManager(topo, traj, sel1, sel2, interactions)

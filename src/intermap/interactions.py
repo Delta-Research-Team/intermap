@@ -529,10 +529,15 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
     return ijf[mask], inters[mask]
 
 
-def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,rings, cutoffs_aro, to_compute_aro, anions, hydrophobes,metal_donors, metal_acceptors, vdw_radii, hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors, xb_acceptors, cutoffs_others, to_compute_others, factor=1.5):
+def get_estimation(xyz_chunk, n_samples, s1_indices, s2_indices, cations,
+                   rings, cutoffs_aro, selected_aro, anions, hydrophobes,
+                   metal_donors, metal_acceptors, vdw_radii, hb_hydrogens,
+                   hb_donors, hb_acceptors, xb_halogens, xb_donors,
+                   xb_acceptors, cutoffs_others, selected_others,
+                   factor=1.5):
     # Preallocate the arrays
-    n_frames = xyz_all.shape[0]
-    samples = xyz_all[::n_frames // n_samples]
+    n_frames = xyz_chunk.shape[0]
+    samples = xyz_chunk[::n_frames // n_samples]
     num_detected = np.zeros(n_samples, dtype=np.int32)
 
     # Use parallel loop to fill
@@ -541,14 +546,14 @@ def get_estimation(xyz_all, n_samples, s1_indices_raw, s2_indices_raw, cations,r
         xyz = samples[i]
 
         ijf_aro, inters_aro = aro(
-            xyz, i, s1_indices_raw, s2_indices_raw, cations, rings,
-            cutoffs_aro, to_compute_aro)
+            xyz, i, s1_indices, s2_indices, cations, rings,
+            cutoffs_aro, selected_aro)
 
         ijf_others, inters_others = not_aro(
-            xyz, i, s1_indices_raw, s2_indices_raw, anions, cations,
+            xyz, i, s1_indices, s2_indices, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
             hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
-            xb_acceptors, cutoffs_others, to_compute_others)
+            xb_acceptors, cutoffs_others, selected_others)
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
     # Estimate the number of contacts
@@ -612,7 +617,6 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
         ijf_final[start:end] = ijf_template[i, :limits[i]]
         inters_final[start:end] = inters_template[i, :limits[i]]
     return ijf_final, inters_final
-
 
 # =============================================================================
 # Debuging area

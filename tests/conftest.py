@@ -7,11 +7,15 @@
     - https://docs.pytest.org/en/stable/writing_plugins.html
 """
 import os
+from argparse import Namespace
 from os.path import join
 
+import mdtraj as md
 import pytest
 
-from intermap import config as conf
+from intermap import commons as cmn, config as conf, containers as cnt, \
+    cutoffs as cf
+from intermap.indices import IndexManager
 
 
 @pytest.fixture(scope="module")
@@ -64,3 +68,58 @@ def topo_trajs_fix():
         assert traj is not None, f"Trajectory file not found for {case}"
         topo_trajs[case] = (topo, traj)
     return topo_trajs
+
+
+@pytest.fixture(scope="module")
+def others_arguments(conf_path, parameters):
+    """
+    Arguments for the not-aromatic interactions
+    """
+    # Get the Index Manager
+    config = conf.InterMapConfig(conf_path, parameters)
+    args = Namespace(**config.config_args)
+    s1 = 'resname LIG'
+    s2 = 'protein'
+    iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
+
+    # Get information from the Index Manager
+    u = iman.universe
+    xyz = u.atoms.positions
+    k = 0
+    s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+    anions, cations = iman.anions, iman.cations
+    hydrophobes = iman.hydroph
+    vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
+
+    # Get the interactions and cutoffs
+    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+    to_compute = all_inters
+    selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
+        cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
+
+    return xyz, k, s1_indices, s2_indices, anions, cations, hydrophobes, \
+        vdw_radii, max_vdw, cutoffs_others, selected_others, args
+
+
+@pytest.fixture(scope="module")
+def others_containers(others_arguments):
+    """
+    Containers for the not-aromatic interactions
+    """
+    xyz, k, s1_indices, s2_indices, anions, cations, hydrophobes, \
+        vdw_radii, max_vdw, cutoffs_others, selected_others, args = others_arguments
+
+    ijf, inters, dists, row1, row2 = cnt.others(xyz, k, s1_indices, s2_indices,
+                                                max_vdw, cutoffs_others,
+                                                selected_others)
+    return ijf, inters, dists, row1, row2
+
+
+@pytest.fixture(scope="module")
+def mdtrajectory(others_arguments):
+    """
+    MDTrajectory object for the tests
+    """
+    _, _, _, _, _, _, _, _, _, _, _, args = others_arguments
+    trj = md.load(args.trajectory, top=args.topology)[0]
+    return trj

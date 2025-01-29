@@ -2,6 +2,7 @@
 """
 Common functions used in the different modules of the package
 """
+import itertools as it
 import logging
 import os
 import re
@@ -10,6 +11,26 @@ import numpy as np
 from numba import njit, prange
 
 logger = logging.getLogger('InterMapLogger')
+
+
+def product_uniques(*inputs):
+    """
+    Generate the unique products of the input iterables.
+
+    Args:
+        *inputs: iterables to generate the products from.
+
+    Returns:
+        generator: unique products of the input iterables.
+    """
+    seen = set()
+    for prod in it.product(*inputs):
+        prod_set = frozenset(prod)
+        if len(prod_set) == 1:
+            continue
+        if prod_set not in seen:
+            seen.add(prod_set)
+            yield prod
 
 
 def start_logger(log_path):
@@ -65,7 +86,8 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
     # Parse non-aromatics
     bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
                   in indices(all_inters, [x])]
-    to_compute_others = np.asarray([all_inters[x] for x in bit_others], dtype=str)
+    to_compute_others = np.asarray([all_inters[x] for x in bit_others],
+                                   dtype=str)
 
     # Get the cutoffs
     cutoffs_aro = all_cutoffs[:, bit_aro]

@@ -67,7 +67,7 @@ def get_cutoff(cutoff_name, args=()):
     if cutoff_name not in cf.__dict__:
         raise ValueError(f"{cutoff_name} is not a valid cutoff name.\n"
                          f"The supported list is:\n"
-                         f"{[x for x in dir(cf) if not x.startswith("__")]}")
+                         f"{[x for x in dir(cf) if not x.startswith('__')]}")
     elif cutoff_name in args:
         return args[cutoff_name]
     else:
