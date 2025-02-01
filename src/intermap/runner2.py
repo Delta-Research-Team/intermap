@@ -37,6 +37,7 @@ def run(mode='production'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -78,10 +79,7 @@ def run(mode='production'):
     # Parsing the interactions & cutoffs
     # =========================================================================
     all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
-    if isinstance(args.interactions, str) and args.interactions == 'all':
-        to_compute = all_inters
-    else:
-        to_compute = args.interactions
+    to_compute = iman.interactions
     selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
 
@@ -107,10 +105,10 @@ def run(mode='production'):
     sel_idx = iman.sel_idx
     s1_indices = iman.sel1_idx
     s2_indices = iman.sel2_idx
+    n_sel_atoms = sel_idx.size
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
-    n_sel_atoms = sel_idx.size
     names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in sel_idx]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
@@ -135,26 +133,12 @@ def run(mode='production'):
 
             # Estimating memory allocation
             logger.info(f"Estimating memory allocation")
-            ijf_template, inters_template = its.get_estimation(xyz_chunk, 5,
-                                                               s1_indices,
-                                                               s2_indices,
-                                                               cations, rings,
-                                                               cutoffs_aro,
-                                                               selected_aro,
-                                                               anions,
-                                                               hydrophobes,
-                                                               metal_donors,
-                                                               metal_acceptors,
-                                                               vdw_radii,
-                                                               max_vdw,
-                                                               hb_hydrogens,
-                                                               hb_donors,
-                                                               hb_acceptors,
-                                                               xb_halogens,
-                                                               xb_donors,
-                                                               xb_acceptors,
-                                                               cutoffs_others,
-                                                               selected_others)
+            ijf_template, inters_template = its.get_estimation(
+                xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
+                cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
+                metal_acceptors, vdw_radii, max_vdw, hb_hydrogens, hb_donors,
+                hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
+                cutoffs_others, selected_others)
 
             # Compiling the parallel function
             _, _ = its.run_parallel(
