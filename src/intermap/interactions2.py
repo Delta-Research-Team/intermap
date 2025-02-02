@@ -48,7 +48,64 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
 
 
 @njit(parallel=False, cache=True)
-def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros, hb_donors, ha_cut, da_cut, min_ang, max_ang, selected_others):
+def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_hydros,
+                  ha_cut, min_ang, max_ang, selected_others):
+    """"
+    Detect the hydrogen bonds
+
+    Args:
+        inter_name (str): Name of the interaction
+        row1 (ndarray): Indices of the atoms in the first selection
+        type1 (ndarray): Type of the atoms to be found in the first selection
+        row2 (ndarray): Indices of the atoms in the second selection
+        type2 (ndarray): Type of the atoms to be found in the second selection
+        dists (ndarray): Distances between the atoms in the first and second
+        xyz (ndarray): Coordinates of the atoms in the system
+        hb_hydros (ndarray): Indices of the hydrogen bond hydrogens
+        ha_cut (float): Cutoff distance for the hydrogen-acceptor atoms
+        min_ang (float): Minimum angle for the hydrogen bond
+        max_ang (float): Maximum angle for the hydrogen bond
+        selected_others (ndarray): Selected interactions to compute
+    """
+    # Detect donors and acceptors under cutoff
+    idx_name = cmn.indices(selected_others, [inter_name])[0]
+    r1_t1 = cmn.isin(row1, type1)
+    r2_t2 = cmn.isin(row2, type2)
+    passing_HA = r1_t1 & r2_t2 & (dists <= ha_cut)
+    t1 = row1[passing_HA]
+    t2 = row2[passing_HA]
+    if not passing_HA.any():
+        return idx_name, np.zeros(dists.size, dtype=np.bool_)
+
+    # Compute DHA angles
+    if "HBDonor" in inter_name:
+        idx_hydros = cmn.indices(type1, t1)
+        D = hb_donors[idx_hydros]
+        DHA_angles = cmn.calc_angle(xyz[D], xyz[t1], xyz[t2])
+    elif "HBAcceptor" in inter_name:
+        idx_hydros = cmn.indices(type2, t2)
+        D = hb_donors[idx_hydros]
+        DHA_angles = cmn.calc_angle(xyz[D], xyz[t2], xyz[t1])
+    else:
+        raise ValueError(f"Invalid interaction name: {inter_name}")
+
+    # Detect DHA tuples that pass the angle cutoff
+    passing_DHA = (DHA_angles >= min_ang) & (DHA_angles <= max_ang)
+
+    if not passing_DHA.any():
+        return idx_name, np.zeros(dists.size, dtype=np.bool_)
+
+    # Find the indices of hbonds in ijf
+    t1_idx = t1[passing_DHA]
+    t2_idx = t2[passing_DHA]
+    ijf_t1 = cmn.isin(row1, t1_idx)
+    ijf_t2 = cmn.isin(row2, t2_idx)
+    return idx_name, ijf_t1 & ijf_t2
+
+
+@njit(parallel=False, cache=True)
+def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
+                hb_donors, ha_cut, da_cut, min_ang, max_ang, selected_others):
     """
     Detect the 2D1A interactions (two distances and one angle involved)
 
@@ -253,24 +310,27 @@ ha_cut, da_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
 
 ha_cut, da_cut = 2.5, 3.9
 min_ang, max_ang = 120, 180
-hbd_idx, hbd_bit = detect_2d1a('HBDonor', dists, xyz, row1, row2, hb_acc,hb_hydros, hb_donors, ha_cut, da_cut, min_ang,max_ang, selected_others)
 
-hba_idx, hba_bit = detect_2d1a('HBAcceptor', dists, xyz, row1, row2, hb_acc,
-                               hb_hydros, hb_donors, ha_cut, da_cut, min_ang,
-                               max_ang, selected_others)
+# %%
+# >>>> 2d1a in intermap
 
+
+# >>>> hubard in mdtraj
 mdtrajectory = md.load(args.trajectory, top=args.topology)[0]
-hubards = md.baker_hubbard(mdtrajectory)
-unique_ha_hubard = np.unique(hubards[:, 1:], axis=0)
+hubards = md.baker_hubbard(mdtrajectory)[:, [0, 2]]
+unique_ha_hubard = np.unique(hubards, axis=0)
 unique_ha_hubard_tuples = tuple(map(tuple, unique_ha_hubard))
+# >>>>>
 
 
-are_hydros = cmn.isin(row1, hb_hydros)
-are_acceptors = cmn.isin(row2, hb_acc)
+hb1 = detect_hbonds('HBDonor', row1, hb_donors, row2, hb_acc, dists, xyz,
+                    hb_hydros, ha_cut, min_ang, max_ang, selected_others)
 
-passing_ha = are_hydros & are_acceptors & (dists <= ha_cut)
-unique_ha_iman = np.unique(ijf[passing_ha][:, :2], axis=0)
+unique_ha_iman = np.unique(ijf[hb1[1]][:, :2], axis=0)
 unique_ha_iman_tuples = tuple(map(tuple, unique_ha_iman))
 
 for tuple_hubard in unique_ha_hubard_tuples:
     assert tuple_hubard in unique_ha_iman_tuples, f"Tuple {tuple_hubard} not found"
+
+for tuple_iman in unique_ha_iman_tuples:
+    assert tuple_iman in unique_ha_hubard_tuples, f"Tuple {tuple_iman} not found"

@@ -296,8 +296,8 @@ class IndexManager:
         hx_A = []
         for case in self.unique_rdmols:
             res = self.unique_residues[case]
-            atom_names = res.atoms.names
             mol = self.unique_rdmols[case]
+            atom_names = res.atoms.names
 
             # Find the donors and hydrogens
             query_dh = Chem.MolFromSmarts(smart_dx)
@@ -461,14 +461,15 @@ class IndexManager:
                 f"{to_skip} ")
         return to_compute
 
+
 # %% ==========================================================================
 #
 # =============================================================================
-# import prolif as plf
-#
-# topo = plf.datafiles.TOP
-# traj = plf.datafiles.TRAJ
-# sel1 = "all"
-# sel2 = "all"
-# interactions = "all"
-# self = IndexManager(topo, traj, sel1, sel2, interactions)
+import prolif as plf
+
+topo = plf.datafiles.TOP
+traj = plf.datafiles.TRAJ
+sel1 = "all"
+sel2 = "all"
+interactions = "all"
+self = IndexManager(topo, traj, sel1, sel2, interactions)

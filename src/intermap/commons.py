@@ -286,6 +286,9 @@ def calc_angle(d, h, a):
         ah_norm = np.sqrt(ah[0] ** 2 + ah[1] ** 2 + ah[2] ** 2)
 
         # Compute angle
+        if dh_norm == 0 or ah_norm == 0:
+            angle_deg[i] = 0
+            continue
         angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
         angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
 
