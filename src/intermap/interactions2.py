@@ -2,6 +2,8 @@
 import numpy as np
 from numba import njit
 
+from intermap import commons as cmn, containers as cnt
+
 
 @njit(parallel=False, cache=True)
 def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
@@ -48,7 +50,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
 
 
 @njit(parallel=False, cache=True)
-def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_hydros,
+def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
                   ha_cut, min_ang, max_ang, selected_others):
     """"
     Detect the hydrogen bonds
@@ -61,7 +63,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_hydros,
         type2 (ndarray): Type of the atoms to be found in the second selection
         dists (ndarray): Distances between the atoms in the first and second
         xyz (ndarray): Coordinates of the atoms in the system
-        hb_hydros (ndarray): Indices of the hydrogen bond hydrogens
+        hb_donors (ndarray): Indices of the hydrogen bond donors
         ha_cut (float): Cutoff distance for the hydrogen-acceptor atoms
         min_ang (float): Minimum angle for the hydrogen bond
         max_ang (float): Maximum angle for the hydrogen bond
@@ -78,6 +80,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_hydros,
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
 
     # Compute DHA angles
+    t3 = np.zeros(passing_HA.size, dtype=np.float32)
     if "HBDonor" in inter_name:
         idx_hydros = cmn.indices(type1, t1)
         D = hb_donors[idx_hydros]
@@ -88,19 +91,14 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_hydros,
         DHA_angles = cmn.calc_angle(xyz[D], xyz[t2], xyz[t1])
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
+    t3[passing_HA] = DHA_angles
 
     # Detect DHA tuples that pass the angle cutoff
-    passing_DHA = (DHA_angles >= min_ang) & (DHA_angles <= max_ang)
+    passing_DHA = (t3 >= min_ang) & (t3 <= max_ang)
 
-    if not passing_DHA.any():
+    if not t3.any():
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
-
-    # Find the indices of hbonds in ijf
-    t1_idx = t1[passing_DHA]
-    t2_idx = t2[passing_DHA]
-    ijf_t1 = cmn.isin(row1, t1_idx)
-    ijf_t2 = cmn.isin(row2, t2_idx)
-    return idx_name, ijf_t1 & ijf_t2
+    return idx_name, passing_DHA
 
 
 @njit(parallel=False, cache=True)
@@ -112,6 +110,7 @@ def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
     Args:
         inter_name (str): Name of the interaction
         dists (ndarray): Distances between the atoms in the first and second
+        xyz (ndarray): Coordinates of the atoms in the system
         row1 (ndarray): Indices of the atoms in the first selection
         row2 (ndarray): Indices of the atoms in the second selection
         hb_acc (ndarray): Indices of the hydrogen bond acceptors
@@ -121,6 +120,7 @@ def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
         da_cut (float): Cutoff distance for the hydrogen bond donor-acceptor
         min_ang (float): Minimum angle for the hydrogen bond
         max_ang (float): Maximum angle for the hydrogen bond
+        selected_others (ndarray): Selected interactions to compute
 
     Returns:
         inter_idx (int): Index of the interaction in the to_compute_others array
@@ -173,94 +173,103 @@ def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
 
 @njit(parallel=False, cache=True)
 def fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
-                metal_donors, metal_acceptors, hb_hydrogens, hb_donors,
-                hb_acceptors, xb_halogens, xb_donors, xb_acceptors, max_vdw,
-                vdw_radii, cutoffs_others, selected_others):
+                metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
+                xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,
+                cutoffs_others, selected_others):
     """
     Fill the not-aromatic interactions
     """
-    selected = list(selected_others)
+
+    # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = cnt.others(xyz, k, s1_indices, s2_indices,
                                                 max_vdw, cutoffs_others,
                                                 selected_others)
-
+    selected = list(selected_others)
+    # [Van der Waals]
     if 'VdWContact' in selected:
-        vdw_index, vdw_contacts = detect_vdw('VdWContact', dists, row1, row2,
-                                             vdw_radii, selected_others)
-        inters[:, vdw_index] = vdw_contacts
+        vdw_idx, vdw_bit = detect_vdw(dists, row1, row2, vdw_radii,
+                                      selected)
+        inters[:, vdw_idx] = vdw_bit
 
+    # [Close Contacts]
     if 'CloseContacts' in selected:
-        cc_index, close_contacts = detect_1d('CloseContacts', dists, row1,
-                                             row1, row2, row2, cutoffs_others,
-                                             selected_others)
-        inters[:, cc_index] = close_contacts
+        cc_idx, cc = detect_1d('CloseContacts', dists, row1, row1, row2, row2,
+                               cutoffs_others, selected)
+        inters[:, cc_idx] = cc
 
+    # [Hydrophobic]
     if 'Hydrophobic' in selected:
-        hp_index, hp_contacts = detect_1d('Hydrophobic', dists, row1,
-                                          hydrophobes, row2, hydrophobes,
-                                          cutoffs_others, selected_others)
-        inters[:, hp_index] = hp_contacts
+        hp_idx, hp = detect_1d('Hydrophobic', dists, row1, hydrophobes, row2,
+                               hydrophobes, cutoffs_others, selected)
+        inters[:, hp_idx] = hp
 
+    # [Cationic]
     if 'Cationic' in selected:
-        cat_idx, cationic = detect_1d('Cationic', dists, row1, cations, row2,
-                                      anions, cutoffs_others, selected_others)
-        inters[:, cat_idx] = cationic
+        cat_idx, cat = detect_1d('Cationic', dists, row1, cations, row2,
+                                 anions, cutoffs_others, selected)
+        inters[:, cat_idx] = cat
 
+    # [Anionic]
     if 'Anionic' in selected:
-        cat_idx, anionic = detect_1d('Anionic', dists, row1, anions, row2,
-                                     cations, cutoffs_others, selected_others)
-        inters[:, cat_idx] = anionic
+        an_idx, an = detect_1d('Anionic', dists, row1, anions, row2,
+                               cations, cutoffs_others, selected)
+        inters[:, an_idx] = an
 
+    # [MetalDonor]
     if 'MetalDonor' in selected:
-        md_idx, metal_donor = detect_1d('MetalDonor', dists, row1,
-                                        metal_donors, row2, metal_acceptors,
-                                        cutoffs_others, selected_others)
-        inters[:, md_idx] = metal_donor
+        md_idx, md = detect_1d('MetalDonor', dists, row1, metal_donors, row2,
+                               metal_acceptors, cutoffs_others,
+                               selected)
+        inters[:, md_idx] = md
 
+    # [MetalAcceptor]
     if 'MetalAcceptor' in selected:
-        ma_idx, metal_acc = detect_1d('MetalAcceptor', dists, row1,
-                                      metal_acceptors, row2, metal_donors,
-                                      cutoffs_others, selected_others)
-        inters[:, ma_idx] = metal_acc
+        ma_idx, ma = detect_1d('MetalAcceptor', dists, row1, metal_acceptors,
+                               row2, metal_donors, cutoffs_others,
+                               selected)
+        inters[:, ma_idx] = ma
 
-    if ('HBAcceptor' in selected_others) or ('HBDonor' in selected_others):
-        idx_both = cmn.indices(selected_others, ['HBAcceptor'])[0]
-        da_cut, ha_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
+    # [HBonds]
+    if ('HBAcceptor' in selected) or ('HBDonor' in selected):
+        idx_hb = cmn.indices(selected, ['HBAcceptor'])[0]
+        da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cutoffs_others[:4,
+                                                       idx_hb]
+        if 'HBAcceptor' in selected:
+            hba_idx, hba = detect_hbonds('HBAcceptor', row1, hb_acc, row2,
+                                         hb_hydros, dists, xyz, hb_donors,
+                                         ha_cut_hb, min_ang_hb, max_ang_hb,
+                                         selected)
+            inters[:, hba_idx] = hba
 
-        if 'HBAcceptor' in selected_others:
-            hba_idx, hb_a = detect_2d1a('HBAcceptor', dists, xyz, row1, row2,
-                                        hb_acceptors, hb_hydrogens,
-                                        hb_donors, ha_cut, da_cut, min_ang,
-                                        max_ang, selected_others)
-            inters[:, hba_idx] = hb_a
+        if 'HBDonor' in selected:
+            hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydros, row2,
+                                         hb_acc, dists, xyz, hb_donors,
+                                         ha_cut_hb, min_ang_hb, max_ang_hb,
+                                         selected)
+            inters[:, hbd_idx] = hbd
 
-        if 'HBDonor' in selected_others:
-            hbd_idx, hb_d = detect_2d1a('HBDonor', dists, xyz, row1, row2,
-                                        hb_acceptors, hb_hydrogens,
-                                        hb_donors, ha_cut, da_cut, min_ang,
-                                        max_ang, selected_others)
-            inters[:, hbd_idx] = hb_d
+    # [XBonds]
+    if ('XBAcceptor' in selected) or ('XBDonor' in selected):
+        idx_xb = cmn.indices(selected, ['XBAcceptor'])[0]
+        da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cutoffs_others[:4,
+                                                       idx_xb]
 
-    if ('XBAcceptor' in selected_others) or ('XBDonor' in selected_others):
-        idx_both = cmn.indices(selected_others, ['XBAcceptor'])[0]
-        da_cut, ha_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
+        if 'XBAcceptor' in selected:
+            xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
+                                         xb_halogens, dists, xyz, xb_donors,
+                                         ha_cut_xb, min_ang_xb, max_ang_xb,
+                                         selected)
+            inters[:, xba_idx] = xba
 
-        if 'XBAcceptor' in selected_others:
-            hbd_idx, xb_a = detect_2d1a('XBAcceptor', dists, xyz, row1, row2,
-                                        xb_acceptors, xb_halogens, xb_donors,
-                                        ha_cut, da_cut, min_ang, max_ang,
-                                        selected_others)
-            inters[:, hbd_idx] = xb_a
-
-        if 'XBDonor' in selected_others:
-            hbd_idx, xb_d = detect_2d1a('XBDonor', dists, xyz, row1, row2,
-                                        xb_acceptors, xb_halogens, xb_donors,
-                                        ha_cut, da_cut, min_ang, max_ang,
-                                        selected_others)
-            inters[:, hbd_idx] = xb_d
+        if 'XBDonor' in selected:
+            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_halogens, row2,
+                                         xb_acc, dists, xyz, xb_donors,
+                                         ha_cut_xb, min_ang_xb, max_ang_xb,
+                                         selected)
+            inters[:, xbd_idx] = xbd
 
     mask = cmn.get_compress_mask(inters)
-    return ijf[mask], interactions[mask]
+    return ijf[mask], inters[mask]
 
 
 # =============================================================================
@@ -270,9 +279,6 @@ from intermap import config as conf
 from argparse import Namespace
 from intermap.indices import IndexManager
 import intermap.cutoffs as cf
-from intermap import containers as cnt
-import mdtraj as md
-from intermap import commons as cmn
 
 conf_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
 # Get the Index Manager
@@ -293,6 +299,11 @@ vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
 hb_acc = iman.hb_A
 hb_hydros = iman.hb_H
 hb_donors = iman.hb_D
+xb_acc = iman.xb_A
+xb_donors = iman.xb_D
+xb_halogens = iman.xb_H
+metal_donors = iman.metal_don
+metal_acceptors = iman.metal_acc
 
 # Get the interactions and cutoffs
 all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
@@ -300,37 +311,8 @@ to_compute = all_inters
 selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
     cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
 
-ijf, interactions, dists, row1, row2 = cnt.others(xyz, k, s1_indices,
-                                                  s2_indices, max_vdw,
-                                                  cutoffs_others,
-                                                  selected_others)
-
-idx_both = cmn.indices(selected_others, ['HBAcceptor'])[0]
-ha_cut, da_cut, min_ang, max_ang = cutoffs_others[:4, idx_both]
-
-ha_cut, da_cut = 2.5, 3.9
-min_ang, max_ang = 120, 180
-
-# %%
-# >>>> 2d1a in intermap
-
-
-# >>>> hubard in mdtraj
-mdtrajectory = md.load(args.trajectory, top=args.topology)[0]
-hubards = md.baker_hubbard(mdtrajectory)[:, [0, 2]]
-unique_ha_hubard = np.unique(hubards, axis=0)
-unique_ha_hubard_tuples = tuple(map(tuple, unique_ha_hubard))
-# >>>>>
-
-
-hb1 = detect_hbonds('HBDonor', row1, hb_donors, row2, hb_acc, dists, xyz,
-                    hb_hydros, ha_cut, min_ang, max_ang, selected_others)
-
-unique_ha_iman = np.unique(ijf[hb1[1]][:, :2], axis=0)
-unique_ha_iman_tuples = tuple(map(tuple, unique_ha_iman))
-
-for tuple_hubard in unique_ha_hubard_tuples:
-    assert tuple_hubard in unique_ha_iman_tuples, f"Tuple {tuple_hubard} not found"
-
-for tuple_iman in unique_ha_iman_tuples:
-    assert tuple_iman in unique_ha_hubard_tuples, f"Tuple {tuple_iman} not found"
+ijf, others = fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
+                          cations, metal_donors, metal_acceptors, hb_hydros,
+                          hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
+                          max_vdw, vdw_radii, cutoffs_others, selected_others)
+print(others.sum(axis=0))

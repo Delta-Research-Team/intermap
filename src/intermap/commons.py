@@ -13,6 +13,19 @@ from numba import njit, prange
 
 logger = logging.getLogger('InterMapLogger')
 
+smarts = {
+    'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
+    'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
+    'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
+    'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
+    'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
+    'hb_acc': '[#7&!$([n&X3])&!$([N&X3]-*=[O,N,P,S])&!$([N&X3]-a)&!$([N&v4&+]),O&!$([O&X2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O&-]-N=O),o&+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
+    'xb_acc': '[#7,#8,P,S,#34,#52,a;!+{1-}]!#*',
+    'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
+    'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
+    'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+    'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
+
 
 def product_uniques(*inputs):
     """
@@ -24,14 +37,11 @@ def product_uniques(*inputs):
     Returns:
         generator: unique products of the input iterables.
     """
-    seen = set()
     for prod in it.product(*inputs):
         prod_set = frozenset(prod)
         if len(prod_set) == 1:
             continue
-        if prod_set not in seen:
-            seen.add(prod_set)
-            yield prod
+        yield prod
 
 
 def start_logger(log_path):
@@ -155,6 +165,27 @@ def isin(full, subset):
     set_b = set(subset)
     for i in prange(n):
         if full[i] in set_b:
+            result[i] = True
+    return result
+
+
+@njit(parallel=False, cache=True)
+def isin2d(full, subset):
+    """
+    Check if the elements of the subset are in the full array.
+
+    Args:
+        full (ndarray): Full array.
+        subset (ndarray): Subset array.
+
+    Returns:
+        result (ndarray): Boolean array indicating if the elements of the
+                          subset are in the full array.
+    """
+    n = len(full)
+    result = np.full(n, False)
+    for i in prange(n):
+        if full[i] in subset:
             result[i] = True
     return result
 
@@ -286,11 +317,11 @@ def calc_angle(d, h, a):
         ah_norm = np.sqrt(ah[0] ** 2 + ah[1] ** 2 + ah[2] ** 2)
 
         # Compute angle
-        if dh_norm == 0 or ah_norm == 0:
-            angle_deg[i] = 0
-            continue
-        angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
-        angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
+        try:
+            angle_rad = np.arccos(dot_product / (dh_norm * ah_norm))
+            angle_deg[i] = np.rad2deg(angle_rad)  # Convert radians to degrees
+        except:
+            angle_deg[i] = 0.0
 
     return angle_deg
 

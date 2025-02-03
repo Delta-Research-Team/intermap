@@ -11,7 +11,7 @@ import rdkit
 from rdkit import Chem
 
 import intermap.cutoffs as cf
-import intermap.smarts as smarts
+from intermap.commons import smarts
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -113,7 +113,7 @@ class IndexManager:
         self.raw_inters = [x.strip() for x in interactions.split(',')]
 
         # Initialize the SMARTS patterns
-        self.smarts_patterns = smarts.ProlifSmarts().interactions
+        self.smarts_patterns = smarts
         # logger.debug(f"Using the following SMARTS patterns:\n"
         #              f" {pformat(self.smarts_patterns)}")
 
@@ -269,6 +269,7 @@ class IndexManager:
             query = Chem.MolFromSmarts(smart)
             match = [list(x) for x in mol.GetSubstructMatches(query)]
             match_names = [' '.join(atom_names[x]) for x in match]
+
             for sel in match_names:
                 hydrophs = 'resname {} and name {}'.format(case, sel)
                 idx = self.renamed_universe.select_atoms(hydrophs).indices

@@ -66,7 +66,8 @@ def topo_trajs_fix():
 
         assert topo is not None, f"Topology file not found for {case}"
         assert traj is not None, f"Trajectory file not found for {case}"
-        topo_trajs[case] = (topo, traj)
+        if 'trj1' in case:
+            topo_trajs[case] = (topo, traj)
     return topo_trajs
 
 
@@ -102,12 +103,62 @@ def others_arguments(conf_path, parameters):
 
 
 @pytest.fixture(scope="module")
+def others_arguments_all(conf_path, parameters):
+    """
+    Arguments for the not-aromatic interactions
+    """
+    # Get the Index Manager
+    config = conf.InterMapConfig(conf_path, parameters)
+    args = Namespace(**config.config_args)
+    s1 = 'all'
+    s2 = 'all'
+    iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
+
+    # Get information from the Index Manager
+    u = iman.universe
+    xyz = u.atoms.positions
+    k = 0
+    s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+    anions, cations = iman.anions, iman.cations
+    hydrophobes = iman.hydroph
+    vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
+    hb_donors = iman.hb_D
+    hb_acc = iman.hb_A
+    hb_hydros = iman.hb_H
+
+    # Get the interactions and cutoffs
+    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+    to_compute = all_inters
+    selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
+        cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
+
+    return (xyz, k, s1_indices, s2_indices, anions, cations, hydrophobes,
+            vdw_radii, max_vdw, hb_donors, hb_hydros, hb_acc, cutoffs_others,
+            selected_others, args)
+
+
+@pytest.fixture(scope="module")
 def others_containers(others_arguments):
     """
     Containers for the not-aromatic interactions
     """
     xyz, k, s1_indices, s2_indices, anions, cations, hydrophobes, \
         vdw_radii, max_vdw, cutoffs_others, selected_others, args = others_arguments
+
+    ijf, inters, dists, row1, row2 = cnt.others(xyz, k, s1_indices, s2_indices,
+                                                max_vdw, cutoffs_others,
+                                                selected_others)
+    return ijf, inters, dists, row1, row2
+
+
+@pytest.fixture(scope="module")
+def others_containers_all(others_arguments_all):
+    """
+    Containers for the not-aromatic interactions
+    """
+    (xyz, k, s1_indices, s2_indices, anions, cations, hydrophobes,
+     vdw_radii, max_vdw, hb_donors, hb_hydros, hb_acc, cutoffs_others,
+     selected_others, args) = others_arguments_all
 
     ijf, inters, dists, row1, row2 = cnt.others(xyz, k, s1_indices, s2_indices,
                                                 max_vdw, cutoffs_others,
