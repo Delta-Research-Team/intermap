@@ -1,8 +1,70 @@
 # Created by rglez at 1/19/25
+"""
+This module contains the functions to compute the inter-atomic interactions
+"""
+
 import numpy as np
 from numba import njit
+from numba_kdtree import KDTree as nckd
 
-from intermap import commons as cmn, containers as cnt
+from intermap import commons as cmn
+
+
+@njit(parallel=False, cache=True)
+def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
+               selected_others):
+    """
+    Get the containers to find interactions not related to aromatic rings
+
+    Args:
+        xyz (ndarray): Coordinates of the atoms in the system
+        k (int): Index of the frame in the trajectory
+        s1_indices (ndarray): Indices of the atoms in the first selection
+        s2_indices (ndarray): Indices of the atoms in the second selection
+        max_vdw: Maximum van der Waals distance in the current universe
+        cutoffs_others (ndarray): Cutoff distances for the interactions
+        selected_others (ndarray): Selected nteractions to compute
+
+    Returns:
+        ijf (ndarray): Indices of the atoms in the first and second selections
+        interactions (ndarray): Container for the interactions
+        dists (ndarray): Distances between the atoms in the first and second
+                         selections
+    """
+
+    # Create & query the trees
+    dist_cut = max(cutoffs_others[:2].max(), max_vdw)
+    s2_tree = nckd(xyz[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
+
+    # Find the contacts
+    n_contacts = sum([len(x) for x in ball_1])
+    ijf = np.empty((n_contacts, 3), dtype=np.int32)
+    counter = 0
+    for i, x in enumerate(ball_1):
+        X1 = s1_indices[i]
+        for j in x:
+            X2 = s2_indices[j]
+            ijf[counter][0] = X1
+            ijf[counter][1] = X2
+            ijf[counter][2] = k
+            counter += 1
+
+    # Remove idems (self-contacts appearing if both selections overlap)
+    idems = ijf[:, 0] == ijf[:, 1]
+    if idems.any():
+        ijf = ijf[~idems]
+
+    # Compute distances
+    row1 = ijf[:, 0]
+    row2 = ijf[:, 1]
+    dists = cmn.calc_dist(xyz[row1], xyz[row2])
+
+    # Create the container for interaction types
+    n_types = selected_others.size
+    interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
+
+    return ijf, interactions, dists, row1, row2
 
 
 @njit(parallel=False, cache=True)
@@ -33,10 +95,6 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
     """
 
     inter_idx = cmn.indices(selected_others, [inter_name])[0]
-
-    # if type1.size == 0 or type2.size == 0:
-    #     return inter_idx, np.zeros(0, dtype=np.bool_)
-
     dist_cutoff = cutoffs_others[0, inter_idx]
     passing_dists = dists <= dist_cutoff
 
@@ -181,10 +239,11 @@ def fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
     """
 
     # Get the containers for the not-aromatic interactions
-    ijf, inters, dists, row1, row2 = cnt.others(xyz, k, s1_indices, s2_indices,
+    ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
                                                 max_vdw, cutoffs_others,
                                                 selected_others)
     selected = list(selected_others)
+
     # [Van der Waals]
     if 'VdWContact' in selected:
         vdw_idx, vdw_bit = detect_vdw(dists, row1, row2, vdw_radii,
@@ -280,7 +339,7 @@ from argparse import Namespace
 from intermap.indices import IndexManager
 import intermap.cutoffs as cf
 
-conf_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
+conf_path = 'tests/imaps/imap1.cfg'
 # Get the Index Manager
 config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
 args = Namespace(**config.config_args)

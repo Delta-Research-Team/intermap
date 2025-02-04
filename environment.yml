@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   # not necessary for the package. Remove when published.
-  - prolif
+  - prolif==2.1.0
   - matplotlib
   - ipython
   - pytest
