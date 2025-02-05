@@ -1,78 +1,10 @@
 # Created by gonzalezroy at 11/14/24
 import os
 from collections import defaultdict
-from os.path import dirname, join
+from os.path import join
 
-# import mdtraj as md
 import numpy as np
 from numba.typed.typeddict import Dict
-
-
-# def get_traj_chunks(top, trajs, start=0, last=-1, stride=1, chunk_size=100):
-#     """
-#     Generator that yields chunks of a list of trajectories.
-#
-#     Args:
-#         top (str): Path to the topology file.
-#         trajs (list): List of paths to the trajectories.
-#         start (int): Starting frame.
-#         last (int): Last frame.
-#         stride (int): Stride.
-#         chunk_size (int): Chunk size.
-#     """
-#
-#     for traj in trajs:
-#         parsed = md.iterload(traj, top=top, skip=start, stride=stride,
-#                              chunk=chunk_size)
-#
-#         if last == -1:
-#             for chunk in parsed:
-#                 yield chunk
-#
-#         else:
-#             requested = len(list(range(start, last + stride, stride)))
-#             for chunk in parsed:
-#                 if requested >= len(chunk):
-#                     requested -= len(chunk)
-#                     yield chunk
-#                 else:
-#                     yield chunk[:requested]
-#                     break
-
-
-# def prepare_datastructures(topo, traj, heavies):
-#     """
-#     Prepare datastructures for the calculation of descriptors
-#
-#     Args:
-#         topo: path to the topology file
-#         traj: path to the trajectory file
-#         heavies: list of elements considered as heavy atoms
-#
-#     Returns:
-#         mini_traj: the first chunk of the trajectory
-#         resids_to_atoms: numba Dict of each residue's indices
-#         resids_to_noh: numba Dict of each residue's indices without hydrogens
-#         donors: numba Dict of each residue's donor indices
-#         hydros: numba Dict of each residue's hydrogen indices
-#         acceptors: numba Dict of each residue's acceptor indices
-#     """
-#
-#     # Load trajectory
-#     mini_traj = next(md.iterload(traj, top=topo, chunk=1))
-#
-#     # Indices of residues in the load trajectory and equivalence
-#     resids_to_atoms, resids_to_noh, internal_equiv = \
-#         get_resids_indices(mini_traj)
-#     raw = {y: x for x in resids_to_atoms for y in resids_to_atoms[x]}
-#     atoms_to_resids = pydict_to_numbadict(raw)
-#
-#     # Atom selections indices for descriptors calculation
-#     donors, hydros, acceptors = \
-#         get_dha_indices(mini_traj, heavies, atoms_to_resids)
-#
-#     return (
-#         mini_traj, resids_to_atoms, resids_to_noh, donors, hydros, acceptors)
 
 
 def get_resids_indices(trajectory):
@@ -244,10 +176,3 @@ def get_coordinates(u, chunk, sel_idx, num_atoms):
     for i, frame in enumerate(chunk):
         xyz_chunk[i] = u.trajectory[frame].positions[sel_idx]
     return xyz_chunk
-
-
-# =============================================================================
-#
-# =============================================================================
-# proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
-# data_dir = mount_data_dir(proj_dir, "INTERMAP_DATA")

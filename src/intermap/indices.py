@@ -461,16 +461,3 @@ class IndexManager:
                 f"selections for the given system:\n"
                 f"{to_skip} ")
         return to_compute
-
-
-# %% ==========================================================================
-#
-# =============================================================================
-import prolif as plf
-
-topo = plf.datafiles.TOP
-traj = plf.datafiles.TRAJ
-sel1 = "all"
-sel2 = "all"
-interactions = "all"
-self = IndexManager(topo, traj, sel1, sel2, interactions)

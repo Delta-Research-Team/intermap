@@ -51,7 +51,8 @@ def containers(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
 
     # Create a new xyz array with the cations & centroids only
     xyz_aro = concat((xyz[s1_cat], xyz[s2_cat], s1_centr, s2_centr), axis=0)
-    xyz_aro_real_idx = concat((s1_cat, s2_cat, s1_rings[:, 0], s2_rings[:, 0]))
+    xyz_aro_real_idx = concat(
+        (s1_cat, s2_cat, s1_rings[:, 0], s2_rings[:, 0])).astype(np.int32)
 
     # Internal indexing for xyz2 coordinates
     n0 = s1_cat.size + s2_cat.size
@@ -79,12 +80,13 @@ def containers(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
 
     return (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx,
             s2_rings_idx, ijf, interactions, dists, row1, row2, s1_norm,
-            s2_norm)
+            s2_norm, s1_rings, s2_rings)
 
 
 @njit(parallel=False, cache=True)
-def pications(inter_name, xyz, ijf, row1, row2, dists, s1_rings_idx,
-              s2_rings_idx, cat_idx, cutoffs_aro, selected_aro):
+def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
+              s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
+              cutoffs_aro, selected_aro):
     """
     Helper function to compute the pi-cation // cation-pi interactions
 
@@ -100,46 +102,55 @@ def pications(inter_name, xyz, ijf, row1, row2, dists, s1_rings_idx,
         s1_is_type = cmn.isin(row1, s1_rings_idx)
         s2_is_type = cmn.isin(row2, s2_cat_idx)
     elif inter_name == 'CationPi':
-        s1_is_type = cmn.isin(row1, cat_idx)
+        s1_is_type = cmn.isin(row1, s1_cat_idx)
         s2_is_type = cmn.isin(row2, s2_rings_idx)
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
+
     pairs = s1_is_type & s2_is_type
+    passing_dist = dists[pairs] <= dist_cut
+    if not passing_dist.any():
+        return idx, np.zeros(row1.shape[0], dtype=np.bool_)
 
-    if pairs.any():
-        # Calculate angles between normals and vectors
-        row1_pairs = row1[pairs]
-        row2_pairs = row2[pairs]
-        vector_ctr_cat = xyz[row1_pairs] - xyz[row2_pairs]
+    # Calculate angles between normals and vectors
+    row1_pairs = row1[pairs]
+    row2_pairs = row2[pairs]
+
+    vector_ctr_cat = xyz_aro[row1_pairs] - xyz_aro[row2_pairs]
+
+    if inter_name == 'PiCation':
         normals = s1_norm[cmn.indices(s1_rings_idx, row1_pairs)]
-        angles = cmn.calc_angles_2v(normals, vector_ctr_cat)
-
-        # Apply restraints
-        passing_dist = dists[pairs] <= dist_cut
-        passing_angles = ((angles >= min_ang) & (angles <= max_ang))
-        return idx, pairs, passing_dist & passing_angles
     else:
-        return idx, pairs, pairs
+        normals = s2_norm[cmn.indices(s2_rings_idx, row2_pairs)]
+
+    angles = cmn.calc_angles_2v(normals, vector_ctr_cat)
+
+    # Apply restraints
+    passing_angles = ((angles >= min_ang) & (angles <= max_ang))
+    passing = passing_dist & passing_angles
+    all_passing = np.zeros(row1.shape[0], dtype=np.bool_)
+    all_passing[pairs] = passing
+    return idx, all_passing
 
 
 @njit(parallel=False, cache=True)
-def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
-              to_compute_aro):
+def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
+              cutoffs_aro, selected_aro):
     """
     Helper function to compute the pi-stacking interactions
 
     """
 
     # Parse the cutoffs
-    idx = cmn.indices(to_compute_aro, [inter_name])[0]
+    idx = cmn.indices(selected_aro, [inter_name])[0]
     dist_cut = cutoffs_aro[0, idx]
     min_dist = cutoffs_aro[1, idx]
     min_ang = cutoffs_aro[2, idx]
     max_ang = cutoffs_aro[3, idx]
 
     # Apply restraints
-    passing_dist1 = dists <= dist_cut
-    passing_dist2 = mindists <= min_dist
+    passing_dist1 = ring_dists <= dist_cut
+    passing_dist2 = (mindists <= min_dist) & (mindists > 0)
     angles = cmn.calc_angles_2v(s1_normals, s2_normals)
     passing_angles = ((angles >= min_ang) & (angles <= max_ang))
     stacking = passing_dist1 & passing_dist2 & passing_angles
@@ -155,8 +166,6 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
     Args:
         xyz (ndarray): Coordinates of the atoms in the system
         k (int): Index of the frame in the trajectory
-        s1_indices_raw (ndarray): Indices of the atoms in the first selection
-        s2_indices_raw (ndarray): Indices of the atoms in the second selection
         cations (ndarray): Indices of the cations
         rings (ndarray): Indices of the aromatic rings
         cutoffs_aro (ndarray): Cutoff distances for the aromatic interactions
@@ -170,120 +179,120 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
     # Get containers
     (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx,
      s2_rings_idx, ijf, inters, dists, row1, row2, s1_norm,
-     s2_norm) = containers(xyz, k, s1_indices, s2_indices, cations, rings,
-                           cutoffs_aro, selected_aro)
+     s2_norm, s1_rings, s2_rings) = containers(xyz, k, s1_indices, s2_indices,
+                                               cations, rings, cutoffs_aro,
+                                               selected_aro)
 
     selected = list(selected_aro)
 
     if 'PiCation' in selected:
-        idx, pairs, pi_cat = pications('PiCation', ijf, dists, xyz, s1_norm,
-                                       s1_rings_idx, s2_cat_idx, cutoffs_aro,
-                                       selected_aro)
-        if pairs.any():
-            inters[pairs, idx] = pi_cat
+        pi_idx, pi_cat = pications('PiCation', xyz_aro, row1, row2, dists,
+                                   s1_rings_idx, s2_rings_idx, s1_cat_idx,
+                                   s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
+                                   selected_aro)
+        inters[:, pi_idx] = pi_cat
 
     if 'CationPi' in selected:
-        idx, pairs, cat_pi = pications('CationPi', ijf, dists, xyz2, s2_norm,
-                                       s2_rings_idx, s1_cat_idx, cutoffs_aro,
-                                       selected_aro)
-        if pairs.any():
-            inters[pairs, idx] = cat_pi
+        cat_idx, cat_pi = pications('CationPi', xyz_aro, row1, row2, dists,
+                                    s1_rings_idx, s2_rings_idx, s1_cat_idx,
+                                    s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
+                                    selected_aro)
+        inters[:, cat_idx] = cat_pi
 
-    # Stackings
-    find_PiStacking = 'PiStacking' in selected
-    find_EdgeToFace = 'EdgeToFace' in selected
-    find_FaceToFace = 'FaceToFace' in selected
-    if find_PiStacking or find_EdgeToFace or find_FaceToFace:
-
+    if 'PiStacking' in selected or 'EdgeToFace' in selected or 'FaceToFace' in selected:
         # Get the ring pairs
-        row1, row2 = ijf[:, 0], ijf[:, 1]
         s1_is_ctr = cmn.isin(row1, s1_rings_idx)
         s2_is_ctr = cmn.isin(row2, s2_rings_idx)
         pairs = s1_is_ctr & s2_is_ctr
-        if pairs.any():
-            ring_pairs = ijf[pairs]
-            ring_dists = dists[pairs]
-            s1_normals = s1_norm[cmn.indices(s1_rings_idx, ring_pairs[:, 0])]
-            s2_normals = s2_norm[cmn.indices(s2_rings_idx, ring_pairs[:, 1])]
 
-            # Compute the minimum distance between the rings
-            num_pairs = ring_pairs.shape[0]
-            mindists = np.zeros(num_pairs, dtype=np.float32)
-            for i in range(num_pairs):
-                s1_ring = \
-                    s1_rings[cmn.indices(s1_rings_idx, [ring_pairs[i, 0]])][0]
-                s1_ring_idx = s1_ring[:s1_ring[-1]]
+        ring_pairs = ijf[pairs]
+        ring_dists = dists[pairs]
+        s1_normals = s1_norm[cmn.indices(s1_rings_idx, ring_pairs[:, 0])]
+        s2_normals = s2_norm[cmn.indices(s2_rings_idx, ring_pairs[:, 1])]
 
-                s2_ring = \
-                    s2_rings[cmn.indices(s2_rings_idx, [ring_pairs[i, 1]])][0]
-                s2_ring_idx = s2_ring[:s2_ring[-1]]
-                mindists[i] = cmn.calc_min_dist(xyz[s1_ring_idx],
-                                                xyz[s2_ring_idx])
+        # Compute the minimum distance between the rings
+        num_pairs = ring_pairs.shape[0]
+        mindists = np.zeros(num_pairs, dtype=np.float32)
+        for i in range(num_pairs):
+            r1 = (s1_rings[:, 0] == xyz_aro_real_idx[
+                ring_pairs[i, 0]]).argmax()
+            ring1 = s1_rings[r1][:s1_rings[r1][-1]]
+            r2 = (s2_rings[:, 0] == xyz_aro_real_idx[
+                ring_pairs[i, 1]]).argmax()
+            ring2 = s2_rings[r2][:s2_rings[r2][-1]]
+            mindists[i] = cmn.calc_min_dist(xyz[ring1], xyz[ring2])
 
-            if find_PiStacking:
-                idx, pi_stacking = stackings('PiStacking', ring_dists,
-                                             mindists, s1_normals, s2_normals,
-                                             cutoffs_aro, selected_aro)
-                inters[pairs, idx] = pi_stacking
+        if 'PiStacking' in selected:
+            idx, pi_stacking = stackings('PiStacking', ring_dists, mindists,
+                                         s1_normals, s2_normals, cutoffs_aro,
+                                         selected_aro)
 
-            if find_EdgeToFace:
-                idx, etf_stacking = stackings('EdgeToFace', ring_dists,
-                                              mindists,
-                                              s1_normals, s2_normals,
-                                              cutoffs_aro, selected_aro)
-                inters[pairs, idx] = etf_stacking
+            inters[pairs, idx] = pi_stacking
 
-            if find_FaceToFace:
-                idx, ftf_stacking = stackings('FaceToFace', ring_dists,
-                                              mindists,
-                                              s1_normals, s2_normals,
-                                              cutoffs_aro, selected_aro)
-                inters[pairs, idx] = ftf_stacking
+        if 'EdgeToFace' in selected:
+            idx, etf_stacking = stackings('EdgeToFace', ring_dists, mindists,
+                                          s1_normals, s2_normals, cutoffs_aro,
+                                          selected_aro)
+            inters[pairs, idx] = etf_stacking
+
+        if 'FaceToFace' in selected:
+            idx, ftf_stacking = stackings('FaceToFace', ring_dists, mindists,
+                                          s1_normals, s2_normals, cutoffs_aro,
+                                          selected_aro)
+            inters[pairs, idx] = ftf_stacking
 
     mask = cmn.get_compress_mask(inters)
-    return ijf[mask], inters[mask]
-
+    ijf_mask = ijf[mask]
+    inters_mask = inters[mask]
+    ijf_real_row1 = xyz_aro_real_idx[ijf_mask[:, 0]]
+    ijf_real_row2 = xyz_aro_real_idx[ijf_mask[:, 1]]
+    ijf_real_row3 = ijf_mask[:, 2]
+    ijf_real = np.stack((ijf_real_row1, ijf_real_row2, ijf_real_row3), axis=1)
+    return ijf_real, inters_mask
 
 # =============================================================================
 #
 # =============================================================================
-from intermap import config as conf
-from argparse import Namespace
-from intermap.indices import IndexManager
-import intermap.cutoffs as cf
-
-conf_path = 'tests/imaps/imap1.cfg'
-# Get the Index Manager
-config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
-args = Namespace(**config.config_args)
-s1 = 'all'
-s2 = 'all'
-iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
-
-# Get information from the Index Manager
-u = iman.universe
-xyz = u.atoms.positions
-k = 0
-s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
-anions, cations = iman.anions, iman.cations
-hydrophobes = iman.hydroph
-vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-hb_acc = iman.hb_A
-hb_hydros = iman.hb_H
-hb_donors = iman.hb_D
-xb_acc = iman.xb_A
-xb_donors = iman.xb_D
-xb_halogens = iman.xb_H
-metal_donors = iman.metal_don
-metal_acceptors = iman.metal_acc
-rings = iman.rings
-
-# Get the interactions and cutoffs
-all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
-to_compute = all_inters
-selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
-    cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
-
-(xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx, s2_rings_idx,
- ijf, interactions, dists, row1, row2, s1_norm, s2_norm) = containers(
-    xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro, selected_aro)
+# from intermap import config as conf
+# from argparse import Namespace
+# from intermap.indices import IndexManager
+# import intermap.cutoffs as cf
+#
+# conf_path = 'tests/imaps/imap1.cfg'
+# # Get the Index Manager
+# config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
+# args = Namespace(**config.config_args)
+# s1 = 'all'
+# s2 = 'all'
+# iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
+#
+# # Get information from the Index Manager
+# u = iman.universe
+# xyz = u.atoms.positions
+# k = 0
+# s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+# anions, cations = iman.anions, iman.cations
+# hydrophobes = iman.hydroph
+# vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
+# hb_acc = iman.hb_A
+# hb_hydros = iman.hb_H
+# hb_donors = iman.hb_D
+# xb_acc = iman.xb_A
+# xb_donors = iman.xb_D
+# xb_halogens = iman.xb_H
+# metal_donors = iman.metal_don
+# metal_acceptors = iman.metal_acc
+# rings = iman.rings
+#
+# # Get the interactions and cutoffs
+# all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+# to_compute = all_inters
+# selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
+#     cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
+#
+# (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx, s2_rings_idx,
+#  ijf, interactions, dists, row1, row2, s1_norm, s2_norm, s1_rings,
+#  s2_rings) = containers(xyz, k, s1_indices, s2_indices, cations, rings,
+#                         cutoffs_aro, selected_aro)
+#
+# ijf_aro, inters = aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro, selected_aro)

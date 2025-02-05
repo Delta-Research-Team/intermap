@@ -27,22 +27,6 @@ class InterDict:
         self.template = bu.zeros(self.n_frames)
 
     # @profile
-    # def fill(self, ijfs, inters):
-    #     """
-    #     Fill the dictionary with the interactions
-    #
-    #     Args:
-    #         ijfs (ndarray): indexes of the interactions and the frames
-    #         inters (ndarray): interactions types detected in the frames
-    #     """
-    #     self.dict = defaultdict(self.template.copy)
-    #     i, j, f = ijfs.T
-    #     for idx in range(ijfs.shape[0]):
-    #         inters_types = inters[idx].nonzero()[0]
-    #         for inter in inters_types:
-    #             self.dict[(i[idx], j[idx], inter)][f[idx]] = True
-
-    # @profile
     def fill(self, ijfs, inters):
         groups = npi.group_by(ijfs[:, :2])
         sorter = groups.index.sorter

@@ -11,15 +11,15 @@ from numba import set_num_threads
 
 import intermap.config as conf
 import intermap.cutoffs as cf
-import intermap.interactions as its
 import intermap.interdict as idt
+import intermap.starters as start
 import intermap.topo_trajs as tt
 from intermap import commons as cmn
 from intermap.indices import IndexManager
 
 
 # todo: check docstrings
-# todo: put a logger when potentially time-consuming tasks starts
+
 
 def run(mode='production'):
     """
@@ -36,8 +36,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
-        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = 'tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
 
@@ -71,8 +70,8 @@ def run(mode='production'):
     hydrophobes = iman.hydroph
     anions, cations = iman.anions, iman.cations
     metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
-    hb_hydrogens, hb_donors, hb_acceptors = iman.hb_H, iman.hb_D, iman.hb_A
-    xb_halogens, xb_donors, xb_acceptors = iman.xb_H, iman.xb_D, iman.xb_A
+    hb_hydros, hb_donors, hb_acc = iman.hb_H, iman.hb_D, iman.hb_A
+    xb_halogens, xb_donors, xb_acc = iman.xb_H, iman.xb_D, iman.xb_A
     rings = iman.rings
 
     # =========================================================================
@@ -105,7 +104,7 @@ def run(mode='production'):
     sel_idx = iman.sel_idx
     s1_indices = iman.sel1_idx
     s2_indices = iman.sel2_idx
-    n_sel_atoms = sel_idx.size
+    natoms = sel_idx.size
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
@@ -123,44 +122,43 @@ def run(mode='production'):
 
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
     to_allocate = 0
+    # %%
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
-                                       n_sel_atoms)
-
+                                       natoms)
         if i == 0:
-            # Compiling main functions
-            logger.info("Compiling main functions")
-
             # Estimating memory allocation
             logger.info(f"Estimating memory allocation")
-            ijf_template, inters_template = its.get_estimation(
+            ijf_template, inters_template = start.get_estimation(
                 xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
-                cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
-                metal_acceptors, vdw_radii, max_vdw, hb_hydrogens, hb_donors,
-                hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
-                cutoffs_others, selected_others)
-
-            # Compiling the parallel function
-            _, _ = its.run_parallel(
-                xyz_chunk[:1], ijf_template, inters_template, len_others,
-                len_aro, s1_indices, s2_indices, anions, cations, hydrophobes,
-                metal_donors, metal_acceptors, vdw_radii, max_vdw,
-                hb_hydrogens,
-                hb_donors, hb_acceptors, xb_halogens, xb_donors, xb_acceptors,
-                rings, cutoffs_others, selected_others, cutoffs_aro,
-                selected_aro)
+                cutoffs_aro,
+                selected_aro, anions, hydrophobes, metal_donors,
+                metal_acceptors,
+                vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+                xb_donors, xb_acc, cutoffs_others, selected_others)
 
             to_allocate = ijf_template.shape[0] * ijf_template.shape[1]
             logger.debug(f"Number of allocated cells: {to_allocate}")
 
+            # Compiling the parallel function
+            logger.info("Compiling the parallel function")
+            ijf, inters = start.run_parallel(
+                xyz_chunk[:1], ijf_template, inters_template, len_others,
+                len_aro,
+                s1_indices, s2_indices, anions, cations, hydrophobes,
+                metal_donors,
+                metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors,
+                hb_acc,
+                xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
+                selected_others, cutoffs_aro, selected_aro)
+
         logger.info(f"Computing chunk {i}")
-        ijf_chunk, inters_chunk = its.run_parallel(
+        ijf_chunk, inters_chunk = start.run_parallel(
             xyz_chunk, ijf_template, inters_template, len_others, len_aro,
-            s1_indices, s2_indices, anions, cations, hydrophobes,
-            metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydrogens,
-            hb_donors,
-            hb_acceptors, xb_halogens, xb_donors, xb_acceptors, rings,
-            cutoffs_others, selected_others, cutoffs_aro, selected_aro)
+            s1_indices, s2_indices, anions, cations, hydrophobes, metal_donors,
+            metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
+            xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
+            selected_others, cutoffs_aro, selected_aro)
 
         # Raise if not enough space has been allocated
         if (occupancy := ijf_chunk.shape[0] / to_allocate) >= 0.98:
@@ -169,7 +167,7 @@ def run(mode='production'):
             logger.warning(f"Chunk {i} occupancy: {round(occupancy, 2)}")
 
         # %% Filling the interaction dictionary
-        logger.info(f"Filling the interaction dictionary")
+        logger.info(f"Filling the interaction dictionary with chunk {i}")
         inter_dict.fill(ijf_chunk, inters_chunk)
     #
     computing = round(time.time() - stamp, 2)

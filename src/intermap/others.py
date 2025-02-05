@@ -160,80 +160,10 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 
 @njit(parallel=False, cache=True)
-def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
-                hb_donors, ha_cut, da_cut, min_ang, max_ang, selected_others):
-    """
-    Detect the 2D1A interactions (two distances and one angle involved)
-
-    Args:
-        inter_name (str): Name of the interaction
-        dists (ndarray): Distances between the atoms in the first and second
-        xyz (ndarray): Coordinates of the atoms in the system
-        row1 (ndarray): Indices of the atoms in the first selection
-        row2 (ndarray): Indices of the atoms in the second selection
-        hb_acc (ndarray): Indices of the hydrogen bond acceptors
-        hb_hydros (ndarray): Indices of the hydrogen bond hydrogens
-        hb_donors (ndarray): Indices of the hydrogen bond donors
-        ha_cut (float): Cutoff distance for the hydrogen bond acceptor
-        da_cut (float): Cutoff distance for the hydrogen bond donor-acceptor
-        min_ang (float): Minimum angle for the hydrogen bond
-        max_ang (float): Maximum angle for the hydrogen bond
-        selected_others (ndarray): Selected interactions to compute
-
-    Returns:
-        inter_idx (int): Index of the interaction in the to_compute_others array
-        hbonds (ndarray): Boolean array with the atoms that pass the distance
-    """
-    idx_name = cmn.indices(selected_others, [inter_name])[0]
-
-    if 'Acceptor' in inter_name:
-        are_acceptors = cmn.isin(row1, hb_acc)
-        are_hydros = cmn.isin(row2, hb_hydros)
-        passing_ha = are_hydros & are_acceptors & (dists <= ha_cut)
-        acceptors = row1[passing_ha]
-        hydros = row2[passing_ha]
-
-    elif 'Donor' in inter_name:
-        are_hydros = cmn.isin(row1, hb_hydros)
-        are_acceptors = cmn.isin(row2, hb_acc)
-        passing_ha = are_hydros & are_acceptors & (dists <= ha_cut)
-        hydros = row1[passing_ha]
-        acceptors = row2[passing_ha]
-    else:
-        raise ValueError(f"Invalid interaction name: {inter_name}")
-
-    if passing_ha.size == 0:
-        return idx_name, np.zeros(dists.size, dtype=np.bool_)
-
-    ext_idx = cmn.indices(hb_hydros, hydros)
-    donors = hb_donors[ext_idx]
-
-    ha_vectors = xyz[acceptors] - xyz[hydros]
-    hd_vectors = xyz[donors] - xyz[hydros]
-    da_vectors = xyz[donors] - xyz[acceptors]
-
-    da_dists = np.sqrt((da_vectors ** 2).sum(axis=1))
-    passing_da = da_dists <= da_cut
-
-    if not passing_da.any():
-        return idx_name, np.zeros(dists.size, dtype=np.bool_)
-
-    angles = cmn.calc_angles_2v(hd_vectors[passing_da], ha_vectors[passing_da])
-    passing_angles = (angles >= min_ang) & (angles <= max_ang)
-
-    if passing_angles.size == 0:
-        return idx_name, np.zeros(dists.size, dtype=np.bool_)
-
-    hbonds = np.zeros(dists.size, dtype=np.bool_)
-    hbonds[passing_da] = passing_angles
-    return idx_name, hbonds
-
-
-@njit(parallel=False, cache=True)
-def fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
-                metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
-                xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,
-                cutoffs_others, selected_others):
+def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
+           metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
+           xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,
+           cutoffs_others, selected_others):
     """
     Fill the not-aromatic interactions
     """
@@ -334,44 +264,44 @@ def fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
 # =============================================================================
 #
 # =============================================================================
-from intermap import config as conf
-from argparse import Namespace
-from intermap.indices import IndexManager
-import intermap.cutoffs as cf
-
-conf_path = 'tests/imaps/imap1.cfg'
-# Get the Index Manager
-config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
-args = Namespace(**config.config_args)
-s1 = 'all'
-s2 = 'all'
-iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
-
-# Get information from the Index Manager
-u = iman.universe
-xyz = u.atoms.positions
-k = 0
-s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
-anions, cations = iman.anions, iman.cations
-hydrophobes = iman.hydroph
-vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-hb_acc = iman.hb_A
-hb_hydros = iman.hb_H
-hb_donors = iman.hb_D
-xb_acc = iman.xb_A
-xb_donors = iman.xb_D
-xb_halogens = iman.xb_H
-metal_donors = iman.metal_don
-metal_acceptors = iman.metal_acc
-
-# Get the interactions and cutoffs
-all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
-to_compute = all_inters
-selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
-    cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
-
-ijf, others = fill_others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
-                          cations, metal_donors, metal_acceptors, hb_hydros,
-                          hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
-                          max_vdw, vdw_radii, cutoffs_others, selected_others)
-print(others.sum(axis=0))
+# from intermap import config as conf
+# from argparse import Namespace
+# from intermap.indices import IndexManager
+# import intermap.cutoffs as cf
+#
+# conf_path = 'tests/imaps/imap1.cfg'
+# # Get the Index Manager
+# config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
+# args = Namespace(**config.config_args)
+# s1 = 'all'
+# s2 = 'all'
+# iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
+#
+# # Get information from the Index Manager
+# u = iman.universe
+# xyz = u.atoms.positions
+# k = 0
+# s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+# anions, cations = iman.anions, iman.cations
+# hydrophobes = iman.hydroph
+# vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
+# hb_acc = iman.hb_A
+# hb_hydros = iman.hb_H
+# hb_donors = iman.hb_D
+# xb_acc = iman.xb_A
+# xb_donors = iman.xb_D
+# xb_halogens = iman.xb_H
+# metal_donors = iman.metal_don
+# metal_acceptors = iman.metal_acc
+#
+# # Get the interactions and cutoffs
+# all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+# to_compute = all_inters
+# selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
+#     cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
+#
+# ijf, others = others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
+#                      cations, metal_donors, metal_acceptors, hb_hydros,
+#                      hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
+#                      max_vdw, vdw_radii, cutoffs_others, selected_others)
+# print(others.sum(axis=0))
