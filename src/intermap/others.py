@@ -167,6 +167,9 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
     """
     Fill the not-aromatic interactions
     """
+    if selected_others.size == 0:
+        return (np.zeros((0, 3), dtype=np.int32),
+                np.zeros((0, 0), dtype=np.bool_))
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
@@ -259,7 +262,6 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
 
     mask = cmn.get_compress_mask(inters)
     return ijf[mask], inters[mask]
-
 
 # =============================================================================
 #

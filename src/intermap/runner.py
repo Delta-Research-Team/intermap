@@ -122,6 +122,7 @@ def run(mode='production'):
 
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
     to_allocate = 0
+    total = 0
     # %%
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
@@ -160,6 +161,8 @@ def run(mode='production'):
             xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
             selected_others, cutoffs_aro, selected_aro)
 
+        total += ijf_chunk.shape[0]
+
         # Raise if not enough space has been allocated
         if (occupancy := ijf_chunk.shape[0] / to_allocate) >= 0.98:
             raise ValueError(f"Chunk {i} occupancy: {round(occupancy, 2)}")
@@ -171,8 +174,6 @@ def run(mode='production'):
         inter_dict.fill(ijf_chunk, inters_chunk)
     #
     computing = round(time.time() - stamp, 2)
-    n_ints = len(inter_dict.dict)
-    logger.info(f"Total interactions detected in {computing} s: {n_ints}")
 
     # =========================================================================
     # Saving
@@ -183,6 +184,8 @@ def run(mode='production'):
     pickle_path = join(args.output_dir, pickle_name)
     gnl.pickle_to_file(inter_dict.dict, pickle_path)
     tot = round(time.time() - start_time, 2)
+    n_ints = len(inter_dict.dict)
+    logger.info(f"Total interactions detected in {computing} s: {total}")
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
 
 

@@ -273,17 +273,20 @@ class InterMapConfig(Config):
 
     def parse_interactions(self):
         raw_inters = self.config_obj['interactions']['interactions']
-        if raw_inters != 'all':
-            parsed_inters = [x.strip() for x in raw_inters.split(',')]
+        if raw_inters == 'all':
+            parsed_inters = np.asarray(list(self.config_args['cutoffs'].keys()))
+        else:
+            parsed_inters = [x.strip() for x in raw_inters.split(',') if x != '']
             parsed_inters = np.asarray(parsed_inters)
-            implemented = set(self.config_args['cutoffs'].keys())
-            for inter in parsed_inters:
-                if inter not in implemented:
-                    raise ValueError(
-                        f"Invalid interaction specified: {inter}. The list of"
-                        f" currently implemented interactions is:\n {implemented}\n")
 
-            self.config_args.update({'interactions': parsed_inters})
+        implemented = set(self.config_args['cutoffs'].keys())
+        for inter in parsed_inters:
+            if inter not in implemented:
+                raise ValueError(
+                    f"Invalid interaction specified: {inter}. The list of"
+                    f" currently implemented interactions is:\n {implemented}\n")
+
+        self.config_args.update({'interactions': parsed_inters})
 
 # %%===========================================================================
 # Debugging area

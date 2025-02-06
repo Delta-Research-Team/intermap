@@ -175,6 +175,9 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         ijf (ndarray): Indices of the atoms in the first and second selections
         interactions (ndarray): Container for the interactions
     """
+    if selected_aro.size == 0:
+        return (np.zeros((0, 3), dtype=np.int32),
+                np.zeros((0, 0), dtype=np.bool_))
 
     # Get containers
     (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx,

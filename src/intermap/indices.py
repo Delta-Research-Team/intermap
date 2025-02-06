@@ -110,7 +110,7 @@ class IndexManager:
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
-        self.raw_inters = [x.strip() for x in interactions.split(',')]
+        self.raw_inters = interactions
 
         # Initialize the SMARTS patterns
         self.smarts_patterns = smarts
