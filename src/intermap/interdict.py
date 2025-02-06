@@ -5,6 +5,13 @@ import bitarray.util as bu
 import numpy as np
 import numpy_indexed as npi
 
+def count_bin2D(arr):
+    """
+    Count the number of True values in a 2D array
+    """
+    return np.count_nonzero(arr, axis=1)
+
+
 
 # todo: numba the fill method of InterDict
 class InterDict:
@@ -21,10 +28,10 @@ class InterDict:
         self.atom_names = atom_names
         self.inter_names = inter_names
         self.n_frames = frames_id.size
+        self.template = bu.zeros(self.n_frames)
 
         # Initialize containers
-        self.dict = {}
-        self.template = bu.zeros(self.n_frames)
+        self.dict = defaultdict(lambda: self.template)
 
     # @profile
     def fill(self, ijfs, inters):
@@ -32,14 +39,15 @@ class InterDict:
         sorter = groups.index.sorter
         slices = groups.index.slices
 
-        self.dict = defaultdict(self.template.copy)
-        indices = iter(np.split(sorter, slices[1:-1]))
+        # self.dict = defaultdict(self.template.copy)
+        indices = np.split(sorter, slices[1:-1])
+
         for index in indices:
             sel_ijfs = ijfs[index]
             sel_inters = inters[index]
             i, j, _ = sel_ijfs[0]
-
             inters_to_assign = np.any(sel_inters, axis=0).nonzero()[0]
+
             for inter in inters_to_assign:
                 frames = sel_ijfs[:, 2][sel_inters[:, inter]].tolist()
                 self.dict[(i, j, inter)][frames] = True

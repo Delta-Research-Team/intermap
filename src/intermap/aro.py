@@ -132,7 +132,6 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     all_passing[pairs] = passing
     return idx, all_passing
 
-
 @njit(parallel=False, cache=True)
 def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
               cutoffs_aro, selected_aro):
@@ -252,50 +251,3 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
     ijf_real_row3 = ijf_mask[:, 2]
     ijf_real = np.stack((ijf_real_row1, ijf_real_row2, ijf_real_row3), axis=1)
     return ijf_real, inters_mask
-
-# =============================================================================
-#
-# =============================================================================
-# from intermap import config as conf
-# from argparse import Namespace
-# from intermap.indices import IndexManager
-# import intermap.cutoffs as cf
-#
-# conf_path = 'tests/imaps/imap1.cfg'
-# # Get the Index Manager
-# config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
-# args = Namespace(**config.config_args)
-# s1 = 'all'
-# s2 = 'all'
-# iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
-#
-# # Get information from the Index Manager
-# u = iman.universe
-# xyz = u.atoms.positions
-# k = 0
-# s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
-# anions, cations = iman.anions, iman.cations
-# hydrophobes = iman.hydroph
-# vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-# hb_acc = iman.hb_A
-# hb_hydros = iman.hb_H
-# hb_donors = iman.hb_D
-# xb_acc = iman.xb_A
-# xb_donors = iman.xb_D
-# xb_halogens = iman.xb_H
-# metal_donors = iman.metal_don
-# metal_acceptors = iman.metal_acc
-# rings = iman.rings
-#
-# # Get the interactions and cutoffs
-# all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
-# to_compute = all_inters
-# selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
-#     cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
-#
-# (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx, s2_rings_idx,
-#  ijf, interactions, dists, row1, row2, s1_norm, s2_norm, s1_rings,
-#  s2_rings) = containers(xyz, k, s1_indices, s2_indices, cations, rings,
-#                         cutoffs_aro, selected_aro)
-#
-# ijf_aro, inters = aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro, selected_aro)

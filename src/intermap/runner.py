@@ -108,7 +108,8 @@ def run(mode='production'):
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
-    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i, x in enumerate(sel_idx)]
+    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i, x in
+             enumerate(sel_idx)]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
     # =========================================================================
@@ -121,8 +122,10 @@ def run(mode='production'):
         args.format, args.min_prevalence, traj_frames, names, inters)
 
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
-    to_allocate = 10
+    to_allocate = 1
     total = 0
+    total_inters = 0
+
     # %%
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
@@ -132,11 +135,10 @@ def run(mode='production'):
             logger.info(f"Estimating memory allocation")
             ijf_template, inters_template = start.get_estimation(
                 xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
-                cutoffs_aro,
-                selected_aro, anions, hydrophobes, metal_donors,
-                metal_acceptors,
-                vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
-                xb_donors, xb_acc, cutoffs_others, selected_others)
+                cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
+                metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors,
+                hb_acc, xb_halogens, xb_donors, xb_acc, cutoffs_others,
+                selected_others)
 
             to_allocate += ijf_template.shape[0] * ijf_template.shape[1]
             logger.debug(f"Number of allocated cells: {to_allocate}")
@@ -145,14 +147,12 @@ def run(mode='production'):
             logger.info("Compiling the parallel function")
             ijf, inters = start.run_parallel(
                 xyz_chunk[:1], ijf_template, inters_template, len_others,
-                len_aro,
-                s1_indices, s2_indices, anions, cations, hydrophobes,
-                metal_donors,
-                metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors,
-                hb_acc,
-                xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
-                selected_others, cutoffs_aro, selected_aro)
+                len_aro, s1_indices, s2_indices, anions, cations, hydrophobes,
+                metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
+                hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, rings,
+                cutoffs_others, selected_others, cutoffs_aro, selected_aro)
 
+        # Compute the interactions
         logger.info(f"Computing chunk {i}")
         ijf_chunk, inters_chunk = start.run_parallel(
             xyz_chunk, ijf_template, inters_template, len_others, len_aro,
@@ -162,6 +162,7 @@ def run(mode='production'):
             selected_others, cutoffs_aro, selected_aro)
 
         total += ijf_chunk.shape[0]
+        total_inters += np.sum(inters_chunk)
 
         # Raise if not enough space has been allocated
         if (occupancy := ijf_chunk.shape[0] / to_allocate) >= 0.98:
@@ -185,9 +186,10 @@ def run(mode='production'):
     pickle_path = join(args.output_dir, pickle_name)
     gnl.pickle_to_file(inter_dict.dict, pickle_path)
     tot = round(time.time() - start_time, 2)
-    n_ints = len(inter_dict.dict)
-    logger.info(f"Total interactions detected in {computing} s: {total}")
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
+    n_ints = len(inter_dict.dict.keys())
+    logger.info(f"Inter_dict size: {n_ints}")
+    logger.info(f"Total interactions detected in {computing} s: {total}, {total_inters}")
 
 
 run(mode='debug')
