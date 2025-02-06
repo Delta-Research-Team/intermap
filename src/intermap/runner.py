@@ -191,5 +191,4 @@ def run(mode='production'):
     logger.info(f"Inter_dict size: {n_ints}")
     logger.info(f"Total interactions detected in {computing} s: {total}, {total_inters}")
 
-
-run(mode='debug')
+# run(mode='debug')

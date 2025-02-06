@@ -61,6 +61,8 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                  selected_aro):
     num_frames = xyz_all.shape[0]
     limits = np.zeros(num_frames, dtype=np.int32)
+    ijf_template.fill(0)
+    inters_template.fill(False)
 
     # Use parallel loop to fill
     for i in prange(num_frames):
