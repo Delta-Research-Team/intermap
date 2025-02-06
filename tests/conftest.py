@@ -81,7 +81,7 @@ def others_arguments(conf_path, parameters):
     args = Namespace(**config.config_args)
     s1 = 'resname LIG'
     s2 = 'protein'
-    iman = IndexManager(args.topology, args.trajectory, s1, s2, 'all')
+    iman = IndexManager(args.topology, args.trajectory, s1, s2, args.interactions)
 
     # Get information from the Index Manager
     u = iman.universe

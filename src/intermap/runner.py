@@ -108,7 +108,7 @@ def run(mode='production'):
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
     resids = universe.atoms.resids[sel_idx]
-    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i in sel_idx]
+    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i, x in enumerate(sel_idx)]
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
     # =========================================================================
@@ -121,7 +121,7 @@ def run(mode='production'):
         args.format, args.min_prevalence, traj_frames, names, inters)
 
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
-    to_allocate = 0
+    to_allocate = 10
     total = 0
     # %%
     for i, frames_chunk in enumerate(chunks):
@@ -138,7 +138,7 @@ def run(mode='production'):
                 vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
                 xb_donors, xb_acc, cutoffs_others, selected_others)
 
-            to_allocate = ijf_template.shape[0] * ijf_template.shape[1]
+            to_allocate += ijf_template.shape[0] * ijf_template.shape[1]
             logger.debug(f"Number of allocated cells: {to_allocate}")
 
             # Compiling the parallel function
@@ -171,7 +171,8 @@ def run(mode='production'):
 
         # %% Filling the interaction dictionary
         logger.info(f"Filling the interaction dictionary with chunk {i}")
-        inter_dict.fill(ijf_chunk, inters_chunk)
+        if ijf_chunk.shape[0] > 0:
+            inter_dict.fill(ijf_chunk, inters_chunk)
     #
     computing = round(time.time() - stamp, 2)
 

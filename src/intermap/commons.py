@@ -2,7 +2,6 @@
 """
 Common functions used in the different modules of the package
 """
-import itertools as it
 import logging
 import os
 import re
@@ -25,23 +24,6 @@ smarts = {
     'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
     'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
     'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
-
-
-def product_uniques(*inputs):
-    """
-    Generate the unique products of the input iterables.
-
-    Args:
-        *inputs: iterables to generate the products from.
-
-    Returns:
-        generator: unique products of the input iterables.
-    """
-    for prod in it.product(*inputs):
-        prod_set = frozenset(prod)
-        if len(prod_set) == 1:
-            continue
-        yield prod
 
 
 def start_logger(log_path):
@@ -107,6 +89,55 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
     return to_compute_aro, to_compute_others, cutoffs_aro, cutoffs_others
 
 
+def check_path(path, check_exist=True):
+    """
+    Check if a path exists and return it if it does
+
+    Args:
+        path: path to check
+        check_exist: check if the path exists or not
+
+    Returns:
+        path: path to the file or directory
+    """
+    path_exists = os.path.exists(path)
+    if check_exist and path_exists:
+        return path
+    elif (not check_exist) and (not path_exists):
+        return path
+    elif (not check_exist) and path_exists:
+        return path  # todo: check this behaviour
+    elif check_exist and (not path_exists):
+        raise ValueError(f'\nNo such file or directory: {path}')
+    else:
+        pass
+        raise ValueError(
+            f'\nPath already exists and will not be overwritten: {path}')
+
+
+def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
+    """
+    Check if a value is of a certain type and within a range
+
+    Args:
+        arg_name: name of the argument to check
+        value: value to check
+        dtype: type of the value
+        minim: minimum value
+        maxim: maximum value
+
+    Returns:
+        value: value of the correct type and within the range
+    """
+    if not isinstance(value, dtype):
+        raise TypeError(f'Param "{arg_name}" must be of type {dtype}')
+
+    if not minim <= value <= maxim:
+        raise ValueError(f'Param "{value}" out of [{minim}, {maxim}]')
+
+    return dtype(value)
+
+
 @njit(parallel=False, cache=True)
 def get_compress_mask(array):
     """
@@ -165,27 +196,6 @@ def isin(full, subset):
     set_b = set(subset)
     for i in prange(n):
         if full[i] in set_b:
-            result[i] = True
-    return result
-
-
-@njit(parallel=False, cache=True)
-def isin2d(full, subset):
-    """
-    Check if the elements of the subset are in the full array.
-
-    Args:
-        full (ndarray): Full array.
-        subset (ndarray): Subset array.
-
-    Returns:
-        result (ndarray): Boolean array indicating if the elements of the
-                          subset are in the full array.
-    """
-    n = len(full)
-    result = np.full(n, False)
-    for i in prange(n):
-        if full[i] in subset:
             result[i] = True
     return result
 
@@ -418,52 +428,3 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     n_types = to_compute.size
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
     return ijf, dists, interactions
-
-
-def check_path(path, check_exist=True):
-    """
-    Check if a path exists and return it if it does
-
-    Args:
-        path: path to check
-        check_exist: check if the path exists or not
-
-    Returns:
-        path: path to the file or directory
-    """
-    path_exists = os.path.exists(path)
-    if check_exist and path_exists:
-        return path
-    elif (not check_exist) and (not path_exists):
-        return path
-    elif (not check_exist) and path_exists:
-        return path  # todo: check this behaviour
-    elif check_exist and (not path_exists):
-        raise ValueError(f'\nNo such file or directory: {path}')
-    else:
-        pass
-        raise ValueError(
-            f'\nPath already exists and will not be overwritten: {path}')
-
-
-def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
-    """
-    Check if a value is of a certain type and within a range
-
-    Args:
-        arg_name: name of the argument to check
-        value: value to check
-        dtype: type of the value
-        minim: minimum value
-        maxim: maximum value
-
-    Returns:
-        value: value of the correct type and within the range
-    """
-    if not isinstance(value, dtype):
-        raise TypeError(f'Param "{arg_name}" must be of type {dtype}')
-
-    if not minim <= value <= maxim:
-        raise ValueError(f'Param "{value}" out of [{minim}, {maxim}]')
-
-    return dtype(value)
