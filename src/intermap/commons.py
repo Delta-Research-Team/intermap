@@ -381,8 +381,7 @@ def calc_normal_vector(p1, p2, p3):
 
 
 @njit(parallel=False, cache=True)
-def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
-                   to_compute):
+def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,to_compute):
     """
     Get the containers for the interactions, the distances and the indices
 
@@ -403,6 +402,10 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
 
     # Find the contacts
     n_contacts = sum([len(x) for x in ball_1])
+    if n_contacts == 0:
+        return (np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
+                np.zeros((0, to_compute.size), dtype=np.bool_))
+
     ijf = np.zeros((n_contacts, 3), dtype=np.int32)
     counter = 0
     for i, x in enumerate(ball_1):

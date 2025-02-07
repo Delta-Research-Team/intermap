@@ -4,24 +4,24 @@ channels:
   - conda-forge
 dependencies:
   # not necessary for the package. Remove when published.
-  - prolif
-  - matplotlib
-  - ipython
   - pytest
+  - prolif
   - pytest-cov
-
-  - python>=3.6
-  - pip
-  - numpy==1.23.1
-  - pandas
+  - matplotlib
   - tqdm
 
+  - pandas
+  - ipython
+  - python>=3.6
+  - numpy==1.23.1
+
   - numba
+  - mdtraj == 1.9.4
   - mdanalysis
   - rdkit
   - bitarray == 3.0.0
-  - mdtraj == 1.9.4
 
+  - pip
   - pip:
       - -e .
       - numpy_indexed
