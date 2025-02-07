@@ -4,9 +4,148 @@ Test the geometric functions to compute distances and angles
 """
 import mdtraj as md
 import numpy as np
+import pytest
 
 import intermap.commons as cmn
+import intermap.commons_aot as aot
 from tests.conftest import mdtrajectory
+
+
+@pytest.mark.skip
+def get_containers_valid_input():
+    xyz = np.random.rand(10, 3).astype(np.float32)
+    k = 0
+    ext_idx = np.arange(10, dtype=np.int32)
+    ball_1 = [[1, 2], [3, 4], [], [5, 6, 7], [8, 9]]
+    s1_indices = np.array([0, 1, 2, 3, 4], dtype=np.int32)
+    s2_indices = np.array([5, 6, 7, 8, 9], dtype=np.int32)
+    to_compute = np.array([0, 1], dtype=np.int32)
+    ijf, dists, interactions = aot.get_containers(xyz, k, ext_idx, ball_1,
+                                                  s1_indices, s2_indices,
+                                                  to_compute)
+    assert ijf.shape == (7, 3)
+    assert dists.shape == (7,)
+    assert interactions.shape == (7, 2)
+
+
+def test_calc_normal_vector_valid_input():
+    p1 = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    p2 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    p3 = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    result = aot.calc_normal_vector(p1, p2, p3)
+    expected = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+    assert np.allclose(result, expected)
+
+
+@pytest.mark.xfail
+def test_calc_centroids_valid_input():
+    rings = np.array([[0, 1, 2, 3], [4, 5, 6, 7]], dtype=np.int32)
+    xyz = np.array([
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [0.0, 1.0, 1.0]
+    ], dtype=np.float32)
+    result = aot.calc_centroids(rings, xyz)
+    expected = np.array([
+        [0.5, 0.5, 0.0],
+        [0.5, 0.5, 1.0]
+    ], dtype=np.float32)
+    assert np.allclose(result, expected)
+
+
+def test_calc_angle_valid_input():
+    d = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32)
+    h = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+    a = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+    result = aot.calc_angle(d, h, a)
+    expected = np.array([90.0, 90.0], dtype=np.float32)
+    assert np.allclose(result, expected)
+
+
+def test_calc_angles_2v_valid_input():
+    vectors1 = np.array([[1, 0, 0], [0, 1, 0]], dtype=np.float32)
+    vectors2 = np.array([[0, 1, 0], [1, 0, 0]], dtype=np.float32)
+    result = aot.calc_angles_2v(vectors1, vectors2)
+    expected = np.array([90.0, 90.0], dtype=np.float32)
+    assert np.allclose(result, expected)
+
+
+def test_calc_dist_valid_input():
+    d = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]], dtype=np.float32)
+    a = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 1.0]], dtype=np.float32)
+    dist = np.linalg.norm(d - a, axis=1)
+    result = aot.calc_dist(d, a)
+    assert np.allclose(result, dist)
+
+
+def test_isin_valid_input():
+    full = np.array([10, 20, 30, 40, 50], dtype=np.int32)
+    subset = np.array([20, 40], dtype=np.int32)
+    result = aot.isin(full, subset)
+    expected = np.array([False, True, False, True, False], dtype=np.bool_)
+    assert np.array_equal(result, expected)
+
+
+def test_indices_valid_input():
+    full = np.array([10, 20, 30, 40, 50], dtype=np.int32)
+    subset = np.array([20, 40], dtype=np.int32)
+    result = aot.indices(full, subset)
+    expected = np.array([1, 3], dtype=np.int32)
+    assert np.array_equal(result, expected)
+
+
+def test_get_compress_mask_valid_input():
+    array = np.array([[1, 0], [0, 0], [1, 1]], dtype=bool)
+    result = aot.get_compress_mask(array)
+    expected = np.array([True, False, True], dtype=bool)
+    assert np.array_equal(result, expected)
+
+
+def get_compress_mask_empty_input():
+    array = np.array([], dtype=bool).reshape(0, 2)
+    result = aot.get_compress_mask(array)
+    expected = np.array([], dtype=bool)
+    assert np.array_equal(result, expected)
+
+
+def get_compress_mask_all_empty_rows():
+    array = np.array([[0, 0], [0, 0], [0, 0]], dtype=bool)
+    result = aot.get_compress_mask(array)
+    expected = np.array([False, False, False], dtype=bool)
+    assert np.array_equal(result, expected)
+
+
+def get_compress_mask_all_non_empty_rows():
+    array = np.array([[1, 0], [0, 1], [1, 1]], dtype=bool)
+    result = aot.get_compress_mask(array)
+    expected = np.array([True, True, True], dtype=bool)
+    assert np.array_equal(result, expected)
+
+
+def get_compress_mask_mixed_rows():
+    array = np.array([[1, 0], [0, 0], [0, 1]], dtype=bool)
+    result = aot.get_compress_mask(array)
+    expected = np.array([True, False, True], dtype=bool)
+    assert np.array_equal(result, expected)
+
+
+def test_min_dist_valid_input():
+    coords1 = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]], dtype=np.float32)
+    coords2 = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 1.0]], dtype=np.float32)
+    result = aot.calc_min_dist(coords1, coords2)
+    assert result == np.sqrt(1.0)
+
+
+def test_min_dist_identical_points():
+    coords1 = np.array([[1.0, 1.0, 1.0]], dtype=np.float32)
+    coords2 = np.array([[1.0, 1.0, 1.0]], dtype=np.float32)
+    result = aot.calc_min_dist(coords1, coords2)
+    assert result == 0.0
 
 
 def test_distance(mdtrajectory):
