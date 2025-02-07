@@ -25,8 +25,7 @@ def get_estimation(xyz_chunk, n_samples, s1_indices, s2_indices, cations,
     for i in range(N):
         xyz = samples[i]
         ijf_aro, inters_aro = aro(xyz, i, s1_indices, s2_indices, cations,
-                                  rings, cutoffs_aro,
-                                  selected_aro)
+                                  rings, cutoffs_aro, selected_aro)
 
         ijf_others, inters_others = others(xyz, i, s1_indices, s2_indices,
                                            hydrophobes, anions, cations,
