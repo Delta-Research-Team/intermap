@@ -1,4 +1,7 @@
 # Created by rglez at 12/29/24
+"""
+Runner for InterMap
+"""
 import sys
 import time
 from argparse import Namespace
@@ -189,7 +192,8 @@ def run(mode='production'):
     logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
     n_ints = len(inter_dict.dict.keys())
     logger.info(f"Inter_dict size: {n_ints}")
-    logger.info(f"Total interactions detected in {computing} s: {total}, {total_inters}")
+    logger.info(
+        f"Total interactions detected in {computing} s: {total}, {total_inters}")
 
 
 run(mode='debug')

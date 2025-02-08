@@ -133,9 +133,9 @@ class IndexManager:
         sel1_idx, sel2_idx = self.get_selections_indices()
         uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
 
-        self.sel_idx = np.asarray(uniques)
-        self.sel1_idx = npi.indices(self.sel_idx, sel1_idx)
-        self.sel2_idx = npi.indices(self.sel_idx, sel2_idx)
+        self.sel_idx = np.asarray(uniques, dtype=np.int32)
+        self.sel1_idx = npi.indices(self.sel_idx, sel1_idx).astype(np.int32)
+        self.sel2_idx = npi.indices(self.sel_idx, sel2_idx).astype(np.int32)
         if -1 in self.sel1_idx:
             raise ValueError(
                 "Some atoms in selection 1 are not in the universe")
