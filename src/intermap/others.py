@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 from numba_kdtree import KDTree as nckd
 
-from intermap import commons as cmn
+from intermap import njitted as aot
 
 
 @njit(parallel=False, cache=True)
@@ -58,7 +58,7 @@ def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
     # Compute distances
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
-    dists = cmn.calc_dist(xyz[row1], xyz[row2])
+    dists = aot.calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
     n_types = selected_others.size
@@ -82,7 +82,7 @@ def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
     Returns:
         (ndarray): Container with the Van der Waals interactions
     """
-    inter_idx = cmn.indices(selected_others, ['VdWContact'])[0]
+    inter_idx = list(selected_others).index('VdWContact')
     vdw_sum = vdw_radii[row1] + vdw_radii[row2]
     return inter_idx, dists <= vdw_sum
 
@@ -93,16 +93,15 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
     """
     Detect the 1D interactions (only one distance involved)
     """
-
-    inter_idx = cmn.indices(selected_others, [inter_name])[0]
+    inter_idx = list(selected_others).index(inter_name)
     dist_cutoff = cutoffs_others[0, inter_idx]
     passing_dists = dists <= dist_cutoff
 
     if inter_name == 'CloseContacts':
         return inter_idx, passing_dists
     else:
-        s1_is_type = cmn.isin(row1, type1)
-        s2_is_type = cmn.isin(row2, type2)
+        s1_is_type = aot.isin(row1, type1)
+        s2_is_type = aot.isin(row2, type2)
         are_type = s1_is_type & s2_is_type
         return inter_idx, passing_dists & are_type
 
@@ -128,9 +127,9 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
         selected_others (ndarray): Selected interactions to compute
     """
     # Detect donors and acceptors under cutoff
-    idx_name = cmn.indices(selected_others, [inter_name])[0]
-    r1_t1 = cmn.isin(row1, type1)
-    r2_t2 = cmn.isin(row2, type2)
+    idx_name = list(selected_others).index(inter_name)
+    r1_t1 = aot.isin(row1, type1)
+    r2_t2 = aot.isin(row2, type2)
     passing_HA = r1_t1 & r2_t2 & (dists <= ha_cut)
     t1 = row1[passing_HA]
     t2 = row2[passing_HA]
@@ -140,13 +139,13 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     # Compute DHA angles
     t3 = np.zeros(passing_HA.size, dtype=np.float32)
     if "HBDonor" in inter_name:
-        idx_hydros = cmn.indices(type1, t1)
+        idx_hydros = aot.indices(type1, t1)
         D = hb_donors[idx_hydros]
-        DHA_angles = cmn.calc_angle(xyz[D], xyz[t1], xyz[t2])
+        DHA_angles = aot.calc_angle(xyz[D], xyz[t1], xyz[t2])
     elif "HBAcceptor" in inter_name:
-        idx_hydros = cmn.indices(type2, t2)
+        idx_hydros = aot.indices(type2, t2)
         D = hb_donors[idx_hydros]
-        DHA_angles = cmn.calc_angle(xyz[D], xyz[t2], xyz[t1])
+        DHA_angles = aot.calc_angle(xyz[D], xyz[t2], xyz[t1])
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
     t3[passing_HA] = DHA_angles
@@ -223,7 +222,7 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
 
     # [HBonds]
     if ('HBAcceptor' in selected) or ('HBDonor' in selected):
-        idx_hb = cmn.indices(selected, ['HBAcceptor'])[0]
+        idx_hb = selected.index('HBAcceptor')
         da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cutoffs_others[:4,
                                                        idx_hb]
         if 'HBAcceptor' in selected:
@@ -242,7 +241,7 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
 
     # [XBonds]
     if ('XBAcceptor' in selected) or ('XBDonor' in selected):
-        idx_xb = cmn.indices(selected, ['XBAcceptor'])[0]
+        idx_xb = selected.index('XBAcceptor')
         da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cutoffs_others[:4,
                                                        idx_xb]
 
@@ -260,7 +259,7 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
                                          selected)
             inters[:, xbd_idx] = xbd
 
-    mask = cmn.get_compress_mask(inters)
+    mask = aot.get_compress_mask(inters)
     return ijf[mask], inters[mask]
 
 # =============================================================================

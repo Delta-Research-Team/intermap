@@ -6,34 +6,17 @@ import mdtraj as md
 import numpy as np
 import pytest
 
-import intermap.commons as cmn
-import intermap.commons_aot as aot
+import intermap.njitted as aot
 from tests.conftest import mdtrajectory
 
 
-@pytest.mark.skip
-def get_containers_valid_input():
-    xyz = np.random.rand(10, 3).astype(np.float32)
-    k = 0
-    ext_idx = np.arange(10, dtype=np.int32)
-    ball_1 = [[1, 2], [3, 4], [], [5, 6, 7], [8, 9]]
-    s1_indices = np.array([0, 1, 2, 3, 4], dtype=np.int32)
-    s2_indices = np.array([5, 6, 7, 8, 9], dtype=np.int32)
-    to_compute = np.array([0, 1], dtype=np.int32)
-    ijf, dists, interactions = aot.get_containers(xyz, k, ext_idx, ball_1,
-                                                  s1_indices, s2_indices,
-                                                  to_compute)
-    assert ijf.shape == (7, 3)
-    assert dists.shape == (7,)
-    assert interactions.shape == (7, 2)
-
-
 def test_calc_normal_vector_valid_input():
-    p1 = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    p2 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
-    p3 = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    p1 = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+    p2 = np.array([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+    p3 = np.array([[0.0, 1.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32)
     result = aot.calc_normal_vector(p1, p2, p3)
-    expected = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+    expected = np.array([[0.0, 0.0, 0.70710677], [0.0, 0.0, 0.70710677]],
+                        dtype=np.float32)
     assert np.allclose(result, expected)
 
 
@@ -166,7 +149,7 @@ def test_distance(mdtrajectory):
     # compute distances with imap
     xyz1 = trj.xyz[:, idx1][0]
     xyz2 = trj.xyz[:, idx2][0]
-    dists_imap = cmn.calc_dist(xyz1, xyz2)
+    dists_imap = aot.calc_dist(xyz1, xyz2)
 
     assert np.allclose(dists_mdtraj, dists_imap, atol=1e-5)
 
@@ -192,7 +175,7 @@ def test_angles_3p(mdtrajectory):
     xyz1 = trj.xyz[:, trio[:, 0]][0]
     xyz2 = trj.xyz[:, trio[:, 1]][0]
     xyz3 = trj.xyz[:, trio[:, 2]][0]
-    angles_imap = cmn.calc_angle(xyz1, xyz2, xyz3)
+    angles_imap = aot.calc_angle(xyz1, xyz2, xyz3)
 
     assert np.allclose(angles_mdtraj, angles_imap, atol=1e-5)
 
@@ -221,8 +204,8 @@ def test_angles_2v(mdtrajectory):
 
     v1 = xyz1 - xyz2
     v2 = xyz3 - xyz2
-    angles_imap_2v = cmn.calc_angles_2v(v1, v2)
-    angles_imap_3p = cmn.calc_angle(xyz1, xyz2, xyz3)
+    angles_imap_2v = aot.calc_angles_2v(v1, v2)
+    angles_imap_3p = aot.calc_angle(xyz1, xyz2, xyz3)
 
     assert np.allclose(angles_mdtraj, angles_imap_2v, atol=1e-3)
     assert np.allclose(angles_mdtraj, angles_imap_3p, atol=1e-3)

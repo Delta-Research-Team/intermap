@@ -72,6 +72,21 @@ def topo_trajs_fix():
 
 
 @pytest.fixture(scope="module")
+def iman(conf_path, parameters):
+    """
+    Index Manager for the tests
+    """
+    # Get the Index Manager
+    config = conf.InterMapConfig(conf_path, parameters)
+    args = Namespace(**config.config_args)
+    s1 = 'resname LIG'
+    s2 = 'protein'
+    iman = IndexManager(args.topology, args.trajectory, s1, s2,
+                        args.interactions)
+    return iman
+
+
+@pytest.fixture(scope="module")
 def others_arguments(conf_path, parameters):
     """
     Arguments for the not-aromatic interactions
@@ -81,7 +96,8 @@ def others_arguments(conf_path, parameters):
     args = Namespace(**config.config_args)
     s1 = 'resname LIG'
     s2 = 'protein'
-    iman = IndexManager(args.topology, args.trajectory, s1, s2, args.interactions)
+    iman = IndexManager(args.topology, args.trajectory, s1, s2,
+                        args.interactions)
 
     # Get information from the Index Manager
     u = iman.universe
