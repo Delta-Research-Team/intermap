@@ -6,7 +6,7 @@ import numpy as np
 from numba import njit, prange
 
 
-@njit("f4(f4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4(f4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_min_dist(coords1, coords2):
     """
     Get the minimumm distance between two sets of coordinates
@@ -35,7 +35,7 @@ def calc_min_dist(coords1, coords2):
     return np.float32(np.sqrt(min_dist_squared))
 
 
-@njit("b1[:](b1[:, :])", parallel=False, cache=True)
+@njit("b1[:](b1[:, :])", parallel=False, cache=False)
 def get_compress_mask(array):
     """
     Compress the array to remove empty
@@ -54,7 +54,7 @@ def get_compress_mask(array):
     return mask
 
 
-@njit("i4[:](i4[:], i4[:])", parallel=False, cache=True)
+@njit("i4[:](i4[:], i4[:])", parallel=False, cache=False)
 def indices(full, subset):
     """
     Find the indices of the subset elements in the full array.
@@ -75,7 +75,7 @@ def indices(full, subset):
     return indices
 
 
-@njit("b1[:](i4[:], i4[:])", parallel=False, cache=True)
+@njit("b1[:](i4[:], i4[:])", parallel=False, cache=False)
 def isin(full, subset):
     """
     Check if the elements of the subset are in the full array.
@@ -97,7 +97,7 @@ def isin(full, subset):
     return result
 
 
-@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_dist(d, a):
     """
     Computes the Euclidean distance between two atoms in a molecule
@@ -121,7 +121,7 @@ def calc_dist(d, a):
     return distances
 
 
-@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_angles_2v(vectors1, vectors2):
     """
     Computes the angles between two arrays of 3D vectors using arctan2.
@@ -168,7 +168,7 @@ def calc_angles_2v(vectors1, vectors2):
     return angles_degrees
 
 
-@njit("f4[:](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4[:](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_angle(d, h, a):
     """
     Computes the angles between sets of three atoms.
@@ -205,7 +205,7 @@ def calc_angle(d, h, a):
     return angle_deg
 
 
-@njit("f4[:, :](i4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4[:, :](i4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_centroids(rings, xyz):
     """
     Calculate the centroid of each ring
@@ -224,7 +224,7 @@ def calc_centroids(rings, xyz):
     return centroids.astype(np.float32)
 
 
-@njit("f4[:, :](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)
+@njit("f4[:, :](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=False)
 def calc_normal_vector(p1, p2, p3):
     """
     Calculate the normal vector of a plane defined by three points
@@ -251,7 +251,7 @@ def calc_normal_vector(p1, p2, p3):
 
 @njit("Tuple((i4[:, :], f4[:], b1[:, :]))"
       "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i8)",
-      cache=True)
+      cache=False)
 def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
                    n_types):
     """

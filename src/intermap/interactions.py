@@ -1,6 +1,6 @@
 # Created by rglez at 12/10/24
 import numpy as np
-from numba import njit, prange
+from numba import njit
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
@@ -11,7 +11,7 @@ import intermap.commons as cmn
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_vdw(inter_name, vdw_radii, row1, row2, dists, to_compute_others):
     """
     Detect the Van der Waals interactions
@@ -42,7 +42,7 @@ def detect_vdw(inter_name, vdw_radii, row1, row2, dists, to_compute_others):
     return inter_idx, passing_dist
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
               to_compute_others):
     """
@@ -79,7 +79,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
         return inter_idx, passing_dists & are_type
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
                 hb_donors,
                 ha_cut, da_cut, min_ang, max_ang, to_compute_others):
@@ -148,7 +148,7 @@ def detect_2d1a(inter_name, dists, xyz, row1, row2, hb_acc, hb_hydros,
     return idx_name, hbonds
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
               to_compute_aro):
     """
@@ -172,7 +172,7 @@ def stackings(inter_name, dists, mindists, s1_normals, s2_normals, cutoffs_aro,
     return idx, stacking
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
               cutoffs_aro, to_compute_aro):
     """
@@ -214,7 +214,7 @@ def pications(inter_name, ijf, dists, xyz2, rings_normals, rings_idx, cat_idx,
         return idx, pairs, pairs
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
             hb_hydrogens, hb_donors, hb_acceptors, xb_halogens, xb_donors,
@@ -381,7 +381,7 @@ def not_aro(xyz, k, s1_indices_raw, s2_indices_raw, anions, cations,
     return ijf[mask], interactions[mask]
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
         to_compute_aro):
     """

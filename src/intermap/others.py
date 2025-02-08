@@ -10,7 +10,7 @@ from numba_kdtree import KDTree as nckd
 from intermap import njitted as aot
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
                selected_others):
     """
@@ -67,7 +67,7 @@ def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
     return ijf, interactions, dists, row1, row2
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
     """
     Detect the Van der Waals interactions
@@ -87,7 +87,7 @@ def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
     return inter_idx, dists <= vdw_sum
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
               selected_others):
     """
@@ -106,7 +106,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
         return inter_idx, passing_dists & are_type
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
                   ha_cut, min_ang, max_ang, selected_others):
     """"
@@ -158,7 +158,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     return idx_name, passing_DHA
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
            metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
            xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,

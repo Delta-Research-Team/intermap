@@ -13,7 +13,7 @@ from intermap.aro import aro
 
 def test_kdtree(iman, conf_path):
     # generate a set of 10 xyz coordinates
-    @njit(parallel=False, cache=True)
+    @njit(parallel=False, cache=False)
     def insider(xyz, indices, dist_cut):
         s2_tree = nckd(xyz[indices])
         ball_1 = s2_tree.query_radius(xyz[indices], dist_cut)

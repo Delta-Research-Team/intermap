@@ -10,20 +10,23 @@ from intermap.others import others
 logger = logging.getLogger('InterMapLogger')
 
 
-def get_estimation(xyz_chunk, n_samples, s1_indices, s2_indices, cations,
-                   rings, cutoffs_aro, selected_aro, anions, hydrophobes,
-                   metal_donors, metal_acceptors, vdw_radii, max_vdw,
-                   hb_hydros, hb_donors, hb_acc, xb_halogens, xb_donors,
-                   xb_acc, cutoffs_others, selected_others, factor=2):
+def get_estimation(n_samples, universe, s1_indices, s2_indices,
+                   cations, rings, cutoffs_aro, selected_aro, anions,
+                   hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+                   max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+                   xb_donors, xb_acc, cutoffs_others, selected_others,
+                   factor=2):
     # Preallocate the arrays
-    n_frames = xyz_chunk.shape[0]
-    samples = xyz_chunk[::n_frames // n_samples]
-    num_detected = np.zeros(n_samples, dtype=np.int32)
+    n_frames = len(universe.trajectory)
+    frames = np.arange(0, n_frames, n_samples)
+    samples = np.zeros((len(frames), len(universe.atoms), 3), dtype=np.float32)
+    num_detected = np.zeros(len(samples), dtype=np.int32)
 
     # Use parallel loop to fill
-    N = samples.shape[0]
+    N = len(samples)
     for i in range(N):
-        xyz = samples[i]
+        xyz = universe.trajectory[frames[i]].positions
+
         ijf_aro, inters_aro = aro(xyz, i, s1_indices, s2_indices, cations,
                                   rings, cutoffs_aro, selected_aro)
 
@@ -51,7 +54,7 @@ def get_estimation(xyz_chunk, n_samples, s1_indices, s2_indices, cations,
     return ijf_template, inters_template
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                  s1_indices, s2_indices, anions, cations,
                  hydrophobes, metal_donors, metal_acceptors, vdw_radii,
@@ -73,7 +76,8 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                                            metal_donors, metal_acceptors,
                                            hb_hydros, hb_donors, hb_acc,
                                            xb_halogens, xb_donors, xb_acc,
-                                           max_vdw, vdw_radii, cutoffs_others,
+                                           max_vdw, vdw_radii,
+                                           cutoffs_others,
                                            selected_others)
 
         # Compute the aromatic interactions
@@ -84,7 +88,6 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
         num_others = ijf_others.shape[0]
         num_aro = ijf_aro.shape[0]
         limits[i] = num_others + num_aro
-
         ijf_template[i, :num_others] = ijf_others
         ijf_template[i, num_others:limits[i]] = ijf_aro
         inters_template[i, :num_others, :len_others] = inters_others

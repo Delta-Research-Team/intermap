@@ -1,7 +1,6 @@
 # Created by rglez at 12/10/24
 import numpy as np
 from numba import njit
-from numba.typed import List
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
@@ -11,7 +10,7 @@ import intermap.njitted as aot
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
                    selected_aro):
     """
@@ -84,7 +83,7 @@ def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
             s2_norm, s1_rings, s2_rings)
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
               s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
               cutoffs_aro, selected_aro):
@@ -93,7 +92,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
     """
     # Parse the cutoffs
-    idx = List(selected_aro).index(inter_name)
+    idx = list(selected_aro).index(inter_name)
     dist_cut = cutoffs_aro[0, idx]
     min_ang = cutoffs_aro[2, idx]
     max_ang = cutoffs_aro[3, idx]
@@ -134,7 +133,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     return idx, all_passing
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
               cutoffs_aro, selected_aro):
     """
@@ -143,7 +142,7 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
     """
 
     # Parse the cutoffs
-    idx = List(selected_aro).index(inter_name)
+    idx = list(selected_aro).index(inter_name)
     dist_cut = cutoffs_aro[0, idx]
     min_dist = cutoffs_aro[1, idx]
     min_ang = cutoffs_aro[2, idx]
@@ -158,7 +157,8 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
     return idx, stacking
 
 
-@njit(parallel=False, cache=True)
+# @njit("Tuple((i4[:, :], b1[:, :]))(f4[:, :], i4, i4[:], i4[:], i4[:], i4[:, :], i8[:], i8[:])", parallel=False, cache=False)
+@njit(parallel=False, cache=False)
 def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         selected_aro):
     """
@@ -177,9 +177,9 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         interactions (ndarray): Container for the interactions
     """
     if selected_aro.size == 0:
-        return (np.zeros((0, 3), dtype=np.int32),
-                np.zeros((0, 0), dtype=np.bool_))
-
+        ijf = np.zeros((0, 3), dtype=np.int32)
+        inters = np.zeros((0, 0), dtype=np.bool_)
+        return ijf, inters
     # Get containers
     (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx,
      s2_rings_idx, ijf, inters, dists, row1, row2, s1_norm,

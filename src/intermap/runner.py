@@ -42,7 +42,7 @@ def run(mode='production'):
         config_path = 'tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
-
+    # %%
     config = conf.InterMapConfig(config_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
     log_path = join(args.output_dir, f"{basename(args.job_name)}_InterMap.log")
@@ -129,7 +129,6 @@ def run(mode='production'):
     total = 0
     total_inters = 0
 
-    # %%
     for i, frames_chunk in enumerate(chunks):
         xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
                                        natoms)
@@ -137,11 +136,12 @@ def run(mode='production'):
             # Estimating memory allocation
             logger.info(f"Estimating memory allocation")
             ijf_template, inters_template = start.get_estimation(
-                xyz_chunk, 5, s1_indices, s2_indices, cations, rings,
+                100, iman.universe, s1_indices, s2_indices, cations, rings,
                 cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
                 metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors,
                 hb_acc, xb_halogens, xb_donors, xb_acc, cutoffs_others,
                 selected_others)
+            # %%
 
             to_allocate += ijf_template.shape[0] * ijf_template.shape[1]
             logger.debug(f"Number of allocated cells: {to_allocate}")
@@ -177,6 +177,8 @@ def run(mode='production'):
         logger.info(f"Filling the interaction dictionary with chunk {i}")
         if ijf_chunk.shape[0] > 0:
             inter_dict.fill(ijf_chunk, inters_chunk)
+            del ijf_chunk
+            del inters_chunk
     #
     computing = round(time.time() - stamp, 2)
 
