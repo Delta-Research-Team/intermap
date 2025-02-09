@@ -40,6 +40,7 @@ def run(mode='production'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         config_path = 'tests/imaps/imap1.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap2.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -197,4 +198,5 @@ def run(mode='production'):
     logger.info(
         f"Total interactions detected in {computing} s: {total}, {total_inters}")
 
-# run(mode='debug')
+
+run(mode='debug')

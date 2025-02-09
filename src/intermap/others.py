@@ -158,7 +158,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     return idx_name, passing_DHA
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
            metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
            xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,

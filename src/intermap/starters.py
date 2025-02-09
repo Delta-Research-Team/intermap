@@ -54,7 +54,7 @@ def get_estimation(n_samples, universe, s1_indices, s2_indices,
     return ijf_template, inters_template
 
 
-@njit(parallel=True, cache=False)
+@njit(parallel=True, cache=True)
 def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                  s1_indices, s2_indices, anions, cations,
                  hydrophobes, metal_donors, metal_acceptors, vdw_radii,
@@ -76,8 +76,7 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
                                            metal_donors, metal_acceptors,
                                            hb_hydros, hb_donors, hb_acc,
                                            xb_halogens, xb_donors, xb_acc,
-                                           max_vdw, vdw_radii,
-                                           cutoffs_others,
+                                           max_vdw, vdw_radii, cutoffs_others,
                                            selected_others)
 
         # Compute the aromatic interactions
@@ -88,6 +87,7 @@ def run_parallel(xyz_all, ijf_template, inters_template, len_others, len_aro,
         num_others = ijf_others.shape[0]
         num_aro = ijf_aro.shape[0]
         limits[i] = num_others + num_aro
+
         ijf_template[i, :num_others] = ijf_others
         ijf_template[i, num_others:limits[i]] = ijf_aro
         inters_template[i, :num_others, :len_others] = inters_others

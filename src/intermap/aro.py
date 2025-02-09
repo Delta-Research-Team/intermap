@@ -158,7 +158,7 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
 
 
 # @njit("Tuple((i4[:, :], b1[:, :]))(f4[:, :], i4, i4[:], i4[:], i4[:], i4[:, :], i8[:], i8[:])", parallel=False, cache=False)
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         selected_aro):
     """
