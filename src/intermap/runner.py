@@ -15,9 +15,8 @@ from numba import set_num_threads
 import intermap.config as conf
 import intermap.cutoffs as cf
 import intermap.interdict as idt
-import intermap.starters as start
 import intermap.topo_trajs as tt
-from intermap import commons as cmn
+from intermap import commons as cmn, macro
 from intermap.indices import IndexManager
 
 
@@ -39,11 +38,11 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap1.cfg'
         config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap2.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
+    f4 = np.float32
     config = conf.InterMapConfig(config_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
     log_path = join(args.output_dir, f"{basename(args.job_name)}_InterMap.log")
@@ -117,71 +116,71 @@ def run(mode='production'):
     inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
 
     # =========================================================================
+    # Estimating memory allocation
+    # =========================================================================
+    logger.info(f"Estimating memory allocation")
+    set_num_threads(args.n_procs)
+    n_frames, n_samples = len(universe.trajectory), 10
+    sub = universe.trajectory[::n_frames // n_samples]
+    positions = np.asarray([ts.positions.copy() for ts in sub], dtype=f4)
+
+    ijf_shape, inters_shape, mb1, mb2, v_size, h_size = macro.estimate(
+        positions, args.chunk_size, s1_indices, s2_indices, cations, rings,
+        cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
+        metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
+        xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others)
+
+    logger.debug(f"Allocated space for interactions:"
+                 f" ~{mb1} MB ({args.chunk_size}, {v_size}, {h_size})")
+    logger.debug(f"Allocated space for coordinates:"
+                 f" ~{mb2} MB ({args.chunk_size}, {natoms}, 3) ")
+
+    # =========================================================================
+    # Compiling the parallel function
+    # =========================================================================
+    logger.info("Compiling the parallel function")
+    xyz_test = positions[:1]
+    tree_test = cmn.get_trees(xyz_test, s2_indices)
+    _, _ = macro.run_parallel2(
+        xyz_test, tree_test, ijf_shape, inters_shape, len_others, len_aro,
+        s1_indices, s2_indices, anions, cations, hydrophobes, metal_donors,
+        metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
+        xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
+        selected_others, cutoffs_aro, selected_aro)
+
+    # =========================================================================
     # Fill the interaction dictionary
     # =========================================================================
-    stamp = time.time()
     logger.info(f"Starting to compute InterMap interactions")
-    set_num_threads(args.n_procs)
-    inter_dict = idt.InterDict(
-        args.format, args.min_prevalence, traj_frames, names, inters)
+    fmt, min_prev = args.format, args.min_prevalence
+    inter_dict = idt.InterDict(fmt, min_prev, traj_frames, names, inters)
 
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
-    to_allocate = 1
-    total = 0
-    total_inters = 0
-
+    total_pairs, total_inters = 0, 0
     for i, frames_chunk in enumerate(chunks):
-        xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx,
-                                       natoms)
-        if i == 0:
-            # Estimating memory allocation
-            logger.info(f"Estimating memory allocation")
-            ijf_template, inters_template = start.get_estimation(
-                100, iman.universe, s1_indices, s2_indices, cations, rings,
-                cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
-                metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors,
-                hb_acc, xb_halogens, xb_donors, xb_acc, cutoffs_others,
-                selected_others)
-            # %%
-
-            to_allocate += ijf_template.shape[0] * ijf_template.shape[1]
-            logger.debug(f"Number of allocated cells: {to_allocate}")
-
-            # Compiling the parallel function
-            logger.info("Compiling the parallel function")
-            ijf, inters = start.run_parallel(
-                xyz_chunk[:1], ijf_template, inters_template, len_others,
-                len_aro, s1_indices, s2_indices, anions, cations, hydrophobes,
-                metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
-                hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, rings,
-                cutoffs_others, selected_others, cutoffs_aro, selected_aro)
+        logger.info(f"Retrieving coordinates for chunk {i}")
+        xyz_chunk = tt.get_coordinates(universe, frames_chunk, sel_idx)
+        trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
 
         # Compute the interactions
         logger.info(f"Computing chunk {i}")
-        ijf_chunk, inters_chunk = start.run_parallel(
-            xyz_chunk, ijf_template, inters_template, len_others, len_aro,
+        ijf_chunk, inters_chunk = macro.run_parallel2(
+            xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
+            len_aro,
             s1_indices, s2_indices, anions, cations, hydrophobes, metal_donors,
             metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
             xb_halogens, xb_donors, xb_acc, rings, cutoffs_others,
             selected_others, cutoffs_aro, selected_aro)
 
-        total += ijf_chunk.shape[0]
-        total_inters += np.sum(inters_chunk)
+        total_pairs += ijf_chunk.shape[0]
+        total_inters += inters_chunk.sum()
 
-        # Raise if not enough space has been allocated
-        if (occupancy := ijf_chunk.shape[0] / to_allocate) >= 0.98:
-            raise ValueError(f"Chunk {i} occupancy: {round(occupancy, 2)}")
-        elif occupancy >= 0.90:
-            logger.warning(f"Chunk {i} occupancy: {round(occupancy, 2)}")
-
-        # %% Filling the interaction dictionary
+        # Filling the interaction dictionary
         logger.info(f"Filling the interaction dictionary with chunk {i}")
         if ijf_chunk.shape[0] > 0:
+            col_frames = frames_chunk[ijf_chunk[:, 2]]
+            ijf_chunk[:, 2] = col_frames
             inter_dict.fill(ijf_chunk, inters_chunk)
-            del ijf_chunk
-            del inters_chunk
-    #
-    computing = round(time.time() - stamp, 2)
 
     # =========================================================================
     # Saving
@@ -190,13 +189,17 @@ def run(mode='production'):
     job_name = basename(args.job_name)
     pickle_name = f"{job_name}_InterMap.pickle"
     pickle_path = join(args.output_dir, pickle_name)
+    logger.info(f"Saving the interactions in {pickle_path}")
     gnl.pickle_to_file(inter_dict.dict, pickle_path)
+
+    # =========================================================================
+    # Timing
+    # =========================================================================
     tot = round(time.time() - start_time, 2)
-    logger.info(f"Normal termination of InterMap job '{job_name}' in {tot} s")
-    n_ints = len(inter_dict.dict.keys())
-    logger.info(f"Inter_dict size: {n_ints}")
-    logger.info(
-        f"Total interactions detected in {computing} s: {total}, {total_inters}")
+    ldict = len(inter_dict.dict)
+    logger.info(f"Total number of unique atom pairs detected:, {ldict}")
+    logger.info(f"Total number of interactions detected: {total_inters}")
+    logger.info(f"Normal termination of InterMap job '{job_name}'")
+    logger.info(f"Total time: {tot} s")
 
-
-run(mode='debug')
+# run(mode='debug')

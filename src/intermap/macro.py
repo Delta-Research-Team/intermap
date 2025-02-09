@@ -1,0 +1,123 @@
+# Created by gonzalezroy at 2/5/25
+import logging
+
+import numpy as np
+from numba import njit, prange
+
+import intermap.commons as cmn
+from intermap import others
+from intermap.aro import aro
+
+logger = logging.getLogger('InterMapLogger')
+
+
+@njit(parallel=True, cache=True)
+def run_parallel2(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
+                  len_aro,
+                  s1_indices, s2_indices, anions, cations, hydrophobes,
+                  metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
+                  hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, rings,
+                  cutoffs_others, selected_others, cutoffs_aro, selected_aro):
+    # Get the number of frames in the chunk
+    dim1 = xyz_chunk.shape[0]
+    dim2 = ijf_shape[0]
+
+    # Preallocate the arrays
+    ijf_template = np.zeros((dim1, dim2, 3), dtype=np.int32)
+    inters_template = np.zeros((dim1, dim2, inters_shape[1]), dtype=np.bool_)
+    markers = np.zeros(dim1, dtype=np.int32)
+    dist_cut1 = max(cutoffs_others[:2].max(), max_vdw)
+
+    for i in prange(dim1):
+        # Compute the interactions
+        xyz = xyz_chunk[i]
+        tree = trees_chunk[i]
+        ball_1 = cmn.get_ball(xyz, s1_indices, tree, dist_cut1)
+
+        ijf_others, inters_others = others.others(xyz, i, s1_indices,
+                                                  s2_indices, ball_1,
+                                                  hydrophobes, anions,
+                                                  cations,
+                                                  metal_donors,
+                                                  metal_acceptors, hb_hydros,
+                                                  hb_donors, hb_acc,
+                                                  xb_halogens, xb_donors,
+                                                  xb_acc, vdw_radii,
+                                                  cutoffs_others,
+                                                  selected_others)
+
+        ijf_aro, inters_aro = aro(xyz, i, s1_indices, s2_indices, cations,
+                                  rings, cutoffs_aro, selected_aro)
+
+        # Fill the templates
+        num_others = ijf_others.shape[0]
+        num_aro = ijf_aro.shape[0]
+        markers[i] = num_others + num_aro
+
+        ijf_template[i][:num_others] = ijf_others
+        ijf_template[i][num_others:markers[i]] = ijf_aro
+        inters_template[i][:num_others, :len_others] = inters_others
+        inters_template[i][num_others:markers[i], len_others:] = inters_aro
+
+    # Compress the chunks to the final size
+    num_pairs = markers.sum()
+    ijf_final = np.empty((num_pairs, 3), dtype=np.int32)
+    inters_final = np.empty((num_pairs, len_others + len_aro), dtype=np.bool_)
+
+    for i in prange(dim1):
+        start = markers[:i].sum()
+        end = markers[:i + 1].sum()
+        ijf_final[start:end] = ijf_template[i, :markers[i]]
+        inters_final[start:end] = inters_template[i, :markers[i]]
+    return ijf_final, inters_final
+
+
+# @njit(parallel=True, cache=True)
+def estimate(positions, chunk_size, s1_indices, s2_indices,
+             cations, rings, cutoffs_aro, selected_aro, anions,
+             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
+             max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+             xb_donors, xb_acc, cutoffs_others, selected_others,
+             factor=1.5):
+    # Detect the number of interactions
+    N = len(positions)
+    others_cut = max(cutoffs_others[:2].max(), max_vdw)
+    num_detected = np.zeros(N, dtype=np.int32)
+    for i in prange(N):
+        xyz = positions[i]
+        ijf_aro, inters_aro = aro(xyz, i, s1_indices, s2_indices, cations,
+                                  rings, cutoffs_aro, selected_aro)
+        ball_1 = others.get_ball(xyz, s1_indices, s2_indices, others_cut)
+        ijf_others, inters_others = others.others(xyz, i, s1_indices,
+                                                  s2_indices, ball_1,
+                                                  hydrophobes, anions,
+                                                  cations,
+                                                  metal_donors,
+                                                  metal_acceptors, hb_hydros,
+                                                  hb_donors, hb_acc,
+                                                  xb_halogens, xb_donors,
+                                                  xb_acc, vdw_radii,
+                                                  cutoffs_others,
+                                                  selected_others)
+
+        num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
+
+    # Estimate the number of contacts
+    ijf_vert = np.int32(num_detected.max() * factor)
+    if ijf_vert == 0:
+        ijf_vert = 1500
+    inters_hori = selected_others.size + selected_aro.size
+
+    # Get the shapes for preallocation
+    ijf_shape = (ijf_vert, 3)
+    inters_shape = (ijf_vert, inters_hori)
+
+    # Get the numbers in MB
+    v_size = ijf_shape[0]
+    h_size = ijf_shape[1] + inters_shape[1]
+    ijf_mb = chunk_size * v_size * 3 * 32 / 2 ** 20
+    inters_mb = chunk_size * v_size * h_size * 8 / 2 ** 20
+    mb1 = round(ijf_mb + inters_mb, 0)
+    mb2 = round(chunk_size * (
+        np.union1d(s1_indices, s2_indices).size) * 3 * 4 / 2 ** 20, 0)
+    return ijf_shape, inters_shape, mb1, mb2, v_size, h_size

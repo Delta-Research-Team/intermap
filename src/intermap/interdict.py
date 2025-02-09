@@ -5,13 +5,6 @@ import bitarray.util as bu
 import numpy as np
 import numpy_indexed as npi
 
-def count_bin2D(arr):
-    """
-    Count the number of True values in a 2D array
-    """
-    return np.count_nonzero(arr, axis=1)
-
-
 
 # todo: numba the fill method of InterDict
 class InterDict:

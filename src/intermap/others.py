@@ -11,8 +11,14 @@ from intermap import njitted as aot
 
 
 @njit(parallel=False, cache=False)
-def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
-               selected_others):
+def get_ball(xyz, s1_indices, s2_indices, dist_cut):
+    s2_tree = nckd(xyz[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
+    return ball_1
+
+
+@njit(parallel=False, cache=False)
+def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
     """
     Get the containers to find interactions not related to aromatic rings
 
@@ -31,12 +37,6 @@ def containers(xyz, k, s1_indices, s2_indices, max_vdw, cutoffs_others,
         dists (ndarray): Distances between the atoms in the first and second
                          selections
     """
-
-    # Create & query the trees
-    dist_cut = max(cutoffs_others[:2].max(), max_vdw)
-    s2_tree = nckd(xyz[s2_indices])
-    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
-
     # Find the contacts
     n_contacts = sum([len(x) for x in ball_1])
     ijf = np.empty((n_contacts, 3), dtype=np.int32)
@@ -159,9 +159,10 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 
 @njit(parallel=False, cache=True)
-def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
+def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
+           cations,
            metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
-           xb_halogens, xb_donors, xb_acc, max_vdw, vdw_radii,
+           xb_halogens, xb_donors, xb_acc, vdw_radii,
            cutoffs_others, selected_others):
     """
     Fill the not-aromatic interactions
@@ -172,8 +173,7 @@ def others(xyz, k, s1_indices, s2_indices, hydrophobes, anions, cations,
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
-                                                max_vdw, cutoffs_others,
-                                                selected_others)
+                                                ball_1, selected_others)
     selected = list(selected_others)
 
     # [Van der Waals]

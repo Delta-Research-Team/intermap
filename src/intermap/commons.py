@@ -8,9 +8,9 @@ import re
 
 import numpy as np
 import numpy_indexed as npi
-from numba.pycc import CC
-
-cc = CC('commons_aot')
+from numba import njit
+from numba.typed import List
+from numba_kdtree import KDTree as nckd
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -138,3 +138,35 @@ def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
         raise ValueError(f'Param "{value}" out of [{minim}, {maxim}]')
 
     return dtype(value)
+
+
+def get_trees(xyz_chunk, s2_indices):
+    """
+
+    Args:
+        xyz_chunk:
+        s2_indices:
+
+    Returns:
+
+    """
+    trees = List()
+    for x in xyz_chunk:
+        trees.append(nckd(x[s2_indices]))
+    return trees
+
+
+@njit(parallel=False, cache=False)
+def get_ball(xyz, s1_indices, tree, dist_cut):
+    """
+    Args:
+        xyz:
+        s1_indices:
+        tree:
+        dist_cut:
+
+    Returns:
+
+    """
+    ball_1 = tree.query_radius_parallel(xyz[s1_indices], dist_cut)
+    return ball_1
