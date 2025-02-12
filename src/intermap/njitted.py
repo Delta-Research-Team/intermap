@@ -169,7 +169,7 @@ def calc_angles_2v(vectors1, vectors2):
 
 
 @njit("f4[:](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=False)
-def calc_angle(d, h, a):
+def calc_angle_3p(d, h, a):
     """
     Computes the angles between sets of three atoms.
 

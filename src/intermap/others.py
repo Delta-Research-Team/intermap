@@ -141,11 +141,11 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     if "HBDonor" in inter_name:
         idx_hydros = aot.indices(type1, t1)
         D = hb_donors[idx_hydros]
-        DHA_angles = aot.calc_angle(xyz[D], xyz[t1], xyz[t2])
+        DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
     elif "HBAcceptor" in inter_name:
         idx_hydros = aot.indices(type2, t2)
         D = hb_donors[idx_hydros]
-        DHA_angles = aot.calc_angle(xyz[D], xyz[t2], xyz[t1])
+        DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
     t3[passing_HA] = DHA_angles

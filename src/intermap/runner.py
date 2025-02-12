@@ -202,4 +202,4 @@ def run(mode='production'):
     logger.info(f"Normal termination of InterMap job '{job_name}'")
     logger.info(f"Total time: {tot} s")
 
-# run(mode='debug')
+run(mode='debug')
