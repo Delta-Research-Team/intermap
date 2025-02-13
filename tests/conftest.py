@@ -31,7 +31,7 @@ def conf_obj(conf_path, parameters):
     """
     Configuration object for the tests
     """
-    parsed = conf.InterMapConfig(conf_path, parameters)
+    parsed = conf.ConfigManager(conf_path, parameters)
     obj = parsed.config_obj
     return obj
 
@@ -77,7 +77,7 @@ def iman(conf_path, parameters):
     Index Manager for the tests
     """
     # Get the Index Manager
-    config = conf.InterMapConfig(conf_path, parameters)
+    config = conf.ConfigManager(conf_path, parameters)
     args = Namespace(**config.config_args)
     s1 = 'resname LIG'
     s2 = 'protein'
@@ -92,7 +92,7 @@ def others_arguments(conf_path, parameters):
     Arguments for the not-aromatic interactions
     """
     # Get the Index Manager
-    config = conf.InterMapConfig(conf_path, parameters)
+    config = conf.ConfigManager(conf_path, parameters)
     args = Namespace(**config.config_args)
     s1 = 'resname LIG'
     s2 = 'protein'
@@ -135,7 +135,7 @@ def others_arguments_all(conf_path, parameters):
     Arguments for the not-aromatic interactions
     """
     # Get the Index Manager
-    config = conf.InterMapConfig(conf_path, parameters)
+    config = conf.ConfigManager(conf_path, parameters)
     args = Namespace(**config.config_args)
     s1 = 'all'
     s2 = 'all'

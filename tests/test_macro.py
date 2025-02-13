@@ -33,7 +33,7 @@ def test_aro(iman, conf_path):
     cations = iman.cations
     rings = iman.rings
 
-    config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
+    config = conf.ConfigManager(conf_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
     all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
     to_compute = iman.interactions

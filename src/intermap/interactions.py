@@ -543,7 +543,7 @@ def aro(xyz, k, s1_indices_raw, s2_indices_raw, cations, rings, cutoffs_aro,
 #
 # # Load the configuration
 # config_path = '/home/rglez/RoyHub/intermap/tests/imap.cfg'
-# config = conf.InterMapConfig(config_path, conf.allowed_parameters)
+# config = conf.ConfigManager(config_path, conf.allowed_parameters)
 # args = Namespace(**config.config_args)
 #
 # # Parsing the interactions & cutoffs

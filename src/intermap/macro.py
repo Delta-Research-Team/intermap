@@ -12,7 +12,7 @@ logger = logging.getLogger('InterMapLogger')
 
 
 @njit(parallel=True, cache=True)
-def run_parallel2(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
+def runpar(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
                   len_aro,
                   s1_indices, s2_indices, anions, cations, hydrophobes,
                   metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,

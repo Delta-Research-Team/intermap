@@ -212,7 +212,7 @@ class Config:
         raise NotImplementedError
 
 
-class InterMapConfig(Config):
+class ConfigManager(Config):
     """
     Specific parser for STDock's config files. It inherits from a more general
     config parser and then perform STDock-related checkings.
@@ -292,4 +292,4 @@ class InterMapConfig(Config):
 # Debugging area
 # =============================================================================
 # config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
-# self = InterMapConfig(config_path, allowed_parameters)
+# self = ConfigManager(config_path, allowed_parameters)

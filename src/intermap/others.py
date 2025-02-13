@@ -272,7 +272,7 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
 #
 # conf_path = 'tests/imaps/imap1.cfg'
 # # Get the Index Manager
-# config = conf.InterMapConfig(conf_path, conf.allowed_parameters)
+# config = conf.ConfigManager(conf_path, conf.allowed_parameters)
 # args = Namespace(**config.config_args)
 # s1 = 'all'
 # s2 = 'all'

@@ -21,18 +21,14 @@ class InterDict:
         self.atom_names = atom_names
         self.inter_names = inter_names
         self.n_frames = frames_id.size
-        self.template = bu.zeros(self.n_frames)
 
         # Initialize containers
-        self.dict = defaultdict(lambda: self.template)
+        self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
-    # @profile
     def fill(self, ijfs, inters):
         groups = npi.group_by(ijfs[:, :2])
         sorter = groups.index.sorter
         slices = groups.index.slices
-
-        # self.dict = defaultdict(self.template.copy)
         indices = np.split(sorter, slices[1:-1])
 
         for index in indices:
