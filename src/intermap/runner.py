@@ -150,6 +150,7 @@ def run(mode='production'):
     inters = np.asarray([x for x in selected_others if x != 'None'] +
                         [x for x in selected_aro if x != 'None'])
     inter_dict = idt.InterDict(fmt, min_prev, traj_frames, names, inters)
+
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
@@ -194,6 +195,5 @@ def run(mode='production'):
     logger.info(f"Total number of interactions detected: {total_inters}")
     logger.info(f"Total elapsed time: {tot} s")
     logger.info(f"Normal termination of InterMap job '{job_name}'")
-
 
 # run(mode='debug')
