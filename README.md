@@ -9,7 +9,7 @@
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Twitter)](https://twitter.com/intermap)
 -->
 
-<img src="https://github.com/rglez/intermap/blob/master/docs/figs/imap.png" width="200">
+<img src="https://github.com/rglez/intermap/blob/master/docs/figs/imap.png" width="300">
 
 
 > Add a short description here!
