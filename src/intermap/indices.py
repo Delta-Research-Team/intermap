@@ -3,6 +3,7 @@ import itertools as it
 import logging
 import time
 from collections import defaultdict
+from pprint import pformat
 
 import MDAnalysis as mda
 import numpy as np
@@ -11,7 +12,6 @@ import rdkit
 from rdkit import Chem
 
 import intermap.cutoffs as cf
-from intermap.commons import smarts
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -103,19 +103,28 @@ class IndexManager:
     """
     Class to manage the indices of the selections in a trajectory.
     """
+    smarts = {
+        'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
+        'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
+        'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
+        'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
+        'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
+        'hb_acc': '[#7&!$([n&X3])&!$([N&X3]-*=[O,N,P,S])&!$([N&X3]-a)&!$([N&v4&+]),O&!$([O&X2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O&-]-N=O),o&+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
+        'xb_acc': '[#7,#8,P,S,#34,#52,a;!+{1-}]!#*',
+        'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
+        'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
+        'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
 
     def __init__(self, topo, traj, sel1, sel2, interactions):
         # Parse the arguments
+        logger.debug(f"Using the following SMARTS patterns:\n"
+                     f" {pformat(self.smarts)}")
         self.topo = topo
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
         self.raw_inters = interactions
-
-        # Initialize the SMARTS patterns
-        self.smarts_patterns = smarts
-        # logger.debug(f"Using the following SMARTS patterns:\n"
-        #              f" {pformat(self.smarts_patterns)}")
 
         # Initialize the trajectory attributes
         self.unique_residues = None
@@ -125,23 +134,16 @@ class IndexManager:
         load_time = time.time() - stamp
         self.n_atoms = self.universe.atoms.n_atoms
         self.n_frames = len(self.universe.trajectory)
-        # logger.info(f'System loaded in {load_time:.2f} s.\n'
-        #             f'Total number of atoms: {self.n_atoms}\n'
-        #             f'Total number of frames: {self.n_frames}')
+        logger.info(f'System loaded in {load_time:.2f} s.\n'
+                    f'Total number of atoms: {self.n_atoms}\n'
+                    f'Total number of frames: {self.n_frames}')
 
         # General selections
         sel1_idx, sel2_idx = self.get_selections_indices()
         uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
-
         self.sel_idx = np.asarray(uniques, dtype=np.int32)
         self.sel1_idx = npi.indices(self.sel_idx, sel1_idx).astype(np.int32)
         self.sel2_idx = npi.indices(self.sel_idx, sel2_idx).astype(np.int32)
-        if -1 in self.sel1_idx:
-            raise ValueError(
-                "Some atoms in selection 1 are not in the universe")
-        if -1 in self.sel2_idx:
-            raise ValueError(
-                "Some atoms in selection 2 are not in the universe")
 
         # VDW radii
         all_radii = self.get_vdw_radii()
@@ -154,22 +156,19 @@ class IndexManager:
         self.metal_acc = self.get_singles('metal_acc', self.sel_idx)
         self.metal_don = self.get_singles('metal_don', self.sel_idx)
 
-        # Double interactions (H-bonds)
+        # Double interactions
         self.hb_D, self.hb_H, self.hb_A = self.get_doubles(
             'hb_don', 'hb_acc', self.sel_idx)
-
-        # Double interactions (Halogen bonds)
         self.xb_D, self.xb_H, self.xb_A = self.get_doubles(
             'xb_don', 'xb_acc', self.sel_idx)
 
         # Rings
         rings = self.get_rings()
-        babel_rings = rings.copy()
+        sel_rings = rings.copy()
         for i, ring in enumerate(rings):
-            idx_part = ring[:ring[-1]]
-            babel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, idx_part,
-                                                    missing=-1)
-        self.rings = babel_rings[babel_rings[:, 0] != -1]
+            r = ring[:ring[-1]]
+            sel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, r, missing=-1)
+        self.rings = sel_rings[sel_rings[:, 0] != -1]
         logger.debug(f"Detected atom types:\n"
                      f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
                      f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
@@ -185,7 +184,6 @@ class IndexManager:
                      f"Halogens: {len(self.xb_H)}\n"
                      f"Halogen bond acceptors: {len(self.xb_A)}\n"
                      f"Aromatic rings: {len(self.rings)}")
-
         # Possible interactions
         self.interactions = self.get_interactions()
 
@@ -259,7 +257,7 @@ class IndexManager:
         Returns:
             singles: array with the indices of the single atoms
         """
-        smart = self.smarts_patterns[identifier]
+        smart = self.smarts[identifier]
         singles = []
         for case in self.unique_rdmols:
             res = self.unique_residues[case]
@@ -288,7 +286,7 @@ class IndexManager:
             hb_H: array with the indices of the hydrogens
             hb_A: array with the indices of the acceptors
         """
-        smarts = self.smarts_patterns
+        smarts = self.smarts
         smart_dx = smarts[donor_identifier]
         smart_a = smarts[acceptor_identifier]
 
@@ -343,8 +341,7 @@ class IndexManager:
         Returns:
             rings: List with the indices of the aromatic rings
         """
-        patterns = [self.smarts_patterns['rings5'],
-                    self.smarts_patterns['rings6']]
+        patterns = [self.smarts['rings5'], self.smarts['rings6']]
 
         rings = []
         for case in self.unique_rdmols:

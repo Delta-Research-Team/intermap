@@ -1,12 +1,12 @@
-# Created by gonzalezroy at 2/7/25
+# Created by rglez at 2/8/25
+"""
+Common functions used in the different modules of the package
+"""
 import numpy as np
 from numba import njit, prange
-from numba.pycc import CC
-
-cc = CC('commons_aot')
 
 
-@cc.export('calc_min_dist', 'f4(f4[:, :], f4[:, :])')
+@njit("f4(f4[:, :], f4[:, :])", parallel=False, cache=True)
 def calc_min_dist(coords1, coords2):
     """
     Get the minimumm distance between two sets of coordinates
@@ -35,7 +35,7 @@ def calc_min_dist(coords1, coords2):
     return np.float32(np.sqrt(min_dist_squared))
 
 
-@cc.export('get_compress_mask', 'b1[:](b1[:, :])')
+@njit("b1[:](b1[:, :])", parallel=False, cache=True)
 def get_compress_mask(array):
     """
     Compress the array to remove empty
@@ -54,7 +54,7 @@ def get_compress_mask(array):
     return mask
 
 
-@cc.export('indices', 'i4[:](i4[:], i4[:])')
+@njit("i4[:](i4[:], i4[:])", parallel=False, cache=True)
 def indices(full, subset):
     """
     Find the indices of the subset elements in the full array.
@@ -75,7 +75,7 @@ def indices(full, subset):
     return indices
 
 
-@cc.export('isin', 'b1[:](i4[:], i4[:])')
+@njit("b1[:](i4[:], i4[:])", parallel=False, cache=True)
 def isin(full, subset):
     """
     Check if the elements of the subset are in the full array.
@@ -97,8 +97,7 @@ def isin(full, subset):
     return result
 
 
-# @cc.export('calc_dist', 'f4[:](f4[:, :], f4[:, :])')
-@njit(parallel=False)
+@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=True)
 def calc_dist(d, a):
     """
     Computes the Euclidean distance between two atoms in a molecule
@@ -122,7 +121,7 @@ def calc_dist(d, a):
     return distances
 
 
-@cc.export('calc_angles_2v', 'f4[:](f4[:, :], f4[:, :])')
+@njit("f4[:](f4[:, :], f4[:, :])", parallel=False, cache=True)
 def calc_angles_2v(vectors1, vectors2):
     """
     Computes the angles between two arrays of 3D vectors using arctan2.
@@ -169,8 +168,8 @@ def calc_angles_2v(vectors1, vectors2):
     return angles_degrees
 
 
-@cc.export('calc_angle', 'f4[:](f4[:, :], f4[:, :], f4[:, :])')
-def calc_angle(d, h, a):
+@njit("f4[:](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)
+def calc_angle_3p(d, h, a):
     """
     Computes the angles between sets of three atoms.
 
@@ -183,7 +182,8 @@ def calc_angle(d, h, a):
         angle_deg: Angles in degrees for each set of atoms (n,).
     """
     n = d.shape[0]  # Number of triplets
-    angle_deg = np.empty(n, dtype=np.float32)  # Array to hold the result angles
+    angle_deg = np.empty(n,
+                         dtype=np.float32)  # Array to hold the result angles
 
     for i in range(n):
         # Compute vectors
@@ -205,7 +205,7 @@ def calc_angle(d, h, a):
     return angle_deg
 
 
-@cc.export('calc_centroids', 'f4[:, :](i4[:, :], f4[:, :])')
+@njit("f4[:, :](i4[:, :], f4[:, :])", parallel=False, cache=True)
 def calc_centroids(rings, xyz):
     """
     Calculate the centroid of each ring
@@ -224,7 +224,7 @@ def calc_centroids(rings, xyz):
     return centroids.astype(np.float32)
 
 
-@cc.export('calc_normal_vector', 'f4[:](f4[:], f4[:], f4[:])')
+@njit("f4[:, :](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)
 def calc_normal_vector(p1, p2, p3):
     """
     Calculate the normal vector of a plane defined by three points
@@ -249,10 +249,11 @@ def calc_normal_vector(p1, p2, p3):
     return (normal / norm).astype(np.float32)
 
 
-@cc.export('get_containers',
-           'Tuple((i4[:, :], f4[:], b1[:, :]))(f4[:, :], i4, i4[:], List(List(i4)), i4[:], i4[:], i4[:])')
+@njit("Tuple((i4[:, :], f4[:], b1[:, :]))"
+      "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i8)",
+      cache=True)
 def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
-                   to_compute):
+                   n_types):
     """
     Get the containers for the interactions, the distances and the indices
 
@@ -276,7 +277,7 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     if n_contacts == 0:
         return (
             np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
-            np.zeros((0, to_compute.size), dtype=np.bool_))
+            np.zeros((0, n_types), dtype=np.bool_))
 
     ijf = np.zeros((n_contacts, 3), dtype=np.int32)
     counter = 0
@@ -300,15 +301,5 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     dists = calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
-    n_types = to_compute.size
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
     return ijf, dists, interactions
-
-
-# =============================================================================
-#
-# =============================================================================
-
-
-if __name__ == "__main__":
-    cc.compile()

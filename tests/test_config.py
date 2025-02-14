@@ -18,7 +18,7 @@ def save_config(conf_obj, conf_path):
 
 def test_parsing_with_cutoffs_section(conf_obj, conf_path, parameters):
     """Configuration file with a [cutoffs] section is parsed"""
-    parsed = conf.InterMapConfig(conf_path, parameters)
+    parsed = conf.ConfigManager(conf_path, parameters)
     assert 'cutoffs' in parsed.config_args
 
 
@@ -33,7 +33,7 @@ def test_parsing_without_cutoffs_section(conf_obj, conf_path, parameters):
     out_name = save_config(conf_cpy, conf_path)
 
     # Parse the modified configuration file
-    parsed = conf.InterMapConfig(out_name, parameters)
+    parsed = conf.ConfigManager(out_name, parameters)
     assert 'cutoffs' in parsed.config_args
 
 
@@ -48,7 +48,7 @@ def test_invalid_cutoff(conf_obj, conf_path, parameters):
 
     # Parse the modified configuration file
     with pytest.raises(ValueError):
-        conf.InterMapConfig(out_name, parameters)
+        conf.ConfigManager(out_name, parameters)
 
 
 def test_parsing_with_missing_cutoffs(conf_obj, conf_path, parameters):
@@ -64,7 +64,7 @@ def test_parsing_with_missing_cutoffs(conf_obj, conf_path, parameters):
     out_name = save_config(conf_cpy, conf_path)
 
     # Parse the modified configuration file
-    parsed = conf.InterMapConfig(out_name, parameters)
+    parsed = conf.ConfigManager(out_name, parameters)
     assert 'cutoffs' in parsed.config_args
 
 # =============================================================================
