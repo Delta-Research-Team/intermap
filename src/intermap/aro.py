@@ -4,13 +4,13 @@ from numba import njit
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
-import intermap.njitted as aot
+import intermap.geometry as aot
 
 
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
                    selected_aro):
     """
@@ -74,7 +74,7 @@ def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
     # Get containers
     ijf, dists, interactions = aot.get_containers(
         xyz_aro, k, xyz_aro_real_idx, ball_1, s1_aro_indices, s2_aro_indices,
-        selected_aro.size)
+        len(selected_aro))
 
     row1, row2 = ijf[:, 0], ijf[:, 1]
 
@@ -83,7 +83,7 @@ def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
             s2_norm, s1_rings, s2_rings)
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
               s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
               cutoffs_aro, selected_aro):
@@ -92,7 +92,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
     """
     # Parse the cutoffs
-    idx = list(selected_aro).index(inter_name)
+    idx = selected_aro.index(inter_name)
     dist_cut = cutoffs_aro[0, idx]
     min_ang = cutoffs_aro[2, idx]
     max_ang = cutoffs_aro[3, idx]
@@ -133,7 +133,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     return idx, all_passing
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
               cutoffs_aro, selected_aro):
     """
@@ -142,7 +142,7 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
     """
 
     # Parse the cutoffs
-    idx = list(selected_aro).index(inter_name)
+    idx = selected_aro.index(inter_name)
     dist_cut = cutoffs_aro[0, idx]
     min_dist = cutoffs_aro[1, idx]
     min_ang = cutoffs_aro[2, idx]
@@ -157,7 +157,7 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
     return idx, stacking
 
 
-# @njit("Tuple((i4[:, :], b1[:, :]))(f4[:, :], i4, i4[:], i4[:], i4[:], i4[:, :], i8[:], i8[:])", parallel=False, cache=False)
+# @njit("Tuple((i4[:, :], b1[:, :]))(f4[:, :], i4, i4[:], i4[:], i4[:], i4[:, :], i8[:], i8[:])", parallel=False, cache=True)
 @njit(parallel=False, cache=True)
 def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         selected_aro):
@@ -176,7 +176,7 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
         ijf (ndarray): Indices of the atoms in the first and second selections
         interactions (ndarray): Container for the interactions
     """
-    if selected_aro.size == 0:
+    if 'None' in selected_aro:
         ijf = np.zeros((0, 3), dtype=np.int32)
         inters = np.zeros((0, 0), dtype=np.bool_)
         return ijf, inters
@@ -187,23 +187,21 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
                                                    s2_indices, cations, rings,
                                                    cutoffs_aro, selected_aro)
 
-    selected = list(selected_aro)
-
-    if 'PiCation' in selected:
+    if 'PiCation' in selected_aro:
         pi_idx, pi_cat = pications('PiCation', xyz_aro, row1, row2, dists,
                                    s1_rings_idx, s2_rings_idx, s1_cat_idx,
                                    s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
                                    selected_aro)
         inters[:, pi_idx] = pi_cat
 
-    if 'CationPi' in selected:
+    if 'CationPi' in selected_aro:
         cat_idx, cat_pi = pications('CationPi', xyz_aro, row1, row2, dists,
                                     s1_rings_idx, s2_rings_idx, s1_cat_idx,
                                     s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
                                     selected_aro)
         inters[:, cat_idx] = cat_pi
 
-    if 'PiStacking' in selected or 'EdgeToFace' in selected or 'FaceToFace' in selected:
+    if 'PiStacking' in selected_aro or 'EdgeToFace' in selected_aro or 'FaceToFace' in selected_aro:
         # Get the ring pairs
         s1_is_ctr = aot.isin(row1, s1_rings_idx)
         s2_is_ctr = aot.isin(row2, s2_rings_idx)
@@ -226,20 +224,20 @@ def aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
             ring2 = s2_rings[r2][:s2_rings[r2][-1]]
             mindists[i] = aot.calc_min_dist(xyz[ring1], xyz[ring2])
 
-        if 'PiStacking' in selected:
+        if 'PiStacking' in selected_aro:
             idx, pi_stacking = stackings('PiStacking', ring_dists, mindists,
                                          s1_normals, s2_normals, cutoffs_aro,
                                          selected_aro)
 
             inters[pairs, idx] = pi_stacking
 
-        if 'EdgeToFace' in selected:
+        if 'EdgeToFace' in selected_aro:
             idx, etf_stacking = stackings('EdgeToFace', ring_dists, mindists,
                                           s1_normals, s2_normals, cutoffs_aro,
                                           selected_aro)
             inters[pairs, idx] = etf_stacking
 
-        if 'FaceToFace' in selected:
+        if 'FaceToFace' in selected_aro:
             idx, ftf_stacking = stackings('FaceToFace', ring_dists, mindists,
                                           s1_normals, s2_normals, cutoffs_aro,
                                           selected_aro)

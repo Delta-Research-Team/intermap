@@ -6,7 +6,6 @@ import logging
 import os
 import re
 
-import numpy as np
 import numpy_indexed as npi
 from numba import njit
 from numba.typed import List
@@ -63,13 +62,18 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
     # Parse aromatics
     bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
                npi.indices(all_inters, [x])]
-    to_compute_aro = np.asarray([all_inters[x] for x in bit_aro])
+    if len(bit_aro) == 0:
+        to_compute_aro = List(['None'])
+    else:
+        to_compute_aro = List([all_inters[x] for x in bit_aro])
 
     # Parse non-aromatics
     bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
                   in npi.indices(all_inters, [x])]
-    to_compute_others = np.asarray([all_inters[x] for x in bit_others],
-                                   dtype=str)
+    if len(bit_others) == 0:
+        to_compute_others = List(['None'])
+    else:
+        to_compute_others = List([all_inters[x] for x in bit_others])
 
     # Get the cutoffs
     cutoffs_aro = all_cutoffs[:, bit_aro]
@@ -143,7 +147,7 @@ def get_trees(xyz_chunk, s2_indices):
     return trees
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def get_ball(xyz, s1_indices, tree, dist_cut):
     """
     Args:

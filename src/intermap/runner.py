@@ -23,14 +23,6 @@ from intermap.indices import IndexManager
 
 # todo: check docstrings
 
-# todo: [CO] use List instead of ndarray for selected_others and selected_aro.
-#  This will allow to make the signature more stable. When empty, include
-#  "Void" insdide the List to avoid empty cases.
-
-# todo: use cache for all functions jitted
-# todo: change name of module njitted
-# todo: merge parsing of cutoffs inside configMan class
-# todo: add ball_1 parameter to aro
 
 def run(mode='production'):
     """
@@ -46,7 +38,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap2.cfg'
+        config_path = 'tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -109,8 +101,8 @@ def run(mode='production'):
     to_compute = iman.interactions
     selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
-
-    len_others, len_aro = len(selected_others), len(selected_aro)
+    len_others = len(selected_others) if not 'None' in selected_others else 0
+    len_aro = len(selected_aro) if not 'None' in selected_aro else 0
     cutoffs_str = {x: args.cutoffs[x] for x in args.cutoffs if x in to_compute}
     logger.info(f"Interactions to compute:\n {pformat(to_compute)}")
     logger.debug(f"Cutoffs parsed:\n {pformat(cutoffs_str)}")
@@ -127,9 +119,10 @@ def run(mode='production'):
 
     ijf_shape, inters_shape, mb1, mb2, v_size, h_size = macro.estimate(
         positions, args.chunk_size, s1_indices, s2_indices, cations, rings,
-        cutoffs_aro, selected_aro, anions, hydrophobes, metal_donors,
+        cutoffs_aro, selected_aro, len_aro, anions, hydrophobes, metal_donors,
         metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
-        xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others)
+        xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others,
+        len_others)
 
     logger.debug(f"Allocated space for interactions:"
                  f" ~{mb1} MB ({args.chunk_size}, {v_size}, {h_size})")
@@ -154,9 +147,9 @@ def run(mode='production'):
     # =========================================================================
     logger.info(f"Starting to compute InterMap interactions")
     fmt, min_prev = args.format, args.min_prevalence
-    inters = np.asarray(selected_others.tolist() + selected_aro.tolist())
+    inters = np.asarray([x for x in selected_others if x != 'None'] +
+                        [x for x in selected_aro if x != 'None'])
     inter_dict = idt.InterDict(fmt, min_prev, traj_frames, names, inters)
-
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
     chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
@@ -199,7 +192,8 @@ def run(mode='production'):
     ldict = len(inter_dict.dict)
     logger.info(f"Total number of unique atom pairs detected:, {ldict}")
     logger.info(f"Total number of interactions detected: {total_inters}")
+    logger.info(f"Total elapsed time: {tot} s")
     logger.info(f"Normal termination of InterMap job '{job_name}'")
-    logger.info(f"Total time: {tot} s")
+
 
 # run(mode='debug')

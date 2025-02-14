@@ -7,17 +7,17 @@ import numpy as np
 from numba import njit
 from numba_kdtree import KDTree as nckd
 
-from intermap import njitted as aot
+from intermap import geometry as aot
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def get_ball(xyz, s1_indices, s2_indices, dist_cut):
     s2_tree = nckd(xyz[s2_indices])
     ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
     return ball_1
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
     """
     Get the containers to find interactions not related to aromatic rings
@@ -61,13 +61,13 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
     dists = aot.calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
-    n_types = selected_others.size
+    n_types = len(selected_others)
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
 
     return ijf, interactions, dists, row1, row2
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
     """
     Detect the Van der Waals interactions
@@ -87,7 +87,7 @@ def detect_vdw(dists, row1, row2, vdw_radii, selected_others):
     return inter_idx, dists <= vdw_sum
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
               selected_others):
     """
@@ -106,7 +106,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
         return inter_idx, passing_dists & are_type
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
                   ha_cut, min_ang, max_ang, selected_others):
     """"
@@ -167,96 +167,95 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
     """
     Fill the not-aromatic interactions
     """
-    if selected_others.size == 0:
+    if 'None' in selected_others:
         return (np.zeros((0, 3), dtype=np.int32),
                 np.zeros((0, 0), dtype=np.bool_))
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
                                                 ball_1, selected_others)
-    selected = list(selected_others)
 
     # [Van der Waals]
-    if 'VdWContact' in selected:
+    if 'VdWContact' in selected_others:
         vdw_idx, vdw_bit = detect_vdw(dists, row1, row2, vdw_radii,
-                                      selected)
+                                      selected_others)
         inters[:, vdw_idx] = vdw_bit
 
     # [Close Contacts]
-    if 'CloseContacts' in selected:
+    if 'CloseContacts' in selected_others:
         cc_idx, cc = detect_1d('CloseContacts', dists, row1, row1, row2, row2,
-                               cutoffs_others, selected)
+                               cutoffs_others, selected_others)
         inters[:, cc_idx] = cc
 
     # [Hydrophobic]
-    if 'Hydrophobic' in selected:
+    if 'Hydrophobic' in selected_others:
         hp_idx, hp = detect_1d('Hydrophobic', dists, row1, hydrophobes, row2,
-                               hydrophobes, cutoffs_others, selected)
+                               hydrophobes, cutoffs_others, selected_others)
         inters[:, hp_idx] = hp
 
     # [Cationic]
-    if 'Cationic' in selected:
+    if 'Cationic' in selected_others:
         cat_idx, cat = detect_1d('Cationic', dists, row1, cations, row2,
-                                 anions, cutoffs_others, selected)
+                                 anions, cutoffs_others, selected_others)
         inters[:, cat_idx] = cat
 
     # [Anionic]
-    if 'Anionic' in selected:
+    if 'Anionic' in selected_others:
         an_idx, an = detect_1d('Anionic', dists, row1, anions, row2,
-                               cations, cutoffs_others, selected)
+                               cations, cutoffs_others, selected_others)
         inters[:, an_idx] = an
 
     # [MetalDonor]
-    if 'MetalDonor' in selected:
+    if 'MetalDonor' in selected_others:
         md_idx, md = detect_1d('MetalDonor', dists, row1, metal_donors, row2,
                                metal_acceptors, cutoffs_others,
-                               selected)
+                               selected_others)
         inters[:, md_idx] = md
 
     # [MetalAcceptor]
-    if 'MetalAcceptor' in selected:
+    if 'MetalAcceptor' in selected_others:
         ma_idx, ma = detect_1d('MetalAcceptor', dists, row1, metal_acceptors,
                                row2, metal_donors, cutoffs_others,
-                               selected)
+                               selected_others)
         inters[:, ma_idx] = ma
 
     # [HBonds]
-    if ('HBAcceptor' in selected) or ('HBDonor' in selected):
-        idx_hb = selected.index('HBAcceptor')
+    if ('HBAcceptor' in selected_others) or ('HBDonor' in selected_others):
+        idx_hb = selected_others.index('HBAcceptor')
         da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cutoffs_others[:4,
                                                        idx_hb]
-        if 'HBAcceptor' in selected:
+        if 'HBAcceptor' in selected_others:
             hba_idx, hba = detect_hbonds('HBAcceptor', row1, hb_acc, row2,
                                          hb_hydros, dists, xyz, hb_donors,
                                          ha_cut_hb, min_ang_hb, max_ang_hb,
-                                         selected)
+                                         selected_others)
             inters[:, hba_idx] = hba
 
-        if 'HBDonor' in selected:
+        if 'HBDonor' in selected_others:
             hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydros, row2,
                                          hb_acc, dists, xyz, hb_donors,
                                          ha_cut_hb, min_ang_hb, max_ang_hb,
-                                         selected)
+                                         selected_others)
             inters[:, hbd_idx] = hbd
 
     # [XBonds]
-    if ('XBAcceptor' in selected) or ('XBDonor' in selected):
-        idx_xb = selected.index('XBAcceptor')
+    if ('XBAcceptor' in selected_others) or ('XBDonor' in selected_others):
+        idx_xb = selected_others.index('XBAcceptor')
         da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cutoffs_others[:4,
                                                        idx_xb]
 
-        if 'XBAcceptor' in selected:
+        if 'XBAcceptor' in selected_others:
             xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
                                          xb_halogens, dists, xyz, xb_donors,
                                          ha_cut_xb, min_ang_xb, max_ang_xb,
-                                         selected)
+                                         selected_others)
             inters[:, xba_idx] = xba
 
-        if 'XBDonor' in selected:
+        if 'XBDonor' in selected_others:
             xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_halogens, row2,
                                          xb_acc, dists, xyz, xb_donors,
                                          ha_cut_xb, min_ang_xb, max_ang_xb,
-                                         selected)
+                                         selected_others)
             inters[:, xbd_idx] = xbd
 
     mask = aot.get_compress_mask(inters)
