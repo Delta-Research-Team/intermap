@@ -6,26 +6,12 @@ import logging
 import os
 import re
 
-import numpy as np
 import numpy_indexed as npi
-from numba.pycc import CC
-
-cc = CC('commons_aot')
+from numba import njit
+from numba.typed import List
+from numba_kdtree import KDTree as nckd
 
 logger = logging.getLogger('InterMapLogger')
-
-smarts = {
-    'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
-    'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
-    'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
-    'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
-    'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
-    'hb_acc': '[#7&!$([n&X3])&!$([N&X3]-*=[O,N,P,S])&!$([N&X3]-a)&!$([N&v4&+]),O&!$([O&X2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O&-]-N=O),o&+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
-    'xb_acc': '[#7,#8,P,S,#34,#52,a;!+{1-}]!#*',
-    'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
-    'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
-    'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
-    'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
 
 
 def start_logger(log_path):
@@ -76,13 +62,18 @@ def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
     # Parse aromatics
     bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
                npi.indices(all_inters, [x])]
-    to_compute_aro = np.asarray([all_inters[x] for x in bit_aro])
+    if len(bit_aro) == 0:
+        to_compute_aro = List(['None'])
+    else:
+        to_compute_aro = List([all_inters[x] for x in bit_aro])
 
     # Parse non-aromatics
     bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
                   in npi.indices(all_inters, [x])]
-    to_compute_others = np.asarray([all_inters[x] for x in bit_others],
-                                   dtype=str)
+    if len(bit_others) == 0:
+        to_compute_others = List(['None'])
+    else:
+        to_compute_others = List([all_inters[x] for x in bit_others])
 
     # Get the cutoffs
     cutoffs_aro = all_cutoffs[:, bit_aro]
@@ -138,3 +129,35 @@ def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
         raise ValueError(f'Param "{value}" out of [{minim}, {maxim}]')
 
     return dtype(value)
+
+
+def get_trees(xyz_chunk, s2_indices):
+    """
+
+    Args:
+        xyz_chunk:
+        s2_indices:
+
+    Returns:
+
+    """
+    trees = List()
+    for x in xyz_chunk:
+        trees.append(nckd(x[s2_indices]))
+    return trees
+
+
+@njit(parallel=False, cache=True)
+def get_ball(xyz, s1_indices, tree, dist_cut):
+    """
+    Args:
+        xyz:
+        s1_indices:
+        tree:
+        dist_cut:
+
+    Returns:
+
+    """
+    ball_1 = tree.query_radius_parallel(xyz[s1_indices], dist_cut)
+    return ball_1

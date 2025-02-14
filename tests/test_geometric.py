@@ -6,7 +6,7 @@ import mdtraj as md
 import numpy as np
 import pytest
 
-import intermap.njitted as aot
+import intermap.geometry as aot
 from tests.conftest import mdtrajectory
 
 
@@ -45,7 +45,7 @@ def test_calc_angle_valid_input():
     d = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32)
     h = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
     a = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
-    result = aot.calc_angle(d, h, a)
+    result = aot.calc_angle_3p(d, h, a)
     expected = np.array([90.0, 90.0], dtype=np.float32)
     assert np.allclose(result, expected)
 
@@ -175,7 +175,7 @@ def test_angles_3p(mdtrajectory):
     xyz1 = trj.xyz[:, trio[:, 0]][0]
     xyz2 = trj.xyz[:, trio[:, 1]][0]
     xyz3 = trj.xyz[:, trio[:, 2]][0]
-    angles_imap = aot.calc_angle(xyz1, xyz2, xyz3)
+    angles_imap = aot.calc_angle_3p(xyz1, xyz2, xyz3)
 
     assert np.allclose(angles_mdtraj, angles_imap, atol=1e-5)
 
@@ -205,7 +205,7 @@ def test_angles_2v(mdtrajectory):
     v1 = xyz1 - xyz2
     v2 = xyz3 - xyz2
     angles_imap_2v = aot.calc_angles_2v(v1, v2)
-    angles_imap_3p = aot.calc_angle(xyz1, xyz2, xyz3)
+    angles_imap_3p = aot.calc_angle_3p(xyz1, xyz2, xyz3)
 
     assert np.allclose(angles_mdtraj, angles_imap_2v, atol=1e-3)
     assert np.allclose(angles_mdtraj, angles_imap_3p, atol=1e-3)
