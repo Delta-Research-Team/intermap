@@ -35,8 +35,8 @@ allowed_parameters = {
         'selection_1': {'dtype': str, 'values': None},
         'selection_2': {'dtype': str, 'values': None},
         'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
-        'interactions': {'dtype': str,
-                         'values': None},
+        # 'interactions': {'dtype': str,
+        #                  'values': None},
         'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 
     # ____ cutoffs
@@ -184,7 +184,7 @@ class Config:
                     param_info = self.legal_params[section][key]
                 except KeyError:
                     raise KeyError(
-                        f'Key "{key}" is not avilable in the section "{section}".')
+                        f'Key "{key}" is forbidden in the section "{section}".')
 
                 dtype = param_info['dtype']
                 if dtype in {float, int}:
@@ -272,7 +272,7 @@ class ConfigManager(Config):
         self.config_args.update({'cutoffs': parsed_cutoffs})
 
     def parse_interactions(self):
-        raw_inters = self.config_obj['interactions']['interactions']
+        raw_inters = 'all'
         if raw_inters == 'all':
             parsed_inters = np.asarray(list(self.config_args['cutoffs'].keys()))
         else:

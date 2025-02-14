@@ -13,11 +13,10 @@ logger = logging.getLogger('InterMapLogger')
 
 @njit(parallel=True, cache=True)
 def runpar(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
-                  len_aro,
-                  s1_indices, s2_indices, anions, cations, hydrophobes,
-                  metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
-                  hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, rings,
-                  cutoffs_others, selected_others, cutoffs_aro, selected_aro):
+           len_aro, s1_indices, s2_indices, anions, cations, hydrophobes,
+           metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
+           hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, rings,
+           cutoffs_others, selected_others, cutoffs_aro, selected_aro):
     # Get the number of frames in the chunk
     dim1 = xyz_chunk.shape[0]
     dim2 = ijf_shape[0]
@@ -31,11 +30,11 @@ def runpar(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
     for i in prange(dim1):
         # Compute the interactions
         xyz = xyz_chunk[i]
-        tree = trees_chunk[i]
-        ball_1 = cmn.get_ball(xyz, s1_indices, tree, dist_cut1)
+        tree_others = trees_chunk[i]
+        ball_others = cmn.get_ball(xyz, s1_indices, tree_others, dist_cut1)
 
         ijf_others, inters_others = others.others(xyz, i, s1_indices,
-                                                  s2_indices, ball_1,
+                                                  s2_indices, ball_others,
                                                   hydrophobes, anions,
                                                   cations,
                                                   metal_donors,
@@ -72,16 +71,14 @@ def runpar(xyz_chunk, trees_chunk, ijf_shape, inters_shape, len_others,
     return ijf_final, inters_final
 
 
-# @njit(parallel=True, cache=True)
-def estimate(positions, chunk_size, s1_indices, s2_indices,
-             cations, rings, cutoffs_aro, selected_aro, anions,
-             hydrophobes, metal_donors, metal_acceptors, vdw_radii,
-             max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
-             xb_donors, xb_acc, cutoffs_others, selected_others,
-             factor=1.5):
+def estimate(positions, chunk_size, s1_indices, s2_indices, cations, rings,
+             cutoffs_aro, selected_aro, len_aro, anions, hydrophobes,
+             metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
+             hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, cutoffs_others,
+             selected_others, len_others, factor=1.5):
     # Detect the number of interactions
     N = len(positions)
-    others_cut = max(cutoffs_others[:2].max(), max_vdw)
+    others_cut = max(cutoffs_others[:2].max(), max_vdw) if len_others else 0
     num_detected = np.zeros(N, dtype=np.int32)
     for i in prange(N):
         xyz = positions[i]
@@ -106,7 +103,7 @@ def estimate(positions, chunk_size, s1_indices, s2_indices,
     ijf_vert = np.int32(num_detected.max() * factor)
     if ijf_vert == 0:
         ijf_vert = 1500
-    inters_hori = selected_others.size + selected_aro.size
+    inters_hori = len_others + len_aro
 
     # Get the shapes for preallocation
     ijf_shape = (ijf_vert, 3)
@@ -117,7 +114,7 @@ def estimate(positions, chunk_size, s1_indices, s2_indices,
     h_size = ijf_shape[1] + inters_shape[1]
     ijf_mb = chunk_size * v_size * 3 * 32 / 2 ** 20
     inters_mb = chunk_size * v_size * h_size * 8 / 2 ** 20
-    mb1 = round(ijf_mb + inters_mb, 0)
-    mb2 = round(chunk_size * (
-        np.union1d(s1_indices, s2_indices).size) * 3 * 4 / 2 ** 20, 0)
+    mb1 = np.float32(round(ijf_mb + inters_mb, 0))
+    mb2 = np.float32(round(chunk_size * (
+        np.union1d(s1_indices, s2_indices).size) * 3 * 4 / 2 ** 20, 0))
     return ijf_shape, inters_shape, mb1, mb2, v_size, h_size
