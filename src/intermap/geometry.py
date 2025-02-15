@@ -254,27 +254,10 @@ def calc_normal_vector(p1, p2, p3):
       cache=True)
 def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
                    n_types):
-    """
-    Get the containers for the interactions, the distances and the indices
-
-    Args:
-        xyz (ndarray): Coordinates of the atoms in the system
-        k (int): Index of the frame in the trajectory
-        ext_idx (ndarray): External (real) indices for the atoms in the system
-        ball_1 (list): List of lists with the indices of the atoms in the second selection
-        s1_indices (ndarray): Indices of the atoms in the first selection
-        s2_indices (ndarray): Indices of the atoms in the second selection
-        to_compute (ndarray): Interactions to compute
-
-    Returns:
-        ijf (ndarray): Indices of the atoms in the first and second selections
-        dists (ndarray): Distances between the atoms in the first and second selections
-        interactions (ndarray): Container for the interactions
-    """
-
     # Find the contacts
     n_contacts = sum([len(x) for x in ball_1])
     if n_contacts == 0:
+        print("No contacts found")
         return (
             np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
             np.zeros((0, n_types), dtype=np.bool_))

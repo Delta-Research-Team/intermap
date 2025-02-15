@@ -10,8 +10,14 @@ from numba_kdtree import KDTree as nckd
 from intermap import geometry as aot
 
 
-@njit(parallel=False, cache=True)
 def get_ball(xyz, s1_indices, s2_indices, dist_cut):
+    s2_tree = nckd(xyz[s2_indices])
+    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
+    return ball_1
+
+
+@njit(parallel=False, cache=True)
+def get_ball2(xyz, s1_indices, s2_indices, dist_cut):
     s2_tree = nckd(xyz[s2_indices])
     ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
     return ball_1
@@ -259,7 +265,7 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
             inters[:, xbd_idx] = xbd
 
     mask = aot.get_compress_mask(inters)
-    return ijf[mask], inters[mask]
+    return ijf[mask].astype(np.int32), inters[mask].astype(np.bool_)
 
 # =============================================================================
 #
