@@ -38,7 +38,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap3.cfg'
+        config_path = 'tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -218,5 +218,6 @@ def run(mode='production'):
     logger.info(f"Total number of interactions detected: {total_inters}")
     logger.info(f"Total elapsed time: {tot} s")
     logger.info(f"Normal termination of InterMap job '{job_name}'")
+
 
 # run(mode='debug')
