@@ -45,7 +45,14 @@ def get_hh_bonds(universe):
             yield bond
 
 
-def get_uniques(universe):
+def ag2rdkit(ag):
+    try:
+        return ag.convert_to("RDKIT", force=False)
+    except AttributeError:
+        return ag.convert_to("RDKIT", force=True)
+
+
+def get_uniques_triads(universe):
     """
     Get the unique residues in the universe
 
@@ -57,46 +64,51 @@ def get_uniques(universe):
         unique_rdmols (dict): Dictionary with the unique RDKit molecules
         unique_idx (dict): Dictionary with the indices of the unique residues
     """
-    by_atnames = universe.residues.names
-    by_resnames = universe.residues.resnames
 
-    # Find the unique residues by atom names
-    uniques = defaultdict(list)
-    frozen_labels = {}
-    for i, names in enumerate(by_atnames):
-        frozen_atnames = frozenset(names)
-        uniques[frozen_atnames].append(i)
-        frozen_labels[frozen_atnames] = by_resnames[i]
-    unique_indices = list(uniques.values())
-
-    # Parse the unique residues
-    unique_mda_res = {}
-    unique_rdmols = {}
-    unique_idx = {}
-
+    # Load universe information
     stamp = time.time()
-    for i, indices in enumerate(unique_indices, 1):
-        # Get the label of representative residues
-        representative = indices[0]
-        res = universe.residues[representative]
-        label = f'{res.resname}_{i}'
+    by_resnames = universe.residues.resnames
+    by_resindex = universe.residues.resindices
+    bonds = universe.bonds
 
-        # Get the unique mda residues
-        unique_mda_res[label] = res
+    # Get connected residues
+    connected = defaultdict(list)
+    for a1, a2 in bonds:
+        r1 = a1.resindex
+        r2 = a2.resindex
+        if r1 != r2:
+            connected[r1].append(r2)
+            connected[r2].append(r1)
 
-        # Convert the residue to an RDKit molecule
-        try:
-            unique_rdmols[label] = res.atoms.convert_to("RDKIT", force=False)
-        except AttributeError:
-            unique_rdmols[label] = res.atoms.convert_to("RDKIT", force=True)
-            logger.warning(f" No H atoms found in {label}."
-                           f" Convertion to RDKit enforced.")
+    # Convert connected triads to rdkit format
+    mda_connected = {}
+    rdk_connected = {}
+    for residue in connected:
+        neighbors = {residue}
+        neighbors.update(connected[residue])
+        triad = universe.residues[list(neighbors)]
+        mda_connected[residue] = triad
+        rdk_connected[residue] = ag2rdkit(triad.atoms)
 
-        # Get the indices of the unique residues
-        unique_idx[label] = indices
+    # Get unique disconnected residues
+    connected_set = set(connected.keys())
+    disconnected = set.difference(set(by_resindex), connected_set)
+    uniq_disconnected = defaultdict(list)
+    for x in disconnected:
+        uniq_disconnected[by_resnames[x]].append(x)
+
+    # Convert disconnected monomers to rdkit format
+    mda_disconnected = {}
+    rdk_disconnected = {}
+    for residue in uniq_disconnected:
+        mono = universe.residues[uniq_disconnected[residue][0]]
+        mda_disconnected[residue] = mono
+        rdk_disconnected[residue] = ag2rdkit(mono.atoms)
+
     rdkit_ = time.time() - stamp
     logger.info(f"Time to convert residues to Rdkit format: {rdkit_:.2f} s")
-    return unique_mda_res, unique_rdmols, unique_idx
+    return (mda_connected, rdk_connected, mda_disconnected, rdk_disconnected,
+            uniq_disconnected)
 
 
 class IndexManager:
@@ -117,50 +129,47 @@ class IndexManager:
         'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
 
     def __init__(self, topo, traj, sel1, sel2, interactions):
+
         # Parse the arguments
-        logger.debug(f"Using the following SMARTS patterns:\n"
-                     f" {pformat(self.smarts)}")
         self.topo = topo
         self.traj = traj
         self.sel1 = sel1
         self.sel2 = sel2
         self.raw_inters = interactions
 
-        # Initialize the trajectory attributes
-        self.unique_residues = None
-        self.unique_rdmols = None
-        stamp = time.time()
-        self.universe, self.renamed_universe = self.load_traj()
-        load_time = time.time() - stamp
+        # Load the trajectory as a Universe
+        self.universe = self.load_traj()
         self.n_atoms = self.universe.atoms.n_atoms
         self.n_frames = len(self.universe.trajectory)
-        logger.info(f'System loaded in {load_time:.2f} s.\n'
-                    f'Total number of atoms: {self.n_atoms}\n'
+        logger.info(f'Total number of atoms: {self.n_atoms}\n'
                     f'Total number of frames: {self.n_frames}')
 
-        # General selections
+        # Make the general selections
         sel1_idx, sel2_idx = self.get_selections_indices()
         uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
         self.sel_idx = np.asarray(uniques, dtype=np.int32)
         self.sel1_idx = npi.indices(self.sel_idx, sel1_idx).astype(np.int32)
         self.sel2_idx = npi.indices(self.sel_idx, sel2_idx).astype(np.int32)
 
-        # VDW radii
+        # Get VDW radii
         all_radii = self.get_vdw_radii()
         self.radii = all_radii[self.sel_idx]
 
+        # Get triads (connected) / monomers (disconnected) of residues
+        (self.mda_connected, self.rdk_connected, self.mda_disconnected,
+         self.rdk_disconnected, self.uniq_disconnected) = get_uniques_triads(
+            self.universe)
+
         # Single interactions
-        self.hydroph = self.get_singles('hydroph', self.sel_idx)
-        self.cations = self.get_singles('cations', self.sel_idx)
-        self.anions = self.get_singles('anions', self.sel_idx)
-        self.metal_acc = self.get_singles('metal_acc', self.sel_idx)
-        self.metal_don = self.get_singles('metal_don', self.sel_idx)
+        self.hydroph = self.get_singles('hydroph')
+        self.cations = self.get_singles('cations')
+        self.anions = self.get_singles('anions')
+        self.metal_acc = self.get_singles('metal_acc')
+        self.metal_don = self.get_singles('metal_don')
 
         # Double interactions
-        self.hb_D, self.hb_H, self.hb_A = self.get_doubles(
-            'hb_don', 'hb_acc', self.sel_idx)
-        self.xb_D, self.xb_H, self.xb_A = self.get_doubles(
-            'xb_don', 'xb_acc', self.sel_idx)
+        self.hb_D, self.hb_H, self.hb_A = self.get_doubles('hb_don', 'hb_acc')
+        self.xb_D, self.xb_H, self.xb_A = self.get_doubles('xb_don', 'xb_acc')
 
         # Rings
         rings = self.get_rings()
@@ -187,6 +196,10 @@ class IndexManager:
         # Possible interactions
         self.interactions = self.get_interactions()
 
+        # Check the SMARTS patterns
+        logger.debug(f"Using the following SMARTS patterns:\n"
+                     f" {pformat(self.smarts)}")
+
     def load_traj(self):
         """
         Load the trajectory into a Universe
@@ -194,7 +207,9 @@ class IndexManager:
         Returns:
             universe (mda.Universe): Universe object
         """
-        # Load the trajectory
+
+        # Load the trajectory & Guess the bonds if not present
+        stamp0 = time.time()
         universe = mda.Universe(self.topo, self.traj)
         try:
             any_bond = universe.bonds[0]
@@ -205,30 +220,21 @@ class IndexManager:
             any_bond = universe.bonds[0]
         if any_bond is None:
             raise ValueError(
-                "No bonds found in topology and MDAnalysis did not guess them.")
+                "No bonds found in topology and MDAnalysis could not guess them.")
 
-        # Remove the hydrogen-hydrogen bonds
-        stamp = time.time()
+        # Remove the hydrogen-hydrogen bonds if any
+        stamp1 = time.time()
         are_hh = any_hh_bonds(universe)
         universe.delete_bonds(get_hh_bonds(universe))
-        del_time = time.time() - stamp
+        del_time = time.time() - stamp1
         if are_hh:
             logger.warning(f"This universe contains H-H bonds.\n"
                            f"Time to remove H-H bonds: {del_time:.2f} s")
 
-        # Get the unique residues, RDKit molecules and indices
-        unique_residues, unique_rdmols, unique_idx = get_uniques(universe)
-        self.unique_residues = unique_residues
-        self.unique_rdmols = unique_rdmols
-
-        # Change the resnames of the universe to the unique labels
-        old_resnames = universe.residues.resnames
-        new_resnames = old_resnames.copy()
-        new_universe = universe.copy()
-        for label in unique_idx:
-            new_resnames[unique_idx[label]] = label
-        new_universe.add_TopologyAttr('resname', new_resnames)
-        return universe, new_universe
+        # Output load time
+        loading = time.time() - stamp0
+        logger.info(f"Time to load the trajectory: {loading:.2f} s")
+        return universe
 
     def get_selections_indices(self):
         """
@@ -247,7 +253,7 @@ class IndexManager:
             raise ValueError("No atoms found for selection 2")
         return s1_idx, s2_idx
 
-    def get_singles(self, identifier, selection):
+    def get_singles(self, identifier):
         """
         Get the indices associated with the single interactions
 
@@ -257,27 +263,36 @@ class IndexManager:
         Returns:
             singles: array with the indices of the single atoms
         """
-        smart = self.smarts[identifier]
+
+        query = Chem.MolFromSmarts(self.smarts[identifier])
         singles = []
-        for case in self.unique_rdmols:
-            res = self.unique_residues[case]
-            atom_names = res.atoms.names
-            mol = self.unique_rdmols[case]
 
-            query = Chem.MolFromSmarts(smart)
-            match = [list(x) for x in mol.GetSubstructMatches(query)]
-            match_names = [' '.join(atom_names[x]) for x in match]
+        # Look for the single atoms in the connected residues
+        for case in self.rdk_connected:
+            tri_mol = self.rdk_connected[case]
+            match = [y for x in tri_mol.GetSubstructMatches(query) for y in x]
+            if match:
+                tri_res = self.mda_connected[case]
+                where = tri_res.atoms.resindices[match] == case
+                selected = tri_res.atoms.indices[match][where]
+                singles.extend(selected)
 
-            for sel in match_names:
-                hydrophs = 'resname {} and name {}'.format(case, sel)
-                idx = self.renamed_universe.select_atoms(hydrophs).indices
-                singles.extend(idx)
+        # Look for the single atoms in the disconnected residues
+        for case in self.rdk_disconnected:
+            mono_mol = self.rdk_disconnected[case]
+            match = [y for x in mono_mol.GetSubstructMatches(query) for y in x]
+            if match:
+                for similar in self.uniq_disconnected[case]:
+                    mono_res = self.universe.residues[similar]
+                    selected = mono_res.atoms.indices[match]
+                    singles.extend(selected)
 
-        selected_raw = npi.indices(selection, np.asarray(singles), missing=-1)
-        selected = selected_raw[selected_raw != -1]
-        return selected.astype(np.int32)
+        selected_raw = npi.indices(
+            self.sel_idx, np.asarray(singles), missing=-1)
+        selected = selected_raw[selected_raw != -1].astype(np.int32)
+        return selected
 
-    def get_doubles(self, donor_identifier, acceptor_identifier, selection):
+    def get_doubles(self, donor_identifier, acceptor_identifier):
         """
         Get the indices associated with the hydrogen bonds
 
@@ -286,51 +301,66 @@ class IndexManager:
             hb_H: array with the indices of the hydrogens
             hb_A: array with the indices of the acceptors
         """
-        smarts = self.smarts
-        smart_dx = smarts[donor_identifier]
-        smart_a = smarts[acceptor_identifier]
 
+        smart_dx = self.smarts[donor_identifier]
+        smart_a = self.smarts[acceptor_identifier]
+
+        hx_A = []
         hx_D = []
         hx_H = []
-        hx_A = []
-        for case in self.unique_rdmols:
-            res = self.unique_residues[case]
-            mol = self.unique_rdmols[case]
-            atom_names = res.atoms.names
+        query_dh = Chem.MolFromSmarts(smart_dx)
+        query_a = Chem.MolFromSmarts(smart_a)
 
-            # Find the donors and hydrogens
-            query_dh = Chem.MolFromSmarts(smart_dx)
-            match_dh = [list(x) for x in mol.GetSubstructMatches(query_dh)]
-            match_names_dh = [' '.join(atom_names[x]) for x in match_dh]
-            for sel in match_names_dh:
-                d, x = sel.split()
-                donors = 'resname {} and name {}'.format(case, d)
-                hydros = 'resname {} and name {}'.format(case, x)
-                idx1 = self.renamed_universe.select_atoms(donors).indices
-                idx2 = self.renamed_universe.select_atoms(hydros).indices
-                assert len(idx1) == len(idx2)
-                hx_D.extend(idx1)
-                hx_H.extend(idx2)
+        # Look for D, H, A in the connected residues
+        for case in self.rdk_connected:
+            tri_mol = self.rdk_connected[case]
+            tri_res = self.mda_connected[case]
 
-            # Find the acceptors
-            query_a = Chem.MolFromSmarts(smart_a)
-            match_a = [list(x) for x in mol.GetSubstructMatches(query_a)]
-            match_names_a = [' '.join(atom_names[x]) for x in match_a]
-            for a in match_names_a:
-                acc = 'resname {} and name {}'.format(case, a)
-                idx = self.renamed_universe.select_atoms(acc).indices
-                hx_A.extend(idx)
+            match_dh = [x for x in tri_mol.GetSubstructMatches(query_dh)]
+            if match_dh:
+                where_dh = tri_res.atoms.resindices[match_dh] == case
+                selected_dh = tri_res.atoms.indices[match_dh][where_dh]
 
-        hx_D_raw = npi.indices(selection, np.asarray(hx_D), missing=-1).astype(
-            np.int32)
+                for i, x in enumerate(selected_dh):
+                    if i % 2 == 0:
+                        hx_D.append(x)
+                    else:
+                        hx_H.append(x)
 
-        hx_H_raw = npi.indices(selection, np.asarray(hx_H), missing=-1).astype(
-            np.int32)
-        hx_A_raw = npi.indices(selection, np.asarray(hx_A), missing=-1).astype(
-            np.int32)
-        hx_D = hx_D_raw[hx_D_raw != -1]
-        hx_H = hx_H_raw[hx_H_raw != -1]
-        hx_A = np.unique(hx_A_raw[hx_A_raw != -1])
+            match_a = [x for x in tri_mol.GetSubstructMatches(query_a)]
+            if match_a:
+                where_a = tri_res.atoms.resindices[match_a] == case
+                selected_a = tri_res.atoms.indices[match_a][where_a]
+                hx_A.extend(selected_a)
+
+        # Look for D, H, A in the disconnected residues
+        for case in self.rdk_disconnected:
+            mono_mol = self.rdk_disconnected[case]
+            match_dh = [x for x in mono_mol.GetSubstructMatches(query_dh)]
+            if match_dh:
+                for similar in self.uniq_disconnected[case]:
+                    mono_res = self.universe.residues[similar]
+                    selected_dh = mono_res.atoms.indices[match_dh]
+                    for i, x in enumerate(selected_dh):
+                        if i % 2 == 0:
+                            hx_D.append(x[0])
+                        else:
+                            hx_H.append(x[1])
+            match_a = [x for x in mono_mol.GetSubstructMatches(query_a)]
+            if match_a:
+                for similar in self.uniq_disconnected[case]:
+                    mono_res = self.universe.residues[similar]
+                    selected_a = mono_res.atoms.indices[match_a]
+                    hx_A.extend(selected_a[0])
+
+        # Filter the indices
+        hx_D_raw = npi.indices(self.sel_idx, np.asarray(hx_D), missing=-1)
+        hx_H_raw = npi.indices(self.sel_idx, np.asarray(hx_H), missing=-1)
+        hx_A_raw = npi.indices(self.sel_idx, np.asarray(hx_A), missing=-1)
+
+        hx_D = hx_D_raw[hx_D_raw != -1].astype(np.int32)
+        hx_H = hx_H_raw[hx_H_raw != -1].astype(np.int32)
+        hx_A = np.unique(hx_A_raw[hx_A_raw != -1]).astype(np.int32)
         assert len(hx_D) == len(hx_H), "Donors and Hydrogens do not match"
         return hx_D, hx_H, hx_A
 
@@ -344,25 +374,40 @@ class IndexManager:
         patterns = [self.smarts['rings5'], self.smarts['rings6']]
 
         rings = []
-        for case in self.unique_rdmols:
-            res = self.unique_residues[case]
-            atom_names = res.atoms.names
-            mol = self.unique_rdmols[case]
+        # Look for rings in the connected residues
+        for case in self.rdk_connected:
+            tri_mol = self.rdk_connected[case]
+            tri_res = self.mda_connected[case]
 
             for smart in patterns:
                 query = Chem.MolFromSmarts(smart)
-                match = [list(x) for x in mol.GetSubstructMatches(query)]
-                match_names = [' '.join(atom_names[x]) for x in match]
-                for sel in match_names:
-                    ring = 'resname {} and name {}'.format(case, sel)
-                    idx = self.renamed_universe.select_atoms(ring).indices
-                    rings.extend(idx.reshape(-1, len(sel.split())))
+                match = [list(x) for x in tri_mol.GetSubstructMatches(query)]
+                if match:
+                    where_dh = tri_res.atoms.resindices[match] == case
+                    selected_dh = tri_res.atoms.indices[match][where_dh]
+                    if selected_dh.any():
+                        rings.append(selected_dh)
 
-        padded_rings = np.full((len(rings), 7), dtype=int, fill_value=-1)
+        # Look for rings in the disconnected residues
+        for case in self.rdk_disconnected:
+            mono_mol = self.rdk_disconnected[case]
+            for smart in patterns:
+                query = Chem.MolFromSmarts(smart)
+                match = [list(x) for x in mono_mol.GetSubstructMatches(query)]
+                if match:
+                    for similar in self.uniq_disconnected[case]:
+                        mono_res = self.universe.residues[similar]
+                        selected = mono_res.atoms.indices[match]
+                        if selected.any():
+                            for ring in selected:
+                                rings.append(ring)
+
+        # Pad rings with -1
+        padded_rings = np.full((len(rings), 7), dtype=np.int32, fill_value=-1)
         for i, ring in enumerate(rings):
             padded_rings[i, :len(ring)] = ring
             padded_rings[i, -1] = len(ring)
-        return padded_rings.astype(np.int32)
+        return padded_rings
 
     def get_max_vdw_dist(self):
         """
@@ -458,3 +503,15 @@ class IndexManager:
                 f"selections for the given system:\n"
                 f"{to_skip} ")
         return to_compute
+
+# =============================================================================
+#
+# =============================================================================
+# import intermap.config as conf
+# from argparse import Namespace
+#
+# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+# config = conf.ConfigManager(config_path, conf.allowed_parameters)
+# args = Namespace(**config.config_args)
+# self = IndexManager(args.topology, args.trajectory, args.selection_1,
+#                     args.selection_2, args.interactions)
