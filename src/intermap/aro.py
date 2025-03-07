@@ -52,69 +52,31 @@ def get_aro_normals(xyz, s1_rings, s2_rings):
 
 
 @njit(parallel=False, cache=True)
-def containers_aro(xyz, k, s1_indices, s2_indices, cations, rings, cutoffs_aro,
-                   selected_aro):
-    """
-    Compute the aromatic interactions
+def get_aro_normals_centroids(xyz, s1_rings, s2_rings):
+    s1_at1, s1_at2 = s1_rings[:, 0], s1_rings[:, 1]
+    s2_at1, s2_at2 = s2_rings[:, 0], s2_rings[:, 1]
+    s1_ctrs = aot.calc_centroids(s1_rings, xyz)
+    s2_ctrs = aot.calc_centroids(s2_rings, xyz)
+    s1_norm = aot.calc_normal_vector(s1_ctrs, xyz[s1_at1], xyz[s1_at2])
+    s2_norm = aot.calc_normal_vector(s2_ctrs, xyz[s2_at1], xyz[s2_at2])
+    return s1_norm, s2_norm, s1_ctrs, s2_ctrs
 
-    Args:
-        xyz (ndarray): Coordinates of the atoms in the system
-        k (int): Index of the frame in the trajectory
-        s1_indices (ndarray): Indices of the atoms in the first selection
-        s2_indices (ndarray): Indices of the atoms in the second selection
-        cations (ndarray): Indices of the cations
-        rings (ndarray): Indices of the aromatic rings
-        cutoffs_aro (ndarray): Cutoff distances for the aromatic interactions
-        selected_aro (ndarray): Interactions to compute
 
-    Returns:
-        ijf (ndarray): Indices of the atoms in the first and second selections
-        interactions (ndarray): Container for the interactions
-    """
+@njit(parallel=False, cache=True)
+def get_intersect_point(s1_normal, s1_centroid, s2_normal, s2_centroid):
+    # Calculate the intersect direction as the cross product of the two normal vectors
+    intersect_direction = np.array([
+        s1_normal[1] * s2_normal[2] - s1_normal[2] * s2_normal[1],
+        s1_normal[2] * s2_normal[0] - s1_normal[0] * s2_normal[2],
+        s1_normal[0] * s2_normal[1] - s1_normal[1] * s2_normal[0],
+    ])
 
-    # # Get cations
-    # s1_cat = s1_indices[aot.isin(s1_indices, cations)]
-    # s2_cat = s2_indices[aot.isin(s2_indices, cations)]
-    #
-    # # Get the aromatic rings
-    # s1_rings = rings[aot.isin(rings[:, 0], s1_indices)]
-    # s2_rings = rings[aot.isin(rings[:, 0], s2_indices)]
-    #
-    # # Compute the centroids
-    # s1_centr = aot.calc_centroids(s1_rings, xyz)
-    # s2_centr = aot.calc_centroids(s2_rings, xyz)
-    #
-    # # Compute the normal vectors
-    # s1_at1, s1_at3, s1_at5 = s1_rings[:, 0], s1_rings[:, 2], s1_rings[:, 4]
-    # s2_at1, s2_at3, s2_at5 = s2_rings[:, 0], s2_rings[:, 2], s2_rings[:, 4]
-    # s1_norm = aot.calc_normal_vector(xyz[s1_at1], xyz[s1_at3], xyz[s1_at5])
-    # s2_norm = aot.calc_normal_vector(xyz[s2_at1], xyz[s2_at3], xyz[s2_at5])
-    #
-    # # Create a new xyz array with the cations & centroids only
-    # xyz_aro = concat((xyz[s1_cat], xyz[s2_cat], s1_centr, s2_centr), axis=0)
-    # xyz_aro_real_idx = concat(
-    #     (s1_cat, s2_cat, s1_rings[:, 0], s2_rings[:, 0])).astype(np.int32)
-    #
-    # # Internal indexing for xyz2 coordinates
-    # n0 = s1_cat.size + s2_cat.size
-    # n1 = n0 + s1_centr.shape[0]
-    # n2 = n1 + s2_centr.shape[0]
-    #
-    # s1_cat_idx = np.arange(0, s1_cat.size, dtype=np.int32)
-    # s2_cat_idx = np.arange(s1_cat.size, n0, dtype=np.int32)
-    # s1_rings_idx = np.arange(n0, n1, dtype=np.int32)
-    # s2_rings_idx = np.arange(n1, n2, dtype=np.int32)
-    #
-    # # Create & query the trees
-    # dist_cut = cutoffs_aro[:2].max()
-    # s1_aro_indices = concat((s1_cat_idx, s1_rings_idx)).astype(np.int32)
-    # s2_aro_indices = concat((s2_cat_idx, s2_rings_idx)).astype(np.int32)
-    #
-    # ball_1 = others.get_ball2(xyz_aro, s1_aro_indices, s2_aro_indices,
-    #                           dist_cut)
-    # # s2_tree = nckd(xyz_aro[s2_aro_indices])
-    # # ball_1 = s2_tree.query_radius(xyz_aro[s1_aro_indices], dist_cut)
-    # print(ball_1)
+    # Set up the system of linear equations to solve
+    A = np.stack((s1_normal, s2_normal, intersect_direction))
+
+    # Check if the determinant of A is zero (indicating the vectors are coplanar)
+    if np.linalg.det(A) == 0:
+        return None
 
     # Get containers
     ijf, dists, interactions = aot.get_containers(
