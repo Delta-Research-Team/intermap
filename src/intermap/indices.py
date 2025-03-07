@@ -116,16 +116,16 @@ class IndexManager:
     Class to manage the indices of the selections in a trajectory.
     """
     smarts = {
-        'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
-        'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
-        'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
-        'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
-        'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
-        'hb_acc': '[#7&!$([n&X3])&!$([N&X3]-*=[O,N,P,S])&!$([N&X3]-a)&!$([N&v4&+]),O&!$([O&X2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O&-]-N=O),o&+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
-        'xb_acc': '[#7,#8,P,S,#34,#52,a;!+{1-}]!#*',
-        'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
-        'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
-        'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6X4H0]);+0]',
+        'cations': '[+{1-},$([NX3&!$([NX3]-O)]-[C]=[NX3+])]',
+        'anions': '[-{1-},$(O=[C,S,P]-[O-])]',
+        'metal_acc': '[O,#7&!$([nX3])&!$([NX3]-*=[!#6])&!$([NX3]-[a])&!$([NX4]),-{1-};!+{1-}]',
+        'metal_don': '[Ca,Cd,Co,Cu,Fe,Mg,Mn,Ni,Zn]',
+        'hb_acc': '[#7&!$([nX3])&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4&+1]),O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O),o+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
+        'xb_acc': '[#7,#8,P,S,Se,Te,a;!+{1-}]!#[*]',
+        'hb_don': '[$([O,S;+0]),$([N;v3,v4&+1]),n+0]-[H]',
+        'xb_don': '[#6,#7,Si,F,Cl,Br,I]-[Cl,Br,I,At]',
+        'rings5': '[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1',
         'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
 
     def __init__(self, topo, traj, sel1, sel2, interactions):
@@ -341,17 +341,15 @@ class IndexManager:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
                     selected_dh = mono_res.atoms.indices[match_dh]
-                    for i, x in enumerate(selected_dh):
-                        if i % 2 == 0:
-                            hx_D.append(x[0])
-                        else:
-                            hx_H.append(x[1])
+                    hx_D.extend(selected_dh[:, 0].tolist())
+                    hx_H.extend(selected_dh[:, 1].tolist())
+
             match_a = [x for x in mono_mol.GetSubstructMatches(query_a)]
             if match_a:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
                     selected_a = mono_res.atoms.indices[match_a]
-                    hx_A.extend(selected_a[0])
+                    hx_A.extend(selected_a[:, 0])
 
         # Filter the indices
         hx_D_raw = npi.indices(self.sel_idx, np.asarray(hx_D), missing=-1)
@@ -371,7 +369,7 @@ class IndexManager:
         Returns:
             rings: List with the indices of the aromatic rings
         """
-        patterns = [self.smarts['rings5'], self.smarts['rings6']]
+        patterns = [self.smarts['rings6'], self.smarts['rings5']]
 
         rings = []
         # Look for rings in the connected residues
