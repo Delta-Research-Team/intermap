@@ -143,7 +143,9 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     angles = aot.calc_angles_2v(normals, vector_ctr_cat)
 
     # Apply restraints
-    passing_angles = ((angles >= min_ang) & (angles <= max_ang))
+    passing_angles1 = (angles >= min_ang) & (angles <= max_ang)
+    passing_angles2 = (angles <= 180 - min_ang) & (angles >= 180 - max_ang)
+    passing_angles = passing_angles1 | passing_angles2
     passing = passing_dist & passing_angles
     all_passing = np.zeros(row1.shape[0], dtype=np.bool_)
     all_passing[pairs] = passing
@@ -151,8 +153,8 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
 
 @njit(parallel=False, cache=True)
-def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
-              cutoffs_aro, selected_aro):
+def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists, cutoffs_aro,
+              selected_aro):
     """
     Helper function to compute the pi-stacking interactions
 
@@ -160,24 +162,68 @@ def stackings(inter_name, ring_dists, mindists, s1_normals, s2_normals,
 
     # Parse the cutoffs
     idx = selected_aro.index(inter_name)
-    dist_cut = cutoffs_aro[0, idx]
-    min_dist = cutoffs_aro[1, idx]
-    min_ang = cutoffs_aro[2, idx]
-    max_ang = cutoffs_aro[3, idx]
+    # dist_cut = cutoffs_aro[0, idx]
+    # min_ang1 = cutoffs_aro[2, idx]
+    # max_ang1 = cutoffs_aro[3, idx]
+    # min_ang2 = 0
+    # max_ang2 = 30
+    # iradius = 1.5
+    if inter_name == 'FaceToFace':
+        dist_cut = 5.5
+        min_ang1 = 0
+        max_ang1 = 35
+        min_ang2 = 0
+        max_ang2 = 30
+        iradius = np.inf
+    elif inter_name == 'EdgeToFace':
+        dist_cut = 6.5
+        min_ang1 = 50
+        max_ang1 = 90
+        min_ang2 = 0
+        max_ang2 = 30
+        iradius = 1.5
+    elif inter_name == 'PiStacking':
+        dist_cut = 6.5
+        min_ang1 = 0
+        max_ang1 = 90
+        min_ang2 = 0
+        max_ang2 = 180
+        iradius = np.inf
+    else:
+        raise Exception(f"Invalid interaction name: {inter_name}")
 
-    # Apply restraints
-    passing_dist1 = ring_dists <= dist_cut
-    passing_dist2 = (mindists <= min_dist) & (mindists > 0)
-    angles = aot.calc_angles_2v(s1_normals, s2_normals)
-    passing_angles = ((angles >= min_ang) & (angles <= max_ang))
-    stacking = passing_dist1 & passing_dist2 & passing_angles
+
+    # PAssing distances between centroids
+    passing_dist = ring_dists <= dist_cut
+
+    # Passing angles between normals
+    passing_ang_norms1 = (n1n2 <= max_ang1) & (n1n2 >= min_ang1)
+    passing_ang_norms2 = (n1n2 <= 180 - min_ang1) & (n1n2 >= 180 - max_ang1)
+    passing_ang_norms = passing_ang_norms1 | passing_ang_norms2
+
+    # Passing angles between normal & centroids
+    passing_n1c1c2_1 = (n1c1c2 <= max_ang2) & (n1c1c2 >= min_ang2)
+    passing_n1c1c2_2 = (n1c1c2 <= 180 - min_ang2) & (n1c1c2 >= 180 - max_ang2)
+    passing_n1c1c2 = passing_n1c1c2_1 | passing_n1c1c2_2
+
+    passing_n2c2c1_1 = (n2c2c1 <= max_ang2) & (n2c2c1 >= min_ang2)
+    passing_n2c2c1_2 = (n2c2c1 <= 180 - min_ang2) & (n2c2c1 >= 180 - max_ang2)
+    passing_n2c2c1 = passing_n2c2c1_1 | passing_n2c2c1_2
+
+    passing_ncc = passing_n1c1c2 | passing_n2c2c1
+
+    # Passing intersection radius
+    passing_radius = idists <= iradius
+
+    stacking = passing_dist & passing_ang_norms & passing_ncc & passing_radius
     return idx, stacking
 
 
 @njit(parallel=False, cache=True)
-def aro(xyz, xyz_aro, xyz_aro_real_idx, ijf, dists, inters,
-        s1_rings, s1_rings_idx, s2_rings, s2_rings_idx, s1_cat_idx, s2_cat_idx,
-        s1_norm, s2_norm, cutoffs_aro, selected_aro):
+def aro(xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings_idx,
+        s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
+        s2_ctrs, cutoffs_aro, selected_aro):
+
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
 
@@ -205,42 +251,50 @@ def aro(xyz, xyz_aro, xyz_aro_real_idx, ijf, dists, inters,
         s1_is_ctr = aot.isin(row1, s1_rings_idx)
         s2_is_ctr = aot.isin(row2, s2_rings_idx)
         pairs = s1_is_ctr & s2_is_ctr
-
         ring_pairs = ijf[pairs]
+
+        s1_idx = aot.indices(s1_rings_idx, ring_pairs[:, 0])
+        s2_idx = aot.indices(s2_rings_idx, ring_pairs[:, 1])
         ring_dists = dists[pairs]
-        s1_normals = s1_norm[aot.indices(s1_rings_idx, ring_pairs[:, 0])]
-        s2_normals = s2_norm[aot.indices(s2_rings_idx, ring_pairs[:, 1])]
+        s1_normals, s2_normals = s1_norm[s1_idx], s2_norm[s2_idx]
+        s1_centroids, s2_centroids = s1_ctrs[s1_idx], s2_ctrs[s2_idx]
 
-        # Compute the minimum distance between the rings
-        num_pairs = ring_pairs.shape[0]
-        mindists = np.zeros(num_pairs, dtype=np.float32)
-        for i in range(num_pairs):
-            r1 = (s1_rings[:, 0] == xyz_aro_real_idx[
-                ring_pairs[i, 0]]).argmax()
-            ring1 = s1_rings[r1][:s1_rings[r1][-1]]
-            r2 = (s2_rings[:, 0] == xyz_aro_real_idx[
-                ring_pairs[i, 1]]).argmax()
-            ring2 = s2_rings[r2][:s2_rings[r2][-1]]
-            mindists[i] = aot.calc_min_dist(xyz[ring1], xyz[ring2])
+        c1c2 = s1_centroids - s2_centroids
+        c2c1 = s2_centroids - s1_centroids
+        n1n2 = aot.calc_angles_2v(s1_normals, s2_normals)
+        n1c1c2 = aot.calc_angles_2v(c1c2, s1_normals)
+        n2c2c1 = aot.calc_angles_2v(c2c1, s2_normals)
 
-        if 'PiStacking' in selected_aro:
-            idx, pi_stacking = stackings('PiStacking', ring_dists, mindists,
-                                         s1_normals, s2_normals, cutoffs_aro,
-                                         selected_aro)
+        N = s1_normals.shape[0]
+        ipoints = np.empty((N, 3), dtype=np.float32)
+        for i in range(N):
+            s1_normal = s1_normals[i]
+            s1_centroid = s1_centroids[i]
+            s2_normal = s2_normals[i]
+            s2_centroid = s2_centroids[i]
+            ipoints[i] = get_intersect_point(s1_normal, s1_centroid,
+                                             s2_normal, s2_centroid)
 
-            inters[pairs, idx] = pi_stacking
+        idists = np.minimum(aot.calc_dist(ipoints, s1_centroids),
+                            aot.calc_dist(ipoints, s2_centroids))
 
         if 'EdgeToFace' in selected_aro:
-            idx, etf_stacking = stackings('EdgeToFace', ring_dists, mindists,
-                                          s1_normals, s2_normals, cutoffs_aro,
+            idx, etf_stacking = stackings('EdgeToFace', ring_dists, n1n2,
+                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
                                           selected_aro)
             inters[pairs, idx] = etf_stacking
 
         if 'FaceToFace' in selected_aro:
-            idx, ftf_stacking = stackings('FaceToFace', ring_dists, mindists,
-                                          s1_normals, s2_normals, cutoffs_aro,
+            idx, ftf_stacking = stackings('FaceToFace', ring_dists, n1n2,
+                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
                                           selected_aro)
             inters[pairs, idx] = ftf_stacking
+
+        if 'PiStacking' in selected_aro:
+            idx, pi_stacking = stackings('PiStacking', ring_dists, n1n2,
+                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
+                                          selected_aro)
+            inters[pairs, idx] = etf_stacking | ftf_stacking
 
     mask = aot.get_compress_mask(inters)
     ijf_mask = ijf[mask]
