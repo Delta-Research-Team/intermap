@@ -38,7 +38,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap4.cfg'
+        config_path = 'tests/imaps/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -177,7 +177,9 @@ def run(mode='production'):
     # =========================================================================
     for i, frames in tqdm(enumerate(chunks), total=N,
                           desc='Detecting Interactions', unit='chunk'):
+
         xyz_chunk = tt.get_coordinates(trajectory, frames, sel_idx)
+
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
@@ -191,8 +193,8 @@ def run(mode='production'):
             metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
             hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, s1_rings,
             s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_indices,
-            s2_aro_indices, cutoffs_others, selected_others, cutoffs_aro,
-            selected_aro)
+            s2_aro_indices, cutoffs_others,
+            selected_others, cutoffs_aro, selected_aro)
 
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
