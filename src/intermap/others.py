@@ -114,7 +114,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
 
 @njit(parallel=False, cache=True)
 def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
-                  ha_cut, min_ang, max_ang, selected_others):
+                  ha_cut, da_cut, min_ang, max_ang, selected_others):
     """"
     Detect the hydrogen bonds
 
@@ -143,21 +143,27 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
 
     # Compute DHA angles
-    t3 = np.zeros(passing_HA.size, dtype=np.float32)
+    t3 = np.full(passing_HA.size, fill_value=-1, dtype=np.float32)
     if "HBDonor" in inter_name:
         idx_hydros = aot.indices(type1, t1)
         D = hb_donors[idx_hydros]
         DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
+        DA_dists = aot.calc_dist(xyz[D], xyz[t2])
+        DHA_angles[DA_dists > da_cut] = -1
     elif "HBAcceptor" in inter_name:
         idx_hydros = aot.indices(type2, t2)
         D = hb_donors[idx_hydros]
         DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
+        DA_dists = aot.calc_dist(xyz[D], xyz[t1])
+        DHA_angles[DA_dists > da_cut] = -1
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
     t3[passing_HA] = DHA_angles
 
     # Detect DHA tuples that pass the angle cutoff
-    passing_DHA = (t3 >= min_ang) & (t3 <= max_ang)
+    passing_DHA1 = (t3 >= min_ang) & (t3 <= max_ang)
+    passing_DHA2 = (t3 >= 180 - max_ang) & (t3 <= 180 - min_ang)
+    passing_DHA = passing_DHA1 | passing_DHA2
 
     if not t3.any():
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
@@ -166,9 +172,8 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 @njit(parallel=False, cache=True)
 def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
-           cations,
-           metal_donors, metal_acceptors, hb_hydros, hb_donors, hb_acc,
-           xb_halogens, xb_donors, xb_acc, vdw_radii,
+           cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
+           hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii,
            cutoffs_others, selected_others):
     """
     Fill the not-aromatic interactions
@@ -230,18 +235,19 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
         idx_hb = selected_others.index('HBAcceptor')
         da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cutoffs_others[:4,
                                                        idx_hb]
+
         if 'HBAcceptor' in selected_others:
             hba_idx, hba = detect_hbonds('HBAcceptor', row1, hb_acc, row2,
                                          hb_hydros, dists, xyz, hb_donors,
-                                         ha_cut_hb, min_ang_hb, max_ang_hb,
-                                         selected_others)
+                                         ha_cut_hb, da_cut_hb, min_ang_hb,
+                                         max_ang_hb, selected_others)
             inters[:, hba_idx] = hba
 
         if 'HBDonor' in selected_others:
             hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydros, row2,
                                          hb_acc, dists, xyz, hb_donors,
-                                         ha_cut_hb, min_ang_hb, max_ang_hb,
-                                         selected_others)
+                                         ha_cut_hb, da_cut_hb, min_ang_hb,
+                                         max_ang_hb, selected_others)
             inters[:, hbd_idx] = hbd
 
     # [XBonds]
@@ -253,15 +259,15 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
         if 'XBAcceptor' in selected_others:
             xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
                                          xb_halogens, dists, xyz, xb_donors,
-                                         ha_cut_xb, min_ang_xb, max_ang_xb,
-                                         selected_others)
+                                         ha_cut_xb, da_cut_xb, min_ang_xb,
+                                         max_ang_xb, selected_others)
             inters[:, xba_idx] = xba
 
         if 'XBDonor' in selected_others:
             xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_halogens, row2,
                                          xb_acc, dists, xyz, xb_donors,
-                                         ha_cut_xb, min_ang_xb, max_ang_xb,
-                                         selected_others)
+                                         ha_cut_xb, da_cut_xb, min_ang_xb,
+                                         max_ang_xb, selected_others)
             inters[:, xbd_idx] = xbd
 
     mask = aot.get_compress_mask(inters)
