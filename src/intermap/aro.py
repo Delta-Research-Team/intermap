@@ -78,16 +78,26 @@ def get_intersect_point(s1_normal, s1_centroid, s2_normal, s2_centroid):
     if np.linalg.det(A) == 0:
         return None
 
-    # Get containers
-    ijf, dists, interactions = aot.get_containers(
-        xyz_aro, k, xyz_aro_real_idx, ball_1, s1_aro_indices, s2_aro_indices,
-        len(selected_aro))
+    # Calculate the offsets for the planes defined by the normals and centroids
+    tilted_offset = np.dot(s2_normal, s2_centroid)
+    plane_offset = np.dot(s1_normal, s1_centroid)
 
-    row1, row2 = ijf[:, 0], ijf[:, 1]
+    # Create the right-hand side of the equation
+    d = np.empty(3, dtype=np.float32)
+    d[0] = plane_offset
+    d[1] = tilted_offset
+    d[2] = 0.0
 
-    return (xyz_aro, xyz_aro_real_idx, s1_cat_idx, s2_cat_idx, s1_rings_idx,
-            s2_rings_idx, ijf, interactions, dists, row1, row2, s1_norm,
-            s2_norm, s1_rings, s2_rings)
+    # Solve the linear equations to find the intersection point on the intersect line
+    point = np.linalg.solve(A, d)
+
+    # Find the projection of the centroid onto the intersect line using vector projection
+    vec = s1_centroid - point
+    intersect_direction_normalized = intersect_direction / np.linalg.norm(
+        intersect_direction)
+    scalar_proj = np.dot(intersect_direction_normalized, vec)
+
+    return point + (intersect_direction_normalized * scalar_proj)
 
 
 @njit(parallel=False, cache=True)
