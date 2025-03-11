@@ -9,6 +9,7 @@ from os.path import basename, join
 from pprint import pformat
 
 import numpy as np
+import rgpack.generals as gnl
 from numba import set_num_threads
 from tqdm import tqdm
 
@@ -184,7 +185,9 @@ def run(mode='production'):
     # =========================================================================
     for i, frames in tqdm(enumerate(chunks), total=N,
                           desc='Detecting Interactions', unit='chunk'):
+
         xyz_chunk = tt.get_coordinates(trajectory, frames, sel_idx)
+
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)

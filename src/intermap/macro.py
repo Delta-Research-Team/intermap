@@ -34,7 +34,8 @@ def runpar(xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
         # Compute the interactions
         xyz = xyz_chunk[i]
         xyz_aro = xyzs_aro[i]
-        s1_norm, s2_norm = aro.get_aro_normals(xyz, s1_rings, s2_rings)
+        s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_aro_normals_centroids(
+            xyz, s1_rings, s2_rings)
         ball_aro = aro_balls[i]
 
         ijf, dists, inters = geom.get_containers(
@@ -42,9 +43,9 @@ def runpar(xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
             s2_aro_indices, len(selected_aro))
 
         ijf_aro, inters_aro = aro.aro(
-            xyz, xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings,
-            s1_rings_idx, s2_rings, s2_rings_idx, s1_cat_idx, s2_cat_idx,
-            s1_norm, s2_norm, cutoffs_aro, selected_aro)
+            xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings_idx,
+            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
+            s2_ctrs, cutoffs_aro, selected_aro)
 
         tree_others = trees_chunk[i]
         ball_others = cmn.get_ball(xyz, s1_indices, tree_others, dist_cut1)
@@ -85,7 +86,6 @@ def estimate(
         metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
         xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others,
         len_others, dist_cut_aro, factor=1.5):
-
     # Detect the number of interactions
     N = len(positions)
     others_cut = max(cutoffs_others[:2].max(), max_vdw) if len_others else 0
@@ -99,29 +99,27 @@ def estimate(
     for i in prange(N):
         xyz = positions[i]
         xyz_aro = xyzs_aro[i]
-        s1_norm, s2_norm = aro.get_aro_normals(xyz, s1_rings, s2_rings)
+
+        s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_aro_normals_centroids(
+            xyz, s1_rings, s2_rings)
         ball_aro = aro_balls[i]
+
         ijf, dists, inters = geom.get_containers(
             xyz_aro, i, xyz_aro_real_idx, ball_aro, s1_aro_indices,
             s2_aro_indices, len(selected_aro))
-        ijf_aro, inters_aro = aro.aro(xyz, xyz_aro, xyz_aro_real_idx, ijf,
-                                      dists, inters,
-                                      s1_rings, s1_rings_idx, s2_rings,
-                                      s2_rings_idx, s1_cat_idx, s2_cat_idx,
-                                      s1_norm, s2_norm, cutoffs_aro,
-                                      selected_aro)
+
+        ijf_aro, inters_aro = aro.aro(
+            xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings_idx,
+            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
+            s2_ctrs, cutoffs_aro, selected_aro)
+
         ball_1 = others.get_ball(xyz, s1_indices, s2_indices, others_cut)
-        ijf_others, inters_others = others.others(xyz, i, s1_indices,
-                                                  s2_indices, ball_1,
-                                                  hydrophobes, anions,
-                                                  cations,
-                                                  metal_donors,
-                                                  metal_acceptors, hb_hydros,
-                                                  hb_donors, hb_acc,
-                                                  xb_halogens, xb_donors,
-                                                  xb_acc, vdw_radii,
-                                                  cutoffs_others,
-                                                  selected_others)
+
+        ijf_others, inters_others = others.others(
+            xyz, i, s1_indices, s2_indices, ball_1, hydrophobes, anions,
+            cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
+            hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
+            selected_others)
 
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
