@@ -257,7 +257,6 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     # Find the contacts
     n_contacts = sum([len(x) for x in ball_1])
     if n_contacts == 0:
-        print("No contacts found")
         return (
             np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
             np.zeros((0, n_types), dtype=np.bool_))
