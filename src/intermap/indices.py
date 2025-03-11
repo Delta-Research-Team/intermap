@@ -126,7 +126,8 @@ class IndexManager:
         'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
         'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
         'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
-        'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1'}
+        'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'water': ' [OH2]'}
 
     def __init__(self, topo, traj, sel1, sel2, interactions):
 
@@ -178,6 +179,10 @@ class IndexManager:
             r = ring[:ring[-1]]
             sel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, r, missing=-1)
         self.rings = sel_rings[sel_rings[:, 0] != -1]
+
+        # Waters
+        self.waters = self.get_waters()
+
         logger.debug(f"Detected atom types:\n"
                      f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
                      f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
@@ -409,6 +414,32 @@ class IndexManager:
             padded_rings[i, -1] = len(ring)
         return padded_rings
 
+    def get_waters(self):
+        """
+        Get the indices associated with the water molecules
+
+        Returns:
+            waters: List with the indices of the water molecules
+        """
+        query = Chem.MolFromSmarts(self.smarts['water'])
+        query = Chem.AddHs(query)
+        waters = []
+
+        # Look for the water molecules in the disconnected residues
+        for case in self.rdk_disconnected:
+            mono_mol = self.rdk_disconnected[case]
+            match = [y for x in mono_mol.GetSubstructMatches(query) for y in x]
+            if match:
+                for similar in self.uniq_disconnected[case]:
+                    mono_res = self.universe.residues[similar]
+                    selected = mono_res.atoms.indices[match]
+                    waters.extend(selected)
+
+        selected_raw = npi.indices(
+            self.sel_idx, np.asarray(waters), missing=-1)
+        selected = selected_raw[selected_raw != -1].astype(np.int32)
+        return selected
+
     def get_max_vdw_dist(self):
         """
         Get the maximum van der Waals distance between the atoms in the
@@ -510,7 +541,7 @@ class IndexManager:
 # import intermap.config as conf
 # from argparse import Namespace
 #
-# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap3.cfg'
 # config = conf.ConfigManager(config_path, conf.allowed_parameters)
 # args = Namespace(**config.config_args)
 # self = IndexManager(args.topology, args.trajectory, args.selection_1,

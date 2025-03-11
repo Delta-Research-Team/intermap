@@ -9,7 +9,6 @@ from os.path import basename, join
 from pprint import pformat
 
 import numpy as np
-import rgpack.generals as gnl
 from numba import set_num_threads
 from tqdm import tqdm
 
@@ -19,10 +18,12 @@ import intermap.interdict as idt
 import intermap.topo_trajs as tt
 from intermap import aro, commons as cmn, geometry as aot, macro
 from intermap.indices import IndexManager
+from intermap.waters import wb1
 
 
 # %% todo: check docstrings
-
+# todo: let users choose the inters to compute/output (maintain square matrix
+#  but do a magic to avoid recompilation due to changing the number of interactions)
 
 def run(mode='production'):
     """
@@ -38,7 +39,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap4.cfg'
+        config_path = 'tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -75,6 +76,7 @@ def run(mode='production'):
     metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
     hb_hydros, hb_donors, hb_acc = iman.hb_H, iman.hb_D, iman.hb_A
     xb_halogens, xb_donors, xb_acc = iman.xb_H, iman.xb_D, iman.xb_A
+    waters = iman.waters
 
     anions, cations = iman.anions, iman.cations
     rings = iman.rings
@@ -101,8 +103,9 @@ def run(mode='production'):
     universe = iman.universe
     atnames = universe.atoms.names[sel_idx]
     resnames = universe.atoms.resnames[sel_idx]
-    resids = universe.atoms.resids[sel_idx]
-    names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}" for i, x in
+    at2res = universe.atoms.resids[sel_idx]
+    resids = universe.atoms.resids
+    names = [f"{resnames[i]}_{at2res[i]}_{atnames[i]}" for i, x in
              enumerate(sel_idx)]
 
     # Chunks of frames to analyze
@@ -162,7 +165,11 @@ def run(mode='production'):
     fmt, min_prev = args.format, args.min_prevalence
     inters = np.asarray([x for x in selected_others if x != 'None'] +
                         [x for x in selected_aro if x != 'None'])
-    inter_dict = idt.InterDict(fmt, min_prev, traj_frames, names, inters)
+    self = idt.InterDict(fmt, min_prev, traj_frames, names, inters,
+                         at2res, waters)
+    hba_idx = (inters == 'HBAcceptor').nonzero()[0][0]
+    hbd_idx = (inters == 'HBDonor').nonzero()[0][0]
+    idxs = [hba_idx, hbd_idx]
 
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
@@ -197,27 +204,30 @@ def run(mode='production'):
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
 
-        # Filling the interaction dictionary
         if ijf_chunk.shape[0] > 0:
-            col_frames = frames[ijf_chunk[:, 2]]
-            ijf_chunk[:, 2] = col_frames
-            inter_dict.fill(ijf_chunk, inters_chunk)
+            # Fill interactions in ijf
+            ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
+            self.fill(ijf_chunk, inters_chunk)
+
+            if waters.size > 0:
+                # Fill wb interactions in ijkf
+                ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
+                self.fill(ijkf, inters='wb')
 
     # =========================================================================
     # Save the interactions
     # =========================================================================
-    inter_dict.pack()
     job_name = basename(args.job_name)
-    pickle_name = f"{job_name}_InterMap.pickle"
+    pickle_name = f"{job_name}_InterMap.tsv"
     pickle_path = join(args.output_dir, pickle_name)
     logger.info(f"Saving the interactions in {pickle_path}")
-    gnl.pickle_to_file(inter_dict.dict, pickle_path)
+    self.save(pickle_path)
 
     # =========================================================================
     # Timing
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(inter_dict.dict)
+    ldict = len(self.dict)
     logger.info(f"Total number of unique atom pairs detected:, {ldict}")
     logger.info(f"Total number of interactions detected: {total_inters}")
     logger.info(f"Total elapsed time: {tot} s")
