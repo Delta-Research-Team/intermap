@@ -1,7 +1,7 @@
 # Created by rglez at 1/27/25
 import numpy as np
 
-from intermap import topo_trajs as tt
+from intermap import commons as tt
 
 
 def test_split_array():

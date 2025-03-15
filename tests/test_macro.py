@@ -1,14 +1,13 @@
 # Created by rglez at 1/28/25
 from argparse import Namespace
 
-import numpy as np
-from numba import njit
-from numba_kdtree import KDTree as nckd
-
+import interactions.cutoffs as cf
 import intermap.commons as cmn
 import intermap.config as conf
-import intermap.cutoffs as cf
-from intermap.aro import aro
+import numpy as np
+from interactions.aro import aro
+from numba import njit
+from numba_kdtree import KDTree as nckd
 
 
 def test_kdtree(iman, conf_path):

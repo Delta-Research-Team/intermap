@@ -2,9 +2,8 @@
 
 import MDAnalysis as mda
 import pytest
+from interactions import indices as idx
 from rgpack.generals import recursive_defaultdict
-
-from intermap import indices as idx
 
 
 @pytest.fixture(scope="module")

@@ -1,12 +1,11 @@
 # Created by gonzalezroy at 2/5/25
 import logging
 
-import numpy as np
-from numba import njit, prange
-
+import interactions.geometry as geom
 import intermap.commons as cmn
-import intermap.geometry as geom
-from intermap import aro, others
+import numpy as np
+from interactions import aro, others
+from numba import njit, prange
 
 logger = logging.getLogger('InterMapLogger')
 

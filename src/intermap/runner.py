@@ -8,18 +8,16 @@ from argparse import Namespace
 from os.path import basename, join
 from pprint import pformat
 
+import interactions.cutoffs as cf
+import interactions.interdict as idt
+import intermap.config as conf
 import numpy as np
-import rgpack.generals as gnl
+from intermap import commons as cmn
+from intermap.interactions import aro, geometry as aot, macro
+from intermap.interactions.indices import IndexManager
+from intermap.interactions.waters import wb1
 from numba import set_num_threads
 from tqdm import tqdm
-
-import intermap.config as conf
-import intermap.cutoffs as cf
-import intermap.interdict as idt
-import intermap.topo_trajs as tt
-from intermap import aro, commons as cmn, geometry as aot, macro
-from intermap.indices import IndexManager
-from intermap.waters import wb1
 
 
 # %% todo: check docstrings
@@ -111,7 +109,7 @@ def run(mode='production'):
 
     # Chunks of frames to analyze
     n_frames = iman.n_frames
-    last = tt.parse_last_param(args.last, n_frames)
+    last = cmn.parse_last_param(args.last, n_frames)
     traj_frames = np.arange(args.start, last, args.stride)
     logger.info(f"Number of frames to consider (start:last:stride): "
                 f"{traj_frames.size} ({args.start}:{last}:{args.stride})")
@@ -174,7 +172,7 @@ def run(mode='production'):
 
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
-    chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
+    chunks = cmn.split_in_chunks(traj_frames, args.chunk_size)
     trajectory = universe.trajectory
     # =========================================================================
     xyz_chunk = None

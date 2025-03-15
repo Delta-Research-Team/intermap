@@ -5,13 +5,12 @@ import time
 from collections import defaultdict
 from pprint import pformat
 
+import interactions.cutoffs as cf
 import MDAnalysis as mda
 import numpy as np
 import numpy_indexed as npi
 import rdkit
 from rdkit import Chem
-
-import intermap.cutoffs as cf
 
 logger = logging.getLogger('InterMapLogger')
 

@@ -2,11 +2,11 @@
 """
 Test the geometric functions to compute distances and angles
 """
+import interactions.geometry as aot
 import mdtraj as md
 import numpy as np
 import pytest
 
-import intermap.geometry as aot
 from tests.conftest import mdtrajectory
 
 
