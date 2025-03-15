@@ -4,9 +4,10 @@ import os
 import sys
 from os.path import abspath, dirname, isabs, join, normpath
 
-import interactions.cutoffs as cf
-import intermap.commons as cmn
 import numpy as np
+
+import intermap.commons as cmn
+import intermap.interactions.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)

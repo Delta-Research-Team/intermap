@@ -8,16 +8,18 @@ from argparse import Namespace
 from os.path import basename, join
 from pprint import pformat
 
-import interactions.cutoffs as cf
-import interactions.interdict as idt
-import intermap.config as conf
+import mdtraj as md
 import numpy as np
+from numba import set_num_threads
+from tqdm import tqdm
+
+import intermap.config as conf
+import intermap.interactions.cutoffs as cf
+import intermap.interactions.interdict as idt
 from intermap import commons as cmn
 from intermap.interactions import aro, geometry as aot, macro
 from intermap.interactions.indices import IndexManager
 from intermap.interactions.waters import wb1
-from numba import set_num_threads
-from tqdm import tqdm
 
 
 # %% todo: check docstrings
@@ -38,7 +40,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap3.cfg'
+        config_path = 'tests/imaps/imap2.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -172,19 +174,24 @@ def run(mode='production'):
 
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
-    chunks = cmn.split_in_chunks(traj_frames, args.chunk_size)
-    trajectory = universe.trajectory
-    # =========================================================================
-    xyz_chunk = None
-    trees_chunk = None
-    s1_centrs, s2_centrs, xyzs_aro = None, None, None
-    aro_balls = None
-    ijf_chunk, inters_chunk = None, None
-    # =========================================================================
-    for i, frames in tqdm(enumerate(chunks), total=N,
-                          desc='Detecting Interactions', unit='chunk'):
+    chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
 
-        xyz_chunk = tt.get_coordinates(trajectory, frames, sel_idx)
+    trajiter = md.iterload(args.trajectory, top=args.topology,
+                           stride=args.stride, chunk=args.chunk_size,
+                           atom_indices=sel_idx)
+
+    n_frames_proc = 0
+    for i, chunk in tqdm(enumerate(trajiter), desc='Detecting Interactions',
+                         unit='chunk', total=N, ):
+
+        # Stop the iteration if the user-declared last frame  is reached
+        n_frames_proc += chunk.n_frames
+        M = chunk_frames[i].size
+        if n_frames_proc >= last:
+            chunk = chunk[:M]
+            trajiter.close()
+
+        xyz_chunk = chunk.xyz.astype(np.float32) * 10
 
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
@@ -205,6 +212,7 @@ def run(mode='production'):
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
 
+        frames = chunk_frames[i]
         if ijf_chunk.shape[0] > 0:
             # Fill interactions in ijf
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]

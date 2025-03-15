@@ -4,9 +4,10 @@ This module contains the functions to compute the inter-atomic interactions
 """
 
 import numpy as np
-from interactions import geometry as aot
 from numba import njit
 from numba_kdtree import KDTree as nckd
+
+from intermap.interactions import geometry as aot
 
 
 def get_ball(xyz, s1_indices, s2_indices, dist_cut):

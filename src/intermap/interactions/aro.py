@@ -1,10 +1,11 @@
 # Created by rglez at 12/10/24
-import interactions.geometry as aot
 import numpy as np
 from numba import njit, prange
 from numba.typed import List
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
+
+import intermap.interactions.geometry as aot
 
 
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
