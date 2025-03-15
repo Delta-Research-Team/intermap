@@ -177,8 +177,7 @@ def run(mode='production'):
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
 
     trajiter = md.iterload(args.trajectory, top=args.topology,
-                           stride=args.stride, chunk=args.chunk_size,
-                           atom_indices=sel_idx)
+                           stride=args.stride, chunk=args.chunk_size)
 
     n_frames_proc = 0
     for i, chunk in tqdm(enumerate(trajiter), desc='Detecting Interactions',
@@ -191,7 +190,7 @@ def run(mode='production'):
             chunk = chunk[:M]
             trajiter.close()
 
-        xyz_chunk = chunk.xyz.astype(np.float32) * 10
+        xyz_chunk = chunk.xyz.astype(np.float32)[:, sel_idx] * 10
 
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
