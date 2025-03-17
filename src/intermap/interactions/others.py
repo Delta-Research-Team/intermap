@@ -51,26 +51,23 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
         X1 = s1_indices[i]
         for j in x:
             X2 = s2_indices[j]
+            if X1 == X2:
+                continue
             ijf[counter][0] = X1
             ijf[counter][1] = X2
             ijf[counter][2] = k
             counter += 1
 
-    # Remove idems (self-contacts appearing if both selections overlap)
-    idems = ijf[:, 0] == ijf[:, 1]
-    if idems.any():
-        ijf = ijf[~idems]
-
     # Compute distances
-    row1 = ijf[:, 0]
-    row2 = ijf[:, 1]
+    row1 = ijf[:counter, 0]
+    row2 = ijf[:counter, 1]
     dists = aot.calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
     n_types = len(selected_others)
-    interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
+    interactions = np.zeros((counter, n_types), dtype=np.bool_)
 
-    return ijf, interactions, dists, row1, row2
+    return ijf[:counter], interactions, dists, row1, row2
 
 
 @njit(parallel=False, cache=True)
@@ -172,15 +169,15 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 @njit(parallel=False, cache=True)
 def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
-           cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
-           hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii,
-           cutoffs_others, selected_others):
+           cations, metal_donors,
+           metal_acceptors, hb_hydros, hb_donors, hb_acc, xb_halogens,
+           xb_donors, xb_acc, vdw_radii, cutoffs_others, selected_others):
     """
     Fill the not-aromatic interactions
     """
-    if 'None' in selected_others:
-        return (np.zeros((0, 3), dtype=np.int32),
-                np.zeros((0, 0), dtype=np.bool_))
+    # if 'None' in selected_others:
+    #     return (np.zeros((0, 3), dtype=np.int32),
+    #             np.zeros((0, 0), dtype=np.bool_))
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
@@ -271,7 +268,7 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
             inters[:, xbd_idx] = xbd
 
     mask = aot.get_compress_mask(inters)
-    return ijf[mask].astype(np.int32), inters[mask].astype(np.bool_)
+    return ijf[mask], inters[mask]
 
 # =============================================================================
 #

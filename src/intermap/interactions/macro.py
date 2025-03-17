@@ -12,70 +12,76 @@ logger = logging.getLogger('InterMapLogger')
 
 
 @njit(parallel=True, cache=True)
-def runpar(xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
-           ijf_shape, inters_shape, len_others, len_aro, s1_indices,
-           s2_indices, anions, cations, s1_cat_idx, s2_cat_idx, hydrophobes,
-           metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
-           hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, s1_rings,
-           s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_indices,
-           s2_aro_indices, cutoffs_others, selected_others, cutoffs_aro,
-           selected_aro):
+def runpar(
+        xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
+        ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
+        s1_cat_idx, s2_cat_idx, hydrophobes, metal_donors, metal_acceptors,
+        vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+        xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
+        s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
+        cutoffs_aro, selected_aro):
     # Get the number of frames in the chunk
     dim1 = np.int64(xyz_chunk.shape[0])
     dim2 = np.int64(ijf_shape[0])
 
-    # Preallocate the arrays
-    ijf_template = np.zeros((dim1, dim2, 3), dtype=np.int32)
-    inters_template = np.zeros((dim1, dim2, inters_shape[1]), dtype=np.bool_)
+    # Preallocate the arrays on initialization
+    ijf_template = np.empty((dim1, dim2, 3), dtype=np.int32)
+    inters_template = np.empty((dim1, dim2, inters_shape[1]), dtype=np.bool_)
+    ijf_template.fill(0)
+    inters_template.fill(False)
+
     markers = np.zeros(dim1, dtype=np.int32)
     dist_cut1 = max(cutoffs_others[:2].max(), max_vdw)
 
     for i in prange(dim1):
-        # Compute the interactions
-        xyz = xyz_chunk[i]
-        xyz_aro = xyzs_aro[i]
+        xyz = xyz_chunk[i].view()
+        xyz_aro = xyzs_aro[i].view()
+
+        # Get the views of the templates
+        ijf_view = ijf_template[i].view()
+        inters_view = inters_template[i].view()
+
+        # Get the pairs for aromatic interactions
         s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_aro_normals_centroids(
             xyz, s1_rings, s2_rings)
         ball_aro = aro_balls[i]
-
-        ijf, dists, inters = geom.get_containers(
+        ijf_view, dists = geom.get_containers_run(
             xyz_aro, i, xyz_aro_real_idx, ball_aro, s1_aro_indices,
-            s2_aro_indices, len(selected_aro))
+            s2_aro_indices, ijf_view)
+        n_pairs_aro = dists.shape[0]
 
-        ijf_aro, inters_aro = aro.aro(
-            xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings_idx,
-            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
-            s2_ctrs, cutoffs_aro, selected_aro)
+        # Get the aromatic interactions
+        ijf_view, inters_view, n_aro = aro.aro(xyz_aro, xyz_aro_real_idx,
+                                               n_pairs_aro,
+                                               ijf_view, dists, inters_view,
+                                               s1_rings_idx, s2_rings_idx,
+                                               s1_cat_idx,
+                                               s2_cat_idx, s1_norm, s2_norm,
+                                               s1_ctrs,
+                                               s2_ctrs, cutoffs_aro,
+                                               selected_aro)
 
+        # Get the non-aromatic interactions
         tree_others = trees_chunk[i]
         ball_others = cmn.get_ball(xyz, s1_indices, tree_others, dist_cut1)
+
         ijf_others, inters_others = others.others(
             xyz, i, s1_indices, s2_indices, ball_others, hydrophobes, anions,
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
             selected_others)
+        n_others = ijf_others.shape[0]
 
-        # Fill the templates
-        num_others = len(ijf_others)
-        num_aro = len(ijf_aro)
-        markers[i] = num_others + num_aro
+        M = inters_view.shape[1] - inters_others.shape[1]
+        ijf_view[n_aro:n_aro + n_others] = ijf_others
+        inters_view[n_aro:n_aro + n_others, M:] = inters_others
 
-        ijf_template[i][:num_others] = ijf_others
-        ijf_template[i][num_others:markers[i]] = ijf_aro
-        inters_template[i][:num_others, :len_others] = inters_others
-        inters_template[i][num_others:markers[i], len_others:] = inters_aro
+        markers[i] = n_aro + n_others
 
-    # Compress the chunks to the final size
-    num_pairs = markers.sum()
-    ijf_final = np.empty((num_pairs, 3), dtype=np.int32)
-    inters_final = np.empty((num_pairs, len_others + len_aro), dtype=np.bool_)
-
-    for i in prange(dim1):
-        start = markers[:i].sum()
-        end = markers[:i + 1].sum()
-        ijf_final[start:end] = ijf_template[i, :markers[i]]
-        inters_final[start:end] = inters_template[i, :markers[i]]
-    return ijf_final, inters_final
+    ijf_reshaped = ijf_template.reshape(-1, 3)
+    inters_reshaped = inters_template.reshape(-1, inters_shape[1])
+    mask = geom.get_compress_mask(inters_reshaped)
+    return ijf_reshaped[mask], inters_reshaped[mask]
 
 
 def estimate(
@@ -108,10 +114,16 @@ def estimate(
             xyz_aro, i, xyz_aro_real_idx, ball_aro, s1_aro_indices,
             s2_aro_indices, len(selected_aro))
 
-        ijf_aro, inters_aro = aro.aro(
-            xyz_aro, xyz_aro_real_idx, ijf, dists, inters, s1_rings_idx,
-            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
-            s2_ctrs, cutoffs_aro, selected_aro)
+        n_pairs_aro = dists.shape[0]
+
+        ijf_aro, inters_aro, n_aro = aro.aro(xyz_aro, xyz_aro_real_idx,
+                                             n_pairs_aro, ijf, dists,
+                                             inters, s1_rings_idx,
+                                             s2_rings_idx,
+                                             s1_cat_idx, s2_cat_idx, s1_norm,
+                                             s2_norm,
+                                             s1_ctrs, s2_ctrs, cutoffs_aro,
+                                             selected_aro, )
 
         ball_1 = others.get_ball(xyz, s1_indices, s2_indices, others_cut)
 
@@ -120,7 +132,6 @@ def estimate(
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
             selected_others)
-
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
     # Estimate the number of contacts

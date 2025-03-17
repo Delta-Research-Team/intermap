@@ -19,7 +19,6 @@ import intermap.interactions.interdict as idt
 from intermap import commons as cmn
 from intermap.interactions import aro, geometry as aot, macro
 from intermap.interactions.indices import IndexManager
-from intermap.interactions.waters import wb1
 
 
 # %% todo: check docstrings
@@ -40,7 +39,7 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap2.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap5.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
@@ -50,7 +49,8 @@ def run(mode='production'):
     log_path = join(args.output_dir, f"{basename(args.job_name)}_InterMap.log")
     logger = cmn.start_logger(log_path)
     logger.info(f"Starting InterMap with the following parameters:"
-                f"\n Job name: {args.job_name}"
+                f"\n J"
+                f"Job name: {args.job_name}"
                 f"\n Number of processors: {args.n_procs}"
                 f"\n Output directory: {args.output_dir}"
                 f"\n Topology: {args.topology}"
@@ -182,7 +182,7 @@ def run(mode='production'):
     n_frames_proc = 0
     for i, chunk in tqdm(enumerate(trajiter), desc='Detecting Interactions',
                          unit='chunk', total=N, ):
-
+        break
         # Stop the iteration if the user-declared last frame  is reached
         n_frames_proc += chunk.n_frames
         M = chunk_frames[i].size
@@ -190,55 +190,58 @@ def run(mode='production'):
             chunk = chunk[:M]
             trajiter.close()
 
+        # LOAD the coordinates
         xyz_chunk = chunk.xyz.astype(np.float32)[:, sel_idx] * 10
 
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
+
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
+
         aro_balls = aro.get_balls(
             xyzs_aro, s1_aro_indices, s2_aro_indices, dist_cut_aro)
 
         ijf_chunk, inters_chunk = macro.runpar(
             xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
-            ijf_shape, inters_shape, len_others, len_aro, s1_indices,
-            s2_indices, anions, cations, s1_cat_idx, s2_cat_idx, hydrophobes,
-            metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
-            hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, s1_rings,
-            s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_indices,
-            s2_aro_indices, cutoffs_others, selected_others, cutoffs_aro,
-            selected_aro)
+            ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
+            s1_cat_idx, s2_cat_idx, hydrophobes, metal_donors, metal_acceptors,
+            vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+            xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
+            s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
+            cutoffs_aro, selected_aro)
+    #
+    #     total_pairs += ijf_chunk.shape[0]
+    #     total_inters += inters_chunk.sum()
+    #
+    #     frames = chunk_frames[i]
+    #     if ijf_chunk.shape[0] > 0:
+    #         # Fill interactions in ijf
+    #         ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
+    #         self.fill(ijf_chunk, inters_chunk)
+    #
+    #         if waters.size > 0:
+    #             # Fill wb interactions in ijkf
+    #             ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
+    #             self.fill(ijkf, inters='wb')
+    #
+    # # =========================================================================
+    # # Save the interactions
+    # # =========================================================================
+    # job_name = basename(args.job_name)
+    # pickle_name = f"{job_name}_InterMap.tsv"
+    # pickle_path = join(args.output_dir, pickle_name)
+    # logger.info(f"Saving the interactions in {pickle_path}")
+    # self.save(pickle_path)
+    #
+    # # =========================================================================
+    # # Timing
+    # # =========================================================================
+    # tot = round(time.time() - start_time, 2)
+    # ldict = len(self.dict)
+    # logger.info(f"Total number of unique atom pairs detected:, {ldict}")
+    # logger.info(f"Total number of interactions detected: {total_inters}")
+    # logger.info(f"Total elapsed time: {tot} s")
+    # logger.info(f"Normal termination of InterMap job '{job_name}'")
 
-        total_pairs += ijf_chunk.shape[0]
-        total_inters += inters_chunk.sum()
 
-        frames = chunk_frames[i]
-        if ijf_chunk.shape[0] > 0:
-            # Fill interactions in ijf
-            ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            self.fill(ijf_chunk, inters_chunk)
-
-            if waters.size > 0:
-                # Fill wb interactions in ijkf
-                ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
-                self.fill(ijkf, inters='wb')
-
-    # =========================================================================
-    # Save the interactions
-    # =========================================================================
-    job_name = basename(args.job_name)
-    pickle_name = f"{job_name}_InterMap.tsv"
-    pickle_path = join(args.output_dir, pickle_name)
-    logger.info(f"Saving the interactions in {pickle_path}")
-    self.save(pickle_path)
-
-    # =========================================================================
-    # Timing
-    # =========================================================================
-    tot = round(time.time() - start_time, 2)
-    ldict = len(self.dict)
-    logger.info(f"Total number of unique atom pairs detected:, {ldict}")
-    logger.info(f"Total number of interactions detected: {total_inters}")
-    logger.info(f"Total elapsed time: {tot} s")
-    logger.info(f"Normal termination of InterMap job '{job_name}'")
-
-# run(mode='debug')
+run(mode='debug')

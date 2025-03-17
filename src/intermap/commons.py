@@ -203,5 +203,5 @@ def get_ball(xyz, s1_indices, tree, dist_cut):
     Returns:
 
     """
-    ball_1 = tree.query_radius_parallel(xyz[s1_indices], dist_cut)
+    ball_1 = tree.query_radius(xyz[s1_indices], dist_cut)
     return ball_1
