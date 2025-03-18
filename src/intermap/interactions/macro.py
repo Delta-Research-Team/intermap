@@ -11,7 +11,7 @@ from intermap.interactions import aro, others
 logger = logging.getLogger('InterMapLogger')
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def runpar(
         xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
         ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
@@ -32,14 +32,14 @@ def runpar(
 
     markers = np.zeros(dim1, dtype=np.int32)
     dist_cut1 = max(cutoffs_others[:2].max(), max_vdw)
-
+    n_aros = np.zeros(dim1, dtype=np.int32)
+    n_others = np.zeros(dim1, dtype=np.int32)
     for i in prange(dim1):
-        xyz = xyz_chunk[i].view()
-        xyz_aro = xyzs_aro[i].view()
+        xyz = xyz_chunk[i]
+        xyz_aro = xyzs_aro[i]
 
-        # Get the views of the templates
-        ijf_view = ijf_template[i].view()
-        inters_view = inters_template[i].view()
+        ijf_view = ijf_template[i].copy()
+        inters_view = inters_template[i].copy()
 
         # Get the pairs for aromatic interactions
         s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_aro_normals_centroids(
@@ -60,6 +60,7 @@ def runpar(
                                                s1_ctrs,
                                                s2_ctrs, cutoffs_aro,
                                                selected_aro)
+        n_aros[i] = n_aro
 
         # Get the non-aromatic interactions
         tree_others = trees_chunk[i]
@@ -70,13 +71,16 @@ def runpar(
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
             selected_others)
-        n_others = ijf_others.shape[0]
+        n_others[i] = ijf_others.shape[0]
+
 
         M = inters_view.shape[1] - inters_others.shape[1]
-        ijf_view[n_aro:n_aro + n_others] = ijf_others
-        inters_view[n_aro:n_aro + n_others, M:] = inters_others
+        ijf_view[n_aros[i]:n_aros[i] + n_others[i]] = ijf_others
+        inters_view[n_aros[i]:n_aros[i] + n_others[i], M:] = inters_others
+        markers[i] = n_aros[i] + n_others[i]
 
-        markers[i] = n_aro + n_others
+        ijf_template[i] = ijf_view
+        inters_template[i] = inters_view
 
     ijf_reshaped = ijf_template.reshape(-1, 3)
     inters_reshaped = inters_template.reshape(-1, inters_shape[1])

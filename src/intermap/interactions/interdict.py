@@ -28,6 +28,7 @@ class InterDict:
         # Initialize containers
         self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
+    @profile
     def fill(self, ijfs, inters):
         groups = npi.group_by(ijfs[:, :2])
         sorter = groups.index.sorter

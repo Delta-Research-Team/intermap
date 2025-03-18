@@ -3,7 +3,6 @@
 Runner for InterMap
 """
 import sys
-import time
 from argparse import Namespace
 from os.path import basename, join
 from pprint import pformat
@@ -19,6 +18,7 @@ import intermap.interactions.interdict as idt
 from intermap import commons as cmn
 from intermap.interactions import aro, geometry as aot, macro
 from intermap.interactions.indices import IndexManager
+from intermap.interactions.waters import wb1
 
 
 # %% todo: check docstrings
@@ -201,47 +201,68 @@ def run(mode='production'):
         aro_balls = aro.get_balls(
             xyzs_aro, s1_aro_indices, s2_aro_indices, dist_cut_aro)
 
-        ijf_chunk, inters_chunk = macro.runpar(
-            xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
-            ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
-            s1_cat_idx, s2_cat_idx, hydrophobes, metal_donors, metal_acceptors,
-            vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
-            xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
-            s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
-            cutoffs_aro, selected_aro)
-    #
-    #     total_pairs += ijf_chunk.shape[0]
-    #     total_inters += inters_chunk.sum()
-    #
-    #     frames = chunk_frames[i]
-    #     if ijf_chunk.shape[0] > 0:
-    #         # Fill interactions in ijf
-    #         ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-    #         self.fill(ijf_chunk, inters_chunk)
-    #
-    #         if waters.size > 0:
-    #             # Fill wb interactions in ijkf
-    #             ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
-    #             self.fill(ijkf, inters='wb')
-    #
-    # # =========================================================================
-    # # Save the interactions
-    # # =========================================================================
-    # job_name = basename(args.job_name)
-    # pickle_name = f"{job_name}_InterMap.tsv"
-    # pickle_path = join(args.output_dir, pickle_name)
-    # logger.info(f"Saving the interactions in {pickle_path}")
-    # self.save(pickle_path)
-    #
-    # # =========================================================================
-    # # Timing
-    # # =========================================================================
-    # tot = round(time.time() - start_time, 2)
-    # ldict = len(self.dict)
-    # logger.info(f"Total number of unique atom pairs detected:, {ldict}")
-    # logger.info(f"Total number of interactions detected: {total_inters}")
-    # logger.info(f"Total elapsed time: {tot} s")
-    # logger.info(f"Normal termination of InterMap job '{job_name}'")
+        ijf_chunk, inters_chunk = macro.runpar(xyz_chunk, xyzs_aro,
+                                               xyz_aro_real_idx, trees_chunk,
+                                               aro_balls, ijf_shape,
+                                               inters_shape, s1_indices,
+                                               s2_indices, anions, cations,
+                                               s1_cat_idx, s2_cat_idx,
+                                               hydrophobes, metal_donors,
+                                               metal_acceptors, vdw_radii,
+                                               max_vdw, hb_hydros, hb_donors,
+                                               hb_acc, xb_halogens, xb_donors,
+                                               xb_acc, s1_rings, s2_rings,
+                                               s1_rings_idx, s2_rings_idx,
+                                               s1_aro_indices, s2_aro_indices,
+                                               cutoffs_others, selected_others,
+                                               cutoffs_aro, selected_aro)
+
+        total_pairs += ijf_chunk.shape[0]
+        total_inters += inters_chunk.sum()
+        print(total_pairs, total_inters)
+
+        frames = chunk_frames[i]
+        if ijf_chunk.shape[0] > 0:
+            # Fill interactions in ijf
+            ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
+            self.fill(ijf_chunk, inters_chunk)
+
+            if waters.size > 0:
+                # Fill wb interactions in ijkf
+                ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
+                self.fill(ijkf, inters='wb')
+
+    # =========================================================================
+    # Save the interactions
+    # =========================================================================
+    job_name = basename(args.job_name)
+    pickle_name = f"{job_name}_InterMap.tsv"
+    pickle_path = join(args.output_dir, pickle_name)
+    logger.info(f"Saving the interactions in {pickle_path}")
+    self.save(pickle_path)
+
+    # =========================================================================
+    # Timing
+    # =========================================================================
+    tot = round(time.time() - start_time, 2)
+    ldict = len(self.dict)
+    logger.info(f"Total number of unique atom pairs detected:, {ldict}")
+    logger.info(f"Total number of interactions detected: {total_inters}")
+    logger.info(f"Total elapsed time: {tot} s")
+    logger.info(f"Normal termination of InterMap job '{job_name}'")
 
 
 run(mode='debug')
+
+# =============================================================================
+#
+# =============================================================================
+import numpy_indexed as npi
+import time
+
+s = time.time()
+groups = npi.group_by(ijf_chunk[:4491370, :2])
+sorter = groups.index.sorter
+slices = groups.index.slices
+indices = np.split(sorter, slices[1:-1])
+print(time.time() - s)
