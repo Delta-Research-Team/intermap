@@ -177,11 +177,11 @@ class InterDict:
             else:
                 raise ValueError('The key must have 3 or 4 elements')
 
-                s1_name = self.atom_names[s1]
-                s2_name = self.atom_names[s2]
-                s3_name = self.atom_names[wat] if wat else ''
-                time = self.dict[key]
-                prevalence = round(time.count() / self.n_frames * 100, 2)
+            s1_name = self.atom_names[s1]
+            s2_name = self.atom_names[s2]
+            s3_name = self.atom_names[wat] if wat else ''
+            time = self.dict[key]
+            prevalence = round(time.count() / self.n_frames * 100, 2)
 
             # Yield each line as a generator
             yield f'{s1_name},{s2_name},{s3_name},{inter_name},{prevalence},{time.to01()}\n'
