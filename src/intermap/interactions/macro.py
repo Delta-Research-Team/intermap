@@ -11,7 +11,7 @@ from intermap.interactions import aro, others
 logger = logging.getLogger('InterMapLogger')
 
 
-@njit(parallel=True, cache=False)
+@njit(parallel=True, cache=True)
 def runpar(
         xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
         ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
@@ -19,7 +19,7 @@ def runpar(
         vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
         xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
         s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
-        cutoffs_aro, selected_aro):
+        cutoffs_aro, selected_aro, overlap):
     # Get the number of frames in the chunk
     dim1 = np.int64(xyz_chunk.shape[0])
     dim2 = np.int64(ijf_shape[0])
@@ -70,7 +70,7 @@ def runpar(
             xyz, i, s1_indices, s2_indices, ball_others, hydrophobes, anions,
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
-            selected_others)
+            selected_others, overlap)
         n_others[i] = ijf_others.shape[0]
 
 
@@ -95,7 +95,7 @@ def estimate(
         cutoffs_aro, selected_aro, len_aro, anions, hydrophobes, metal_donors,
         metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
         xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others,
-        len_others, dist_cut_aro, factor=1.5):
+        len_others, dist_cut_aro, overlap, factor=1.5):
     # Detect the number of interactions
     N = len(positions)
     others_cut = max(cutoffs_others[:2].max(), max_vdw) if len_others else 0
@@ -135,7 +135,7 @@ def estimate(
             xyz, i, s1_indices, s2_indices, ball_1, hydrophobes, anions,
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
-            selected_others)
+            selected_others, overlap)
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
     # Estimate the number of contacts
