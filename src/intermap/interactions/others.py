@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 from numba_kdtree import KDTree as nckd
 
-from intermap import geometry as aot
+from intermap.interactions import geometry as aot
 
 
 def get_ball(xyz, s1_indices, s2_indices, dist_cut):
@@ -17,14 +17,34 @@ def get_ball(xyz, s1_indices, s2_indices, dist_cut):
 
 
 @njit(parallel=False, cache=True)
-def get_ball2(xyz, s1_indices, s2_indices, dist_cut):
-    s2_tree = nckd(xyz[s2_indices])
-    ball_1 = s2_tree.query_radius(xyz[s1_indices], dist_cut)
-    return ball_1
+def unswap_frame(ijf):
+    """
+    Detects swapped pairs in the frame. This occurs when selections overlaps.
+
+    Args:
+        ijf: Indices of the atoms in the first and second selections
+
+    Returns:
+        uniques: Boolean array to detect the unique pairs
+    """
+    seen = set()
+    uniques = np.zeros(ijf.shape[0], dtype=np.bool_)
+    for i in range(ijf.shape[0]):
+        a, b, c = ijf[i]
+        tupy = (a, b)
+        topy = (b, a)
+        if (tupy in seen) or (topy in seen):
+            continue
+        seen.add(tupy)
+        seen.add(topy)
+        uniques[i] = True
+
+    return uniques
 
 
 @njit(parallel=False, cache=True)
-def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
+def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
+               overlap):
     """
     Get the containers to find interactions not related to aromatic rings
 
@@ -43,23 +63,28 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
         dists (ndarray): Distances between the atoms in the first and second
                          selections
     """
-    # Find the contacts
+    # Find the number of contacts
     n_contacts = sum([len(x) for x in ball_1])
+
+    # Ignore pairs with the same index
     ijf = np.empty((n_contacts, 3), dtype=np.int32)
     counter = 0
     for i, x in enumerate(ball_1):
         X1 = s1_indices[i]
         for j in x:
             X2 = s2_indices[j]
+            if X1 == X2:
+                continue
             ijf[counter][0] = X1
             ijf[counter][1] = X2
             ijf[counter][2] = k
             counter += 1
+    ijf = ijf[:counter]
 
-    # Remove idems (self-contacts appearing if both selections overlap)
-    idems = ijf[:, 0] == ijf[:, 1]
-    if idems.any():
-        ijf = ijf[~idems]
+    # Eliminate the swapped cases if any
+    if overlap:
+        uniques = unswap_frame(ijf)
+        ijf = ijf[uniques]
 
     # Compute distances
     row1 = ijf[:, 0]
@@ -67,8 +92,9 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others):
     dists = aot.calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
+    N = row1.size
     n_types = len(selected_others)
-    interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)
+    interactions = np.zeros((N, n_types), dtype=np.bool_)
 
     return ijf, interactions, dists, row1, row2
 
@@ -172,19 +198,21 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 @njit(parallel=False, cache=True)
 def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
-           cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
-           hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii,
-           cutoffs_others, selected_others):
+           cations, metal_donors,
+           metal_acceptors, hb_hydros, hb_donors, hb_acc, xb_halogens,
+           xb_donors, xb_acc, vdw_radii, cutoffs_others, selected_others,
+           overlap):
     """
     Fill the not-aromatic interactions
     """
-    if 'None' in selected_others:
-        return (np.zeros((0, 3), dtype=np.int32),
-                np.zeros((0, 0), dtype=np.bool_))
+    # if 'None' in selected_others:
+    #     return (np.zeros((0, 3), dtype=np.int32),
+    #             np.zeros((0, 0), dtype=np.bool_))
 
     # Get the containers for the not-aromatic interactions
-    ijf, inters, dists, row1, row2 = containers(xyz, k, s1_indices, s2_indices,
-                                                ball_1, selected_others)
+    ijf, inters, dists, row1, row2 = \
+        containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
+                   overlap)
 
     # [Van der Waals]
     if 'VdWContact' in selected_others:
@@ -271,7 +299,7 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
             inters[:, xbd_idx] = xbd
 
     mask = aot.get_compress_mask(inters)
-    return ijf[mask].astype(np.int32), inters[mask].astype(np.bool_)
+    return ijf[mask], inters[mask]
 
 # =============================================================================
 #

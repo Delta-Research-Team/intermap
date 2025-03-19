@@ -6,7 +6,7 @@ import mdtraj as md
 import numpy as np
 import pytest
 
-import intermap.geometry as aot
+import intermap.interactions.geometry as aot
 from tests.conftest import mdtrajectory
 
 

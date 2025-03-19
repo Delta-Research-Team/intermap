@@ -11,7 +11,7 @@ import numpy_indexed as npi
 import rdkit
 from rdkit import Chem
 
-import intermap.cutoffs as cf
+import intermap.interactions.cutoffs as cf
 
 logger = logging.getLogger('InterMapLogger')
 

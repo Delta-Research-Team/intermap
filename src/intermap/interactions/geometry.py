@@ -54,6 +54,25 @@ def get_compress_mask(array):
     return mask
 
 
+@njit(parallel=False, cache=True)
+def get_compress_mask2(array):
+    """
+    Compress the array to remove empty
+
+    Args:
+        array (ndarray): Array to compress
+
+    Returns:
+        array (ndarray): Compressed array
+    """
+    n = array.shape[0]
+    mask = np.zeros(n, dtype=np.bool_)
+    for i in range(n):
+        if array[i].any():
+            mask[i] = True
+    return mask
+
+
 @njit("i4[:](i4[:], i4[:])", parallel=False, cache=True)
 def indices(full, subset):
     """
@@ -249,6 +268,67 @@ def calc_normal_vector(p1, p2, p3):
     return (normal / norm).astype(np.float32)
 
 
+@njit("Tuple((i4[:, :], f4[:]))"
+      "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i4[:, :])",
+      cache=True)
+def get_containers_run(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
+                       ijf_view):
+    # Find the contacts
+    n_contacts = sum([len(x) for x in ball_1])
+    if n_contacts == 0:
+        return ijf_view, np.zeros(0, dtype=np.float32)
+
+    # ijf = np.zeros((n_contacts, 3), dtype=np.int32)
+    counter = 0
+    for i, x in enumerate(ball_1):
+        X1 = s1_indices[i]
+        for j in x:
+            X2 = s2_indices[j]
+            ijf_view[counter][0] = X1
+            ijf_view[counter][1] = X2
+            ijf_view[counter][2] = k
+            counter += 1
+
+    # Remove idems (self-contacts appearing if both selections overlap)
+    idems = ext_idx[ijf_view[:, 0]] == ext_idx[ijf_view[:, 1]]
+    uniques = ijf_view[~idems].copy()
+    n_uniques = uniques.shape[0]
+    ijf_view[:n_uniques] = uniques
+
+    # Compute distances
+    row1 = ijf_view[:n_uniques, 0]
+    row2 = ijf_view[:n_uniques, 1]
+    dists = calc_dist(xyz[row1], xyz[row2])
+
+    # Create the container for interaction types
+    return ijf_view, dists
+
+
+@njit("f4[:, :](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)
+def calc_normal_vector(p1, p2, p3):
+    """
+    Calculate the normal vector of a plane defined by three points
+
+    Args:
+        p1 (np.ndarray): First point
+        p2 (np.ndarray): Second point
+        p3 (np.ndarray): Third point
+
+    Returns:
+        np.ndarray: Normal vector of the plane defined by the three points
+    """
+
+    # Calculate vectors from points
+    v1 = p2 - p1
+    v2 = p3 - p1
+
+    # Calculate the normal vector
+    normal = np.cross(v1, v2)
+    norm = np.linalg.norm(normal)
+
+    return (normal / norm).astype(np.float32)
+
+
 @njit("Tuple((i4[:, :], f4[:], b1[:, :]))"
       "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i8)",
       cache=True)
@@ -257,6 +337,7 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
     # Find the contacts
     n_contacts = sum([len(x) for x in ball_1])
     if n_contacts == 0:
+        print("No contacts found")
         return (
             np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
             np.zeros((0, n_types), dtype=np.bool_))

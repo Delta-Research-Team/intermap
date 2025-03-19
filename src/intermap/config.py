@@ -7,7 +7,7 @@ from os.path import abspath, dirname, isabs, join, normpath
 import numpy as np
 
 import intermap.commons as cmn
-import intermap.cutoffs as cf
+import intermap.interactions.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)

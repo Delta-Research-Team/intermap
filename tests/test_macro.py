@@ -7,8 +7,8 @@ from numba_kdtree import KDTree as nckd
 
 import intermap.commons as cmn
 import intermap.config as conf
-import intermap.cutoffs as cf
-from intermap.aro import aro
+import intermap.interactions.cutoffs as cf
+from intermap.interactions.aro import aro
 
 
 def test_kdtree(iman, conf_path):
@@ -41,7 +41,6 @@ def test_aro(iman, conf_path):
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
 
     iff_aro, inters_aro = aro(xyz, k, s1_indices, s2_indices, cations, rings,
-                              cutoffs_aro,
-                              selected_aro)
+                              cutoffs_aro, selected_aro,,,
     assert iff_aro.any()
     assert inters_aro.any()

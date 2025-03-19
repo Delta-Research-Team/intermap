@@ -12,10 +12,10 @@ from os.path import join
 
 import mdtraj as md
 import pytest
-
-from intermap import commons as cmn, config as conf, cutoffs as cf
-from intermap.indices import IndexManager
-from intermap.others import others
+from interactions import cutoffs as cf
+from interactions.indices import IndexManager
+from interactions.others import others
+from intermap import commons as cmn, config as conf
 
 
 @pytest.fixture(scope="module")

@@ -4,7 +4,7 @@ import itertools as it
 import numpy as np
 import numpy_indexed as npi
 
-from intermap import geometry as aot
+from intermap.interactions import geometry as aot
 
 
 def wb1(ijf_chunk, inters_chunk, waters, idxs):

@@ -8,19 +8,18 @@ from argparse import Namespace
 from os.path import basename, join
 from pprint import pformat
 
+import mdtraj as md
 import numpy as np
-import rgpack.generals as gnl
 from numba import set_num_threads
 from tqdm import tqdm
 
 import intermap.config as conf
-import intermap.cutoffs as cf
-import intermap.interdict as idt
-import intermap.topo_trajs as tt
-from intermap import aro, commons as cmn, geometry as aot, macro
-from intermap.indices import IndexManager
-from intermap.waters import wb1
-
+import intermap.interactions.cutoffs as cf
+import intermap.interactions.interdict as idt
+from intermap import commons as cmn
+from intermap.interactions import aro, geometry as aot, macro
+from intermap.interactions.indices import IndexManager
+from intermap.interactions.waters import wb1
 
 # %% todo: check docstrings
 # todo: let users choose the inters to compute/output (maintain square matrix
@@ -33,6 +32,7 @@ def run(mode='production'):
     # =========================================================================
     # Parsing the configuration file
     # =========================================================================
+    start_time = time.time()
 
     if mode == 'production':
         if len(sys.argv) != 2:
@@ -40,17 +40,17 @@ def run(mode='production'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = 'tests/imaps/imap3.cfg'
+        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     # %%
-    start_time = time.time()
     config = conf.ConfigManager(config_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
     log_path = join(args.output_dir, f"{basename(args.job_name)}_InterMap.log")
     logger = cmn.start_logger(log_path)
     logger.info(f"Starting InterMap with the following parameters:"
-                f"\n Job name: {args.job_name}"
+                f"\n J"
+                f"Job name: {args.job_name}"
                 f"\n Number of processors: {args.n_procs}"
                 f"\n Output directory: {args.output_dir}"
                 f"\n Topology: {args.topology}"
@@ -78,6 +78,7 @@ def run(mode='production'):
     hb_hydros, hb_donors, hb_acc = iman.hb_H, iman.hb_D, iman.hb_A
     xb_halogens, xb_donors, xb_acc = iman.xb_H, iman.xb_D, iman.xb_A
     waters = iman.waters
+    overlap = np.intersect1d(s1_indices, s2_indices).size > 0
 
     anions, cations = iman.anions, iman.cations
     rings = iman.rings
@@ -111,7 +112,7 @@ def run(mode='production'):
 
     # Chunks of frames to analyze
     n_frames = iman.n_frames
-    last = tt.parse_last_param(args.last, n_frames)
+    last = cmn.parse_last_param(args.last, n_frames)
     traj_frames = np.arange(args.start, last, args.stride)
     logger.info(f"Number of frames to consider (start:last:stride): "
                 f"{traj_frames.size} ({args.start}:{last}:{args.stride})")
@@ -152,7 +153,7 @@ def run(mode='production'):
         cutoffs_aro, selected_aro, len_aro, anions, hydrophobes, metal_donors,
         metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
         xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others,
-        len_others, dist_cut_aro)
+        len_others, dist_cut_aro, overlap)
 
     logger.debug(f"Allocated space for interactions:"
                  f" ~{mb1} MB ({args.chunk_size}, {v_size}, {h_size})")
@@ -174,39 +175,46 @@ def run(mode='production'):
 
     total_pairs, total_inters = 0, 0
     N = traj_frames.size // args.chunk_size
-    chunks = tt.split_in_chunks(traj_frames, args.chunk_size)
-    trajectory = universe.trajectory
-    # =========================================================================
-    xyz_chunk = None
-    trees_chunk = None
-    s1_centrs, s2_centrs, xyzs_aro = None, None, None
-    aro_balls = None
-    ijf_chunk, inters_chunk = None, None
-    # =========================================================================
-    for i, frames in tqdm(enumerate(chunks), total=N,
-                          desc='Detecting Interactions', unit='chunk'):
+    chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
 
-        xyz_chunk = tt.get_coordinates(trajectory, frames, sel_idx)
+    trajiter = md.iterload(args.trajectory, top=args.topology,
+                           stride=args.stride, chunk=args.chunk_size)
+
+    n_frames_proc = 0
+    for i, chunk in tqdm(enumerate(trajiter), desc='Detecting Interactions',
+                         unit='chunk', total=N, ):
+        # break
+        # Stop the iteration if the user-declared last frame  is reached
+        n_frames_proc += chunk.n_frames
+        M = chunk_frames[i].size
+        if n_frames_proc >= last:
+            chunk = chunk[:M]
+            trajiter.close()
+
+        # LOAD the coordinates
+        xyz_chunk = chunk.xyz.astype(np.float32)[:, sel_idx] * 10
 
         trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
+
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
+
         aro_balls = aro.get_balls(
             xyzs_aro, s1_aro_indices, s2_aro_indices, dist_cut_aro)
 
         ijf_chunk, inters_chunk = macro.runpar(
             xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
-            ijf_shape, inters_shape, len_others, len_aro, s1_indices,
-            s2_indices, anions, cations, s1_cat_idx, s2_cat_idx, hydrophobes,
-            metal_donors, metal_acceptors, vdw_radii, max_vdw, hb_hydros,
-            hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc, s1_rings,
-            s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_indices,
-            s2_aro_indices, cutoffs_others, selected_others, cutoffs_aro,
-            selected_aro)
-
+            ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
+            s1_cat_idx, s2_cat_idx, hydrophobes, metal_donors, metal_acceptors,
+            vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
+            xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
+            s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
+            cutoffs_aro, selected_aro, overlap)
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
+        print(total_pairs, total_inters)
 
+        frames = chunk_frames[i]
         if ijf_chunk.shape[0] > 0:
             # Fill interactions in ijf
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
@@ -236,4 +244,5 @@ def run(mode='production'):
     logger.info(f"Total elapsed time: {tot} s")
     logger.info(f"Normal termination of InterMap job '{job_name}'")
 
-# run(mode='debug')
+
+run(mode='debug')
