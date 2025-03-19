@@ -5,7 +5,7 @@ Runner for InterMap
 import sys
 import time
 from argparse import Namespace
-from os.path import basename, join
+from os.path import basename, join, dirname
 from pprint import pformat
 
 import mdtraj as md
@@ -21,9 +21,15 @@ from intermap.interactions import aro, geometry as aot, macro
 from intermap.interactions.indices import IndexManager
 from intermap.interactions.waters import wb1
 
+sys.path.append('/media/fajardo/Fajardo/trajs-NCPocs/intermap/scripts/')
+from print_ascii_imap import print_colored_ascii
+
 # %% todo: check docstrings
 # todo: let users choose the inters to compute/output (maintain square matrix
 #  but do a magic to avoid recompilation due to changing the number of interactions)
+
+ASCII_IMAP_PATH = '/media/fajardo/Fajardo/trajs-NCPocs/intermap/scripts/binary_imap.html'
+
 
 def run(mode='production'):
     """
@@ -33,6 +39,8 @@ def run(mode='production'):
     # Parsing the configuration file
     # =========================================================================
     start_time = time.time()
+
+    print_colored_ascii(ASCII_IMAP_PATH)
 
     if mode == 'production':
         if len(sys.argv) != 2:
@@ -245,4 +253,4 @@ def run(mode='production'):
     logger.info(f"Normal termination of InterMap job '{job_name}'")
 
 
-run(mode='debug')
+run(mode='production')
