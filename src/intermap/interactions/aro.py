@@ -42,17 +42,7 @@ def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
 
 
 @njit(parallel=False, cache=True)
-def get_aro_normals(xyz, s1_rings, s2_rings):
-    # Compute the normal vectors
-    s1_at1, s1_at3, s1_at5 = s1_rings[:, 0], s1_rings[:, 2], s1_rings[:, 4]
-    s2_at1, s2_at3, s2_at5 = s2_rings[:, 0], s2_rings[:, 2], s2_rings[:, 4]
-    s1_norm = aot.calc_normal_vector(xyz[s1_at1], xyz[s1_at3], xyz[s1_at5])
-    s2_norm = aot.calc_normal_vector(xyz[s2_at1], xyz[s2_at3], xyz[s2_at5])
-    return s1_norm, s2_norm
-
-
-@njit(parallel=False, cache=True)
-def get_aro_normals_centroids(xyz, s1_rings, s2_rings):
+def get_normals_and_centroids(xyz, s1_rings, s2_rings):
     s1_at1, s1_at2 = s1_rings[:, 0], s1_rings[:, 1]
     s2_at1, s2_at2 = s2_rings[:, 0], s2_rings[:, 1]
     s1_ctrs = aot.calc_centroids(s1_rings, xyz)

@@ -1,17 +1,49 @@
 # Created by roy.gonzalez-aleman at 13/11/2023
 import configparser
+import logging
 import os
 import sys
-from os.path import abspath, dirname, isabs, join, normpath
+from os.path import abspath, basename, dirname, isabs, join, normpath
 
 import numpy as np
 
 import intermap.commons as cmn
-import intermap.interactions.cutoffs as cf
+import managers.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+logger = logging.getLogger('InterMapLogger')
+
+
+def start_logger(log_path):
+    """
+    Start the logger for the InterMap run.
+
+    Args:
+        log_path (str): Path to the log file.
+
+    Returns:
+        logger (logging.Logger): Logger object.
+    """
+
+    logger.setLevel("DEBUG")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel("DEBUG")
+    formatter = logging.Formatter(
+        ">>>>>>>> {asctime} - {levelname} - {message}\n",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel("DEBUG")
+    logger.addHandler(file_handler)
+    return logger
+
+
 #: Allowed section templates in the config file
 
 #:  Allowed keys in the config file (dtypes & expected values)
@@ -35,8 +67,8 @@ allowed_parameters = {
         'selection_1': {'dtype': str, 'values': None},
         'selection_2': {'dtype': str, 'values': None},
         'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
-        # 'interactions': {'dtype': str,
-        #                  'values': None},
+        'interactions': {'dtype': str,
+                         'values': None},
         'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 
     # ____ cutoffs
@@ -97,16 +129,38 @@ class ChoiceParam(Param):
                 f' options are: {choices}.')
 
 
+def detect_config_path(mode='debug'):
+    """
+    Detect the configuration file path
+
+    Args:
+        mode: running mode
+
+    Returns:
+        config_path: path to the configuration file
+    """
+    if mode == 'production':
+        if len(sys.argv) != 2:
+            raise ValueError(
+                '\nInterMap syntax is: intermap path-to-config-file')
+        config_path = sys.argv[1]
+    elif mode == 'debug':
+        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+    else:
+        raise ValueError('Only modes allowed are production and running')
+    return config_path
+
+
 class Config:
     """
     Base class for config file parsing
     """
 
-    def __init__(self, config_path, legal_params):
+    def __init__(self, mode='production'):
 
-        # Parse class args
-        self.config_path = cmn.check_path(config_path)
-        self.legal_params = legal_params
+        # Detect config
+        self.config_path = cmn.check_path(detect_config_path(mode=mode))
+        self.legal_params = allowed_parameters
 
         # Parsing from class args
         self.config_dir = abspath(dirname(self.config_path))
@@ -226,7 +280,26 @@ class ConfigManager(Config):
         self.parse_cutoffs()
 
         # 3. Parse the interactions
-        self.parse_interactions()
+        # self.parse_interactions()
+
+        # 4. Start logging
+        args = self.config_args
+        base_name = basename(args['job_name'])
+        log_path = join(args['output_dir'], f"{base_name}_InterMap.log")
+        start_logger(log_path)
+        logger.info(
+            f"Starting InterMap with the following static parameters:\n"
+            f"\n Job name: {args['job_name']}"
+            f"\n Topology: {args['topology']}"
+            f"\n Trajectory: {args['trajectory']}"
+            f"\n String for selection #1: {args['selection_1']}"
+            f"\n String for selection #2: {args['selection_2']}"
+            f"\n Output directory: {args['output_dir']}"
+            f"\n Chunk size: {args['chunk_size']}"
+            f"\n Number of processors: {args['n_procs']}"
+            f"\n Min prevalence: {args['min_prevalence']}"
+            f"\n Report's format: {args['format']}\n"
+        )
 
     def build_dir_hierarchy(self):
         """
@@ -251,35 +324,39 @@ class ConfigManager(Config):
         """
         Parse the cutoffs
         """
-        prefixes = ('min', 'max', 'dist', 'ang')
+
+        # Get the internal cutoffs
+        prefixes = ('min', 'max', 'dist')
         internal_names = [x for x in dir(cf) if x.startswith(prefixes)]
 
+        # Parse the cutoffs from the config file
         try:
             cutoffs = self.config_obj['cutoffs']
         except KeyError:
             cutoffs = {}
 
+        # Check if the cutoffs are valid
         config_cutoffs = dict()
         for key, value in cutoffs.items():
-            if key not in cf.__dict__:
+            if key not in cf.cutoffs:
                 raise ValueError(
                     f"{key} is not a valid cutoff name.\n"
                     f"The supported list is:\n"
                     f"{internal_names}")
             config_cutoffs.update({key: float(value)})
 
-        parsed_cutoffs = cf.parse_cutoffs(config_cutoffs)
-        self.config_args.update({'cutoffs': parsed_cutoffs})
+        self.config_args.update({'cutoffs': config_cutoffs})
 
     def parse_interactions(self):
-        raw_inters = 'all'
+        raw_inters = self.config_obj['interactions']['interactions']
         if raw_inters == 'all':
-            parsed_inters = np.asarray(list(self.config_args['cutoffs'].keys()))
+            parsed_inters = np.asarray(cf.interactions)
         else:
-            parsed_inters = [x.strip() for x in raw_inters.split(',') if x != '']
+            parsed_inters = [x.strip() for x in raw_inters.split(',') if
+                             x != '']
             parsed_inters = np.asarray(parsed_inters)
 
-        implemented = set(self.config_args['cutoffs'].keys())
+        implemented = cf.interactions
         for inter in parsed_inters:
             if inter not in implemented:
                 raise ValueError(
@@ -292,4 +369,4 @@ class ConfigManager(Config):
 # Debugging area
 # =============================================================================
 # config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
-# self = ConfigManager(config_path, allowed_parameters)
+# self = ConfigManager(mode='debug')

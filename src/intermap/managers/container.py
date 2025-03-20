@@ -8,7 +8,7 @@ from numba import njit, types
 from numba.typed import List
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def transform(ijfs, inters):
     # Initialize containers
     i = 0
@@ -33,7 +33,7 @@ def transform(ijfs, inters):
     return to_assign
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def transform_wb(ijfs):
     # Initialize containers
     i = 0
@@ -93,23 +93,29 @@ def groupby(ijfs: types.Array(types.int64, 2, 'C')) -> types.DictType(
     return indices_as_array
 
 
-# todo: numba the fill method of InterDict
-class InterDict:
+# todo: numba the fill method of ContainerManager
+class ContainerManager:
     """
     A dictionary to store InterMap interactions
     """
 
-    def __init__(self, format_, min_prevalence, frames_id, atom_names,
-                 inter_names, resids, waters):
+    def __init__(self, args, iman, cuts):
 
-        # Parse arguments
-        self.format = format_
-        self.min_prevalence = min_prevalence
-        self.atom_names = atom_names
-        self.inter_names = inter_names
-        self.n_frames = frames_id.size
-        self.resids = resids
-        self.waters = waters
+        # Parse arguments from args
+        self.args = args
+        self.format = self.args.format
+        self.min_prevalence = self.args.min_prevalence
+
+        # Parse arguments from cuts
+        self.cuts = cuts
+        self.inter_names = self.get_inter_names()
+
+        # Parse arguments from iman
+        self.iman = iman
+        self.resids = self.iman.resids
+        self.waters = self.iman.waters
+        self.atom_names = self.iman.names
+        self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
         self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
@@ -122,49 +128,49 @@ class InterDict:
         for key, value in to_assign.items():
             self.dict[key][value.tolist()] = True
 
-    def lock(self):
-        """
-        Lock the dictionary to avoid further modifications
-        """
-        self.dict = dict(self.dict)
+    # def lock(self):
+    #     """
+    #     Lock the dictionary to avoid further modifications
+    #     """
+    #     self.dict = dict(self.dict)
 
-    def pack(self):
-        """
-        Get the prevalence of the interactions
-        """
-
-        packed_dict = {}
-        keys = list(self.dict.keys())
-        for key in keys:
-            if len(key) == 3:
-                s1_id, s2_id, inter_id = key
-                s1_name = self.atom_names[s1_id]
-                s2_name = self.atom_names[s2_id]
-                inter_name = self.inter_names[inter_id]
-                key2save = (s1_name, s2_name, inter_name)
-
-            elif len(key) == 4:
-                s1_id, s2_id, wat_id, inter_id = key
-                s1_name = self.atom_names[s1_id]
-                s2_name = self.atom_names[s2_id]
-                wat_name = self.atom_names[wat_id]
-                key2save = (s1_name, s2_name, wat_name, inter_id)
-            else:
-                raise ValueError('The key must have 3 or 4 elements')
-
-            time = self.dict[key]
-            prevalence = round(time.count() / self.n_frames * 100, 2)
-            del self.dict[key]
-            if prevalence < self.min_prevalence:
-                continue
-
-            if self.format == 'extended':
-                packed_dict[key2save] = {'time': bu.sc_encode(time),
-                                         'prevalence': prevalence}
-            else:
-                packed_dict[key2save] = prevalence
-
-        self.dict = packed_dict
+    # def pack(self):
+    #     """
+    #     Get the prevalence of the interactions
+    #     """
+    #
+    #     packed_dict = {}
+    #     keys = list(self.dict.keys())
+    #     for key in keys:
+    #         if len(key) == 3:
+    #             s1_id, s2_id, inter_id = key
+    #             s1_name = self.atom_names[s1_id]
+    #             s2_name = self.atom_names[s2_id]
+    #             inter_name = self.inter_names[inter_id]
+    #             key2save = (s1_name, s2_name, inter_name)
+    #
+    #         elif len(key) == 4:
+    #             s1_id, s2_id, wat_id, inter_id = key
+    #             s1_name = self.atom_names[s1_id]
+    #             s2_name = self.atom_names[s2_id]
+    #             wat_name = self.atom_names[wat_id]
+    #             key2save = (s1_name, s2_name, wat_name, inter_id)
+    #         else:
+    #             raise ValueError('The key must have 3 or 4 elements')
+    #
+    #         time = self.dict[key]
+    #         prevalence = round(time.count() / self.n_frames * 100, 2)
+    #         del self.dict[key]
+    #         if prevalence < self.min_prevalence:
+    #             continue
+    #
+    #         if self.format == 'extended':
+    #             packed_dict[key2save] = {'time': bu.sc_encode(time),
+    #                                      'prevalence': prevalence}
+    #         else:
+    #             packed_dict[key2save] = prevalence
+    #
+    #     self.dict = packed_dict
 
     def generate_lines(self):
         for key in self.dict:
@@ -196,3 +202,10 @@ class InterDict:
                 'sel1_atom,sel2_atom,water_atom,interaction_name,prevalence, timeseries\n')
             for line in self.generate_lines():
                 file.write(line)
+
+    def get_inter_names(self):
+        selected_others = self.cuts.selected_others
+        selected_aro = self.cuts.selected_aro
+        inter_names = np.asarray([x for x in selected_others if x != 'None'] +
+                                 [x for x in selected_aro if x != 'None'])
+        return inter_names

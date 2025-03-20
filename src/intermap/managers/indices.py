@@ -11,7 +11,9 @@ import numpy_indexed as npi
 import rdkit
 from rdkit import Chem
 
-import intermap.interactions.cutoffs as cf
+import intermap.commons as cmn
+import managers.cutoffs as cf
+import intermap.interactions.geometry as geom
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -46,6 +48,15 @@ def get_hh_bonds(universe):
 
 
 def ag2rdkit(ag):
+    """
+    Convert an AtomGroup to an RDKit molecule
+
+    Args:
+        ag: AtomGroup object from MDAnalysis
+
+    Returns:
+        rdkit_mol: RDKit molecule
+    """
     try:
         return ag.convert_to("RDKIT", force=False)
     except AttributeError:
@@ -54,7 +65,8 @@ def ag2rdkit(ag):
 
 def get_uniques_triads(universe):
     """
-    Get the unique residues in the universe
+    Get the unique residues in the universe taking into account the connected
+    residues
 
     Args:
         universe (mda.Universe): Universe object
@@ -64,7 +76,6 @@ def get_uniques_triads(universe):
         unique_rdmols (dict): Dictionary with the unique RDKit molecules
         unique_idx (dict): Dictionary with the indices of the unique residues
     """
-
     # Load universe information
     stamp = time.time()
     by_resnames = universe.residues.resnames
@@ -106,7 +117,7 @@ def get_uniques_triads(universe):
         rdk_disconnected[residue] = ag2rdkit(mono.atoms)
 
     rdkit_ = time.time() - stamp
-    logger.info(f"Time to convert residues to Rdkit format: {rdkit_:.2f} s")
+    logger.info(f"Residues converted to Rdkit format in {rdkit_:.2f} s")
     return (mda_connected, rdk_connected, mda_disconnected, rdk_disconnected,
             uniq_disconnected)
 
@@ -129,81 +140,63 @@ class IndexManager:
         'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
         'water': ' [OH2]'}
 
-    def __init__(self, topo, traj, sel1, sel2, interactions):
+    def __init__(self, args):
+        logger.info("Loading trajectory and selections."
+                    " Using the following SMARTS patterns:\n\n"
+                    f"{pformat(self.smarts)}\n")
 
-        # Parse the arguments
-        self.topo = topo
-        self.traj = traj
-        self.sel1 = sel1
-        self.sel2 = sel2
-        self.raw_inters = interactions
+        # Get the arguments from the parser
+        self.args = args
+        self.topo = args.topology
+        self.traj = args.trajectory
+        self.sel1 = args.selection_1
+        self.sel2 = args.selection_2
+        self.raw_inters = args.interactions
+        self.last_frame = args.last
 
         # Load the trajectory as a Universe
-        self.universe = self.load_traj()
-        self.n_atoms = self.universe.atoms.n_atoms
-        self.n_frames = len(self.universe.trajectory)
-        logger.info(f'Total number of atoms: {self.n_atoms}\n'
-                    f'Total number of frames: {self.n_frames}')
+        (self.universe, self.traj_frames, self.n_atoms,
+         self.n_frames) = self.load_traj()
 
-        # Make the general selections
-        sel1_idx, sel2_idx = self.get_selections_indices()
-        uniques = sorted(set(sel1_idx).union(set(sel2_idx)))
-        self.sel_idx = np.asarray(uniques, dtype=np.int32)
-        self.sel1_idx = npi.indices(self.sel_idx, sel1_idx).astype(np.int32)
-        self.sel2_idx = npi.indices(self.sel_idx, sel2_idx).astype(np.int32)
+        # Get indices of the selections
+        (self.sel_idx, self.s1_idx, self.s2_idx,
+         self.overlap) = self.get_selections_indices()
 
-        # Get VDW radii
-        all_radii = self.get_vdw_radii()
-        self.radii = all_radii[self.sel_idx]
+        # Get the names of the atoms
+        self.resids, self.names = self.get_resids_and_names()
 
         # Get triads (connected) / monomers (disconnected) of residues
         (self.mda_connected, self.rdk_connected, self.mda_disconnected,
          self.rdk_disconnected, self.uniq_disconnected) = get_uniques_triads(
             self.universe)
 
-        # Single interactions
+        # Get VDW radii
+        self.vdw_radii = self.get_vdw_radii()
+
+        # Get indices of the 1D interactions
         self.hydroph = self.get_singles('hydroph')
         self.cations = self.get_singles('cations')
         self.anions = self.get_singles('anions')
-        self.metal_acc = self.get_singles('metal_acc')
-        self.metal_don = self.get_singles('metal_don')
+        self.met_acc = self.get_singles('metal_acc')
+        self.met_don = self.get_singles('metal_don')
 
-        # Double interactions
-        self.hb_D, self.hb_H, self.hb_A = self.get_doubles('hb_don', 'hb_acc')
-        self.xb_D, self.xb_H, self.xb_A = self.get_doubles('xb_don', 'xb_acc')
+        # Get indices of the 2D1A interactions
+        self.hb_don, self.hb_hydro, self.hb_acc = self.get_doubles(
+            'hb_don', 'hb_acc')
+        self.xb_don, self.xb_hal, self.xb_acc = self.get_doubles(
+            'xb_don', 'xb_acc')
 
-        # Rings
-        rings = self.get_rings()
-        sel_rings = rings.copy()
-        for i, ring in enumerate(rings):
-            r = ring[:ring[-1]]
-            sel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, r, missing=-1)
-        self.rings = sel_rings[sel_rings[:, 0] != -1]
+        # Get indices of waters
+        self.waters, self.raw_waters = self.get_waters()
 
-        # Waters
-        self.waters = self.get_waters()
+        # Get indices of the aromatic interactions
+        (self.rings, self.s1_cat, self.s2_cat, self.s1_cat_idx,
+         self.s2_cat_idx, self.s1_rings, self.s2_rings, self.s1_rings_idx,
+         self.s2_rings_idx, self.s1_aro_idx, self.s2_aro_idx,
+         self.xyz_aro_idx) = self.get_aro()
 
-        logger.debug(f"Detected atom types:\n"
-                     f"In Selection 1 ({self.sel1}): {len(self.sel1_idx)}\n"
-                     f"In Selection 2 ({self.sel2}): {len(self.sel2_idx)}\n"
-                     f"Hydrophobic: {len(self.hydroph)}\n"
-                     f"Cations: {len(self.cations)}\n"
-                     f"Anions: {len(self.anions)}\n"
-                     f"Metal acceptors: {len(self.metal_acc)}\n"
-                     f"Metal donors: {len(self.metal_don)}\n"
-                     f"Hydrogen bond donors: {len(self.hb_D)}\n"
-                     f"Hydrogen bond hydrogens: {len(self.hb_H)}\n"
-                     f"Hydrogen bond acceptors: {len(self.hb_A)}\n"
-                     f"Halogen bond donors: {len(self.xb_D)}\n"
-                     f"Halogens: {len(self.xb_H)}\n"
-                     f"Halogen bond acceptors: {len(self.xb_A)}\n"
-                     f"Aromatic rings: {len(self.rings)}")
-        # Possible interactions
-        self.interactions = self.get_interactions()
-
-        # Check the SMARTS patterns
-        logger.debug(f"Using the following SMARTS patterns:\n"
-                     f" {pformat(self.smarts)}")
+        # Report the interactions detected
+        self.inters_requested = self.report()
 
     def load_traj(self):
         """
@@ -220,8 +213,10 @@ class IndexManager:
             any_bond = universe.bonds[0]
         except:
             logger.warning(f'The passed topology does not contain bonds. '
-                           f'MDTraj will guess them automatically.')
+                           f'MDAnalysis will guess them automatically.')
+            guessing = time.time()
             universe = mda.Universe(self.topo, self.traj, guess_bonds=True)
+            logger.info(f"Bonds guessed in {time.time() - guessing:.2f} s")
             any_bond = universe.bonds[0]
         if any_bond is None:
             raise ValueError(
@@ -233,13 +228,24 @@ class IndexManager:
         universe.delete_bonds(get_hh_bonds(universe))
         del_time = time.time() - stamp1
         if are_hh:
-            logger.warning(f"This universe contains H-H bonds.\n"
-                           f"Time to remove H-H bonds: {del_time:.2f} s")
+            logger.warning(
+                f"This universe contained H-H bonds. Removed in {del_time:.2f} s")
 
         # Output load time
         loading = time.time() - stamp0
-        logger.info(f"Time to load the trajectory: {loading:.2f} s")
-        return universe
+
+        # Chunks of frames to analyze
+        last = cmn.parse_last_param(self.last_frame, len(universe.trajectory))
+        traj_frames = np.arange(self.args.start, last, self.args.stride)
+
+        logger.info(
+            f"Trajectory loaded in {loading:.2f} s.\n"
+            f" Number of frames to consider (start:last:stride): "
+            f"{traj_frames.size} ({self.args.start}:{last}:{self.args.stride})")
+
+        n_atoms = universe.atoms.n_atoms
+        n_frames = len(universe.trajectory)
+        return universe, traj_frames, n_atoms, n_frames
 
     def get_selections_indices(self):
         """
@@ -256,7 +262,13 @@ class IndexManager:
             raise ValueError("No atoms found for selection 1")
         if len(s2_idx) == 0:
             raise ValueError("No atoms found for selection 2")
-        return s1_idx, s2_idx
+
+        uniques = sorted(set(s1_idx).union(set(s2_idx)))
+        sel_idx = np.asarray(uniques, dtype=np.int32)
+        s1_idx = npi.indices(sel_idx, s1_idx).astype(np.int32)
+        s2_idx = npi.indices(sel_idx, s2_idx).astype(np.int32)
+        overlap = np.intersect1d(s1_idx, s2_idx).size > 0
+        return sel_idx, s1_idx, s2_idx, overlap
 
     def get_singles(self, identifier):
         """
@@ -412,7 +424,54 @@ class IndexManager:
         for i, ring in enumerate(rings):
             padded_rings[i, :len(ring)] = ring
             padded_rings[i, -1] = len(ring)
-        return padded_rings
+
+        sel_rings = padded_rings.copy()
+        for i, ring in enumerate(padded_rings):
+            r = ring[:ring[-1]]
+            sel_rings[i, :ring[-1]] = npi.indices(self.sel_idx, r, missing=-1)
+        return sel_rings
+
+    def get_aro(self):
+        """
+        Get the indices associated with the aromatic interactions
+
+        Returns:
+            s1_cat (ndarray): Indices of the atoms in selection 1 that are cations
+            s2_cat (ndarray): Indices of the atoms in selection 2 that are cations
+
+            s1_rings (ndarray): Indices of the atoms in selection 1 that are in rings
+            s2_rings (ndarray): Indices of the atoms in selection 2 that are in rings
+            s1_rings_idx (ndarray): Indices of the atoms in selection 1 that are in rings
+            s2_rings_idx (ndarray): Indices of the atoms in selection 2 that are in rings
+            s1_aro_idx (ndarray): Indices of the atoms in selection 1 that are in aromatic interactions
+            s2_aro_idx (ndarray): Indices of the atoms in selection 2 that are in aromatic interactions
+            xyz_aro_idx (ndarray): Indices of the atoms in the universe that are in aromatic interactions
+        """
+        rings_raw = self.get_rings()
+        rings = rings_raw[rings_raw[:, 0] != -1]
+        s1_cat = self.s1_idx[geom.isin(self.s1_idx, self.cations)]
+        s2_cat = self.s2_idx[geom.isin(self.s2_idx, self.cations)]
+        s1_rings = rings[geom.isin(rings[:, 0], self.s1_idx)]
+        s2_rings = rings[geom.isin(rings[:, 0], self.s2_idx)]
+
+        n0 = s1_cat.size + s2_cat.size
+        n1 = n0 + s1_rings.shape[0]
+        n2 = n1 + s2_rings.shape[0]
+
+        s1_cat_idx = np.arange(0, s1_cat.size, dtype=np.int32)
+        s2_cat_idx = np.arange(s1_cat.size, n0, dtype=np.int32)
+        s1_rings_idx = np.arange(n0, n1, dtype=np.int32)
+        s2_rings_idx = np.arange(n1, n2, dtype=np.int32)
+        s1_aro_idx = np.concatenate((s1_cat_idx, s1_rings_idx)).astype(
+            np.int32)
+        s2_aro_idx = np.concatenate((s2_cat_idx, s2_rings_idx)).astype(
+            np.int32)
+        xyz_aro_idx = np.concatenate((s1_cat, s2_cat, s1_rings[:, 0],
+                                      s2_rings[:, 0])).astype(np.int32)
+
+        return (
+            rings, s1_cat, s2_cat, s1_cat_idx, s2_cat_idx, s1_rings, s2_rings,
+            s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx)
 
     def get_waters(self):
         """
@@ -438,7 +497,8 @@ class IndexManager:
         selected_raw = npi.indices(
             self.sel_idx, np.asarray(waters), missing=-1)
         selected = selected_raw[selected_raw != -1].astype(np.int32)
-        return selected
+
+        return selected, waters
 
     def get_max_vdw_dist(self):
         """
@@ -449,8 +509,8 @@ class IndexManager:
             max_vdw (float): Maximum van der Waals distance between the atoms
         """
 
-        s1_elements = set(self.universe.atoms[self.sel1_idx].elements)
-        s2_elements = set(self.universe.atoms[self.sel2_idx].elements)
+        s1_elements = set(self.universe.atoms[self.s1_idx].elements)
+        s2_elements = set(self.universe.atoms[self.s2_idx].elements)
 
         product = it.product(s1_elements, s2_elements)
         unique_pairs = set(tuple(sorted((a, b))) for a, b in product)
@@ -473,7 +533,8 @@ class IndexManager:
         elements = self.universe.atoms.elements
         pt = rdkit.Chem.GetPeriodicTable()
         radii = np.array([pt.GetRvdw(e) for e in elements])
-        return radii.astype(np.float32)
+        all_radii = radii.astype(np.float32)
+        return all_radii[self.sel_idx]
 
     def get_interactions(self):
         """
@@ -483,16 +544,18 @@ class IndexManager:
 
         """
 
-        len_s1, len_s2 = len(self.sel1_idx), len(self.sel2_idx)
+        # Check the lenght of the selections
+        len_s1, len_s2 = len(self.s1_idx), len(self.s2_idx)
         len_hp = len(self.hydroph)
         len_an, len_ca = len(self.anions), len(self.cations)
-        len_ma, len_md = len(self.metal_acc), len(self.metal_don)
-        len_hbd, len_hba, len_hbh = len(self.hb_D), len(self.hb_A), len(
-            self.hb_H)
-        len_xbd, len_xba, len_xbh = len(self.xb_D), len(self.xb_A), len(
-            self.xb_H)
+        len_ma, len_md = len(self.met_acc), len(self.met_don)
+        len_hbd, len_hba, len_hbh = len(self.hb_don), len(self.hb_acc), len(
+            self.hb_hydro)
+        len_xbd, len_xba, len_xbh = len(self.xb_don), len(self.xb_acc), len(
+            self.xb_hal)
         len_rings = len(self.rings)
 
+        # Gather the interactions constraints
         is_possible = {
             'CloseContacts': (len_s1 > 0) and (len_s2 > 0),
             'VdWContact': (len_s1 > 0) and (len_s2 > 0),
@@ -510,14 +573,14 @@ class IndexManager:
             'CationPi': (len_rings > 0) and (len_ca > 0),
             'FaceToFace': len_rings > 0,
             'EdgeToFace': len_rings > 0,
+            'WaterBridges': len(self.waters) > 0,
         }
 
         raw = self.raw_inters
-        for x in raw:
-            if x == 'all':
-                requested = list(cf.parse_cutoffs().keys())
-            else:
-                requested = raw
+        if raw == 'all':
+            requested = cf.interactions
+        else:
+            requested = raw
 
         to_compute = []
         to_skip = []
@@ -531,18 +594,62 @@ class IndexManager:
             logger.warning(
                 f"Skipping the following interactions because there "
                 f"are no atoms to compute them under the current "
-                f"selections for the given system:\n"
-                f"{to_skip} ")
+                f"selections for the passed system:\n"
+                f" {pformat(to_skip)}")
         return to_compute
 
-# =============================================================================
-#
+    def get_resids_and_names(self):
+        """
+        Get the residue IDs and names of the atoms in the selections
+
+        Returns:
+            resids: array with the residue IDs
+            names: list with the names of the atoms
+        """
+        atnames = self.universe.atoms.names[self.sel_idx]
+        resnames = self.universe.atoms.resnames[self.sel_idx]
+        at2res = self.universe.atoms.resids[self.sel_idx]
+        resids = self.universe.atoms.resids
+        names = [f"{resnames[i]}_{at2res[i]}_{atnames[i]}" for i, x in
+                 enumerate(self.sel_idx)]
+        return resids, names
+
+    def report(self):
+        """
+        Report the interactions detected
+
+        Returns:
+            inters_requested: List with the interactions requested
+        """
+        logger.info(
+            f'The following selected atoms were detected and classified:\n\n'
+            f' Total number of atoms: {self.n_atoms}\n'
+            f" Number of selected atoms: {self.sel_idx.size}\n"
+            f"   In Selection 1 ({self.sel1}): {len(self.s1_idx)}\n"
+            f"   In Selection 2 ({self.sel2}): {len(self.s2_idx)}\n"
+            f"   Hydrophobic: {len(self.hydroph)}\n"
+            f"   Cations: {len(self.cations)}\n"
+            f"   Anions: {len(self.anions)}\n"
+            f"   Metal acceptors: {len(self.met_acc)}\n"
+            f"   Metal donors: {len(self.met_don)}\n"
+            f"   Hydrogen bond donors: {len(self.hb_don)}\n"
+            f"   Hydrogen bond hydrogens: {len(self.hb_hydro)}\n"
+            f"   Hydrogen bond acceptors: {len(self.hb_acc)}\n"
+            f"   Halogen bond donors: {len(self.xb_don)}\n"
+            f"   Halogens: {len(self.xb_hal)}\n"
+            f"   Halogen bond acceptors: {len(self.xb_acc)}\n"
+            f"   Aromatic rings: {len(self.rings)}\n"
+            f"   Water molecules: {len(self.waters)}\n")
+
+        # Possible interactions
+        inters_requested = self.get_interactions()
+        return inters_requested
+
 # =============================================================================
 # import intermap.config as conf
 # from argparse import Namespace
 #
-# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap3.cfg'
+# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
 # config = conf.ConfigManager(config_path, conf.allowed_parameters)
 # args = Namespace(**config.config_args)
-# self = IndexManager(args.topology, args.trajectory, args.selection_1,
-#                     args.selection_2, args.interactions)
+# self = IndexManager(args)

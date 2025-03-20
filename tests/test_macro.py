@@ -6,8 +6,8 @@ from numba import njit
 from numba_kdtree import KDTree as nckd
 
 import intermap.commons as cmn
-import intermap.config as conf
-import intermap.interactions.cutoffs as cf
+import managers.config as conf
+import managers.cutoffs as cf
 from intermap.interactions.aro import aro
 
 
@@ -29,13 +29,13 @@ def test_kdtree(iman, conf_path):
 def test_aro(iman, conf_path):
     xyz = iman.universe.atoms.positions
     k = 0
-    s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+    s1_indices, s2_indices = iman.s1_idx, iman.s2_idx
     cations = iman.cations
     rings = iman.rings
 
     config = conf.ConfigManager(conf_path, conf.allowed_parameters)
     args = Namespace(**config.config_args)
-    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+    all_inters, all_cutoffs = cf.get_inters_cutoffs()
     to_compute = iman.interactions
     selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)

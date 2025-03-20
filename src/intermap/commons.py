@@ -2,17 +2,12 @@
 """
 Common functions used in the different modules of the package
 """
-import logging
 import os
-import re
 
-import numpy_indexed as npi
+import numpy as np
 from numba import njit
 from numba.typed import List
 from numba_kdtree import KDTree as nckd
-
-logger = logging.getLogger('InterMapLogger')
-import numpy as np
 
 
 def parse_last_param(last, traj_len):
@@ -29,9 +24,9 @@ def parse_last_param(last, traj_len):
     if last == -1:
         last = traj_len
     elif last > traj_len:
-        print(
-            f"WARNING: The declared end frame {last} is larger than the trajectory "
-            f"length {traj_len}. The end frame will be set to the last frame.")
+        logger.warning(
+            f"The declared end frame '{last}' is larger than the trajectory "
+            f"length '{traj_len}'. The end frame will be set to the last frame.")
         last = traj_len
     return last
 
@@ -56,74 +51,6 @@ def get_coordinates(u, chunk, sel_idx):
     for i, frame in enumerate(chunk):
         xyz_chunk[i] = u.trajectory[frame].positions[sel_idx].copy()
     return xyz_chunk
-
-
-def start_logger(log_path):
-    """
-    Start the logger for the InterMap run.
-
-    Args:
-        log_path (str): Path to the log file.
-
-    Returns:
-        logger (logging.Logger): Logger object.
-    """
-
-    logger = logging.getLogger('InterMapLogger')
-    logger.setLevel("DEBUG")
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel("DEBUG")
-    formatter = logging.Formatter(
-        ">>>>>>>> {asctime} - {levelname} - {message}\n",
-        style="{",
-        datefmt="%Y-%m-%d %H:%M")
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    file_handler = logging.FileHandler(log_path, encoding="utf-8")
-    file_handler.setLevel("DEBUG")
-    logger.addHandler(file_handler)
-    return logger
-
-
-def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
-    """
-    Get the cutoffs and interactions to compute
-
-    Args:
-        to_compute (ndarray): All interactions to compute
-        all_inters (ndarray): All interactions
-        all_cutoffs (ndarray): All cutoffs
-
-    Returns:
-        to_compute_aro (ndarray): Aromatic interactions to compute
-        to_compute_others (ndarray): Non-aromatic interactions to compute
-        cutoffs_aro (ndarray): Cutoffs for the aromatic interactions
-        cutoffs_others (ndarray): Cutoffs for the non-aromatic interactions
-    """
-
-    # Parse aromatics
-    bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
-               npi.indices(all_inters, [x])]
-    if len(bit_aro) == 0:
-        to_compute_aro = List(['None'])
-    else:
-        to_compute_aro = List([all_inters[x] for x in bit_aro])
-
-    # Parse non-aromatics
-    bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
-                  in npi.indices(all_inters, [x])]
-    if len(bit_others) == 0:
-        to_compute_others = List(['None'])
-    else:
-        to_compute_others = List([all_inters[x] for x in bit_others])
-
-    # Get the cutoffs
-    cutoffs_aro = all_cutoffs[:, bit_aro]
-    cutoffs_others = all_cutoffs[:, bit_others]
-
-    return to_compute_aro, to_compute_others, cutoffs_aro, cutoffs_others
 
 
 def check_path(path, check_exist=True):

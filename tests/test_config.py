@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import pytest
 
-import intermap.config as conf
+import managers.config as conf
 
 
 def save_config(conf_obj, conf_path):

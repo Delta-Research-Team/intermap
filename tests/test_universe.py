@@ -2,7 +2,7 @@
 
 import MDAnalysis as mda
 import pytest
-from interactions import indices as idx
+from managers import indices as idx
 from rgpack.generals import recursive_defaultdict
 
 

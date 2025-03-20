@@ -2,189 +2,110 @@
 """
 Runner for InterMap
 """
-import sys
+import logging
 import time
 from argparse import Namespace
 from os.path import basename, join
-from pprint import pformat
 
 import mdtraj as md
 import numpy as np
 from numba import set_num_threads
 from tqdm import tqdm
 
-import intermap.config as conf
-import intermap.interactions.cutoffs as cf
-import intermap.interactions.interdict as idt
 from intermap import commons as cmn
-from intermap.interactions import aro, geometry as aot, macro
-from intermap.interactions.indices import IndexManager
+from intermap.interactions import aro
+from intermap.interactions.runners import estimate, runpar
 from intermap.interactions.waters import wb1
+from intermap.managers.config import ConfigManager
+from intermap.managers.container import ContainerManager
+from intermap.managers.cutoffs import CutoffsManager
+from intermap.managers.indices import IndexManager
+
+logger = logging.getLogger('InterMapLogger')
+
 
 # %% todo: check docstrings
-# todo: let users choose the inters to compute/output (maintain square matrix
-#  but do a magic to avoid recompilation due to changing the number of interactions)
 
-def run(mode='production'):
+
+def run():
     """
     Main function to run InterMap
     """
-    # =========================================================================
-    # Parsing the configuration file
+    # %%=======================================================================
+    # 1. Parse the configuration file
     # =========================================================================
     start_time = time.time()
-
-    if mode == 'production':
-        if len(sys.argv) != 2:
-            raise ValueError(
-                '\nInterMap syntax is: intermap path-to-config-file')
-        config_path = sys.argv[1]
-    elif mode == 'debug':
-        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap3.cfg'
-    else:
-        raise ValueError('Only modes allowed are production and running')
-    # %%
-    config = conf.ConfigManager(config_path, conf.allowed_parameters)
+    config = ConfigManager(mode='debug')
     args = Namespace(**config.config_args)
-    log_path = join(args.output_dir, f"{basename(args.job_name)}_InterMap.log")
-    logger = cmn.start_logger(log_path)
-    logger.info(f"Starting InterMap with the following parameters:"
-                f"\n J"
-                f"Job name: {args.job_name}"
-                f"\n Number of processors: {args.n_procs}"
-                f"\n Output directory: {args.output_dir}"
-                f"\n Topology: {args.topology}"
-                f"\n Trajectory: {args.trajectory}"
-                f"\n Start frame: {args.start}"
-                f"\n Last frame: {args.last}"
-                f"\n Stride: {args.stride}"
-                f"\n Chunk size: {args.chunk_size}"
-                f"\n Selection 1: {args.selection_1}"
-                f"\n Selection 2: {args.selection_2}"
-                f"\n Min prevalence: {args.min_prevalence}"
-                f"\n Report's format: {args.format}"
-                )
-    # =========================================================================
-    # Load the indices & interactions to compute
-    # =========================================================================
-    iman = IndexManager(args.topology, args.trajectory, args.selection_1,
-                        args.selection_2, args.interactions)
-
-    # Indices & selections for computing interactions
-    sel_idx, s1_indices, s2_indices = iman.sel_idx, iman.sel1_idx, iman.sel2_idx
-    vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-    hydrophobes = iman.hydroph
-    metal_donors, metal_acceptors = iman.metal_don, iman.metal_acc
-    hb_hydros, hb_donors, hb_acc = iman.hb_H, iman.hb_D, iman.hb_A
-    xb_halogens, xb_donors, xb_acc = iman.xb_H, iman.xb_D, iman.xb_A
-    waters = iman.waters
-    overlap = np.intersect1d(s1_indices, s2_indices).size > 0
-
-    anions, cations = iman.anions, iman.cations
-    rings = iman.rings
-    s1_cat = s1_indices[aot.isin(s1_indices, cations)]
-    s2_cat = s2_indices[aot.isin(s2_indices, cations)]
-    s1_rings = rings[aot.isin(rings[:, 0], s1_indices)]
-    s2_rings = rings[aot.isin(rings[:, 0], s2_indices)]
-    # Internal indexing for xyz2 coordinates
-    n0 = s1_cat.size + s2_cat.size
-    n1 = n0 + s1_rings.shape[0]
-    n2 = n1 + s2_rings.shape[0]
-    s1_cat_idx = np.arange(0, s1_cat.size, dtype=np.int32)
-    s2_cat_idx = np.arange(s1_cat.size, n0, dtype=np.int32)
-    s1_rings_idx = np.arange(n0, n1, dtype=np.int32)
-    s2_rings_idx = np.arange(n1, n2, dtype=np.int32)
-    s1_aro_indices = np.concatenate((s1_cat_idx, s1_rings_idx)).astype(
-        np.int32)
-    s2_aro_indices = np.concatenate((s2_cat_idx, s2_rings_idx)).astype(
-        np.int32)
-    xyz_aro_real_idx = np.concatenate(
-        (s1_cat, s2_cat, s1_rings[:, 0], s2_rings[:, 0])).astype(np.int32)
-
-    # Names of the selected atoms
-    universe = iman.universe
-    atnames = universe.atoms.names[sel_idx]
-    resnames = universe.atoms.resnames[sel_idx]
-    at2res = universe.atoms.resids[sel_idx]
-    resids = universe.atoms.resids
-    names = [f"{resnames[i]}_{at2res[i]}_{atnames[i]}" for i, x in
-             enumerate(sel_idx)]
-
-    # Chunks of frames to analyze
-    n_frames = iman.n_frames
-    last = cmn.parse_last_param(args.last, n_frames)
-    traj_frames = np.arange(args.start, last, args.stride)
-    logger.info(f"Number of frames to consider (start:last:stride): "
-                f"{traj_frames.size} ({args.start}:{last}:{args.stride})")
-    logger.info(f"Number of atoms to consider: {iman.sel_idx.size}")
-
-    # =========================================================================
-    # Parsing the interactions & cutoffs
-    # =========================================================================
-    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
-    to_compute = iman.interactions
-    selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
-        cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
-    len_others = len(selected_others) if not 'None' in selected_others else 0
-    len_aro = len(selected_aro) if not 'None' in selected_aro else 0
-
-    # todo: put this in args
-    dist_cut_aro = cutoffs_aro[:2].max()
-    dist_cut_others = max(cutoffs_others[:2].max(), max_vdw)
-
-    cutoffs_str = {x: args.cutoffs[x] for x in args.cutoffs if x in to_compute}
-    logger.info(f"Interactions to compute:\n {pformat(to_compute)}")
-    logger.debug(f"Cutoffs parsed:\n {pformat(cutoffs_str)}")
-
-    # =========================================================================
-    # Estimating memory allocation
-    # =========================================================================
-    logger.info(f"Estimating memory allocation")
     set_num_threads(args.n_procs)
-    n_frames, n_samples = len(universe.trajectory), 10
-    sub = universe.trajectory[::n_frames // n_samples]
-    f4 = np.float32
-    positions = np.asarray([ts.positions.copy() for ts in sub], dtype=f4)
 
-    ijf_shape, inters_shape, mb1, mb2, v_size, h_size = macro.estimate(
-        positions, xyz_aro_real_idx, args.chunk_size, s1_indices, s2_indices,
-        cations, s1_cat_idx, s2_cat_idx, s1_cat, s2_cat, s1_rings, s2_rings,
-        s1_rings_idx, s2_rings_idx, s1_aro_indices, s2_aro_indices,
-        cutoffs_aro, selected_aro, len_aro, anions, hydrophobes, metal_donors,
-        metal_acceptors, vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc,
-        xb_halogens, xb_donors, xb_acc, cutoffs_others, selected_others,
-        len_others, dist_cut_aro, overlap)
-
-    logger.debug(f"Allocated space for interactions:"
-                 f" ~{mb1} MB ({args.chunk_size}, {v_size}, {h_size})")
-    logger.debug(f"Allocated space for coordinates:"
-                 f" ~{mb2} MB ({args.chunk_size}, {sel_idx.size}, 3) ")
-
-    # %%=======================================================================
-    # Fill the interaction dictionary
     # =========================================================================
-    logger.info(f"Starting to compute InterMap interactions")
-    fmt, min_prev = args.format, args.min_prevalence
-    inters = np.asarray([x for x in selected_others if x != 'None'] +
-                        [x for x in selected_aro if x != 'None'])
-    self = idt.InterDict(fmt, min_prev, traj_frames, names, inters,
-                         at2res, waters)
-    hba_idx = (inters == 'HBAcceptor').nonzero()[0][0]
-    hbd_idx = (inters == 'HBDonor').nonzero()[0][0]
+    # 2. Load the indices & interactions to compute
+    # =========================================================================
+    iman = IndexManager(args)
+    (sel_idx, s1_idx, s2_idx, s1_cat, s2_cat, s1_cat_idx, s2_cat_idx, s1_rings,
+     s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx,
+     vdw_radii, max_vdw, hydroph, met_don, met_acc, hb_hydr, hb_don, hb_acc,
+     xb_hal, xb_don, xb_acc, waters, anions, cations, rings, overlap, universe,
+     resids, names, n_frames, traj_frames, inters_requested) = (
+
+        iman.sel_idx, iman.s1_idx, iman.s2_idx, iman.s1_cat, iman.s2_cat,
+        iman.s1_cat_idx, iman.s2_cat_idx, iman.s1_rings, iman.s2_rings,
+        iman.s1_rings_idx, iman.s2_rings_idx, iman.s1_aro_idx, iman.s2_aro_idx,
+        iman.xyz_aro_idx, iman.vdw_radii, iman.get_max_vdw_dist(),
+        iman.hydroph, iman.met_don, iman.met_acc, iman.hb_hydro, iman.hb_don,
+        iman.hb_acc, iman.xb_hal, iman.xb_don, iman.xb_acc, iman.waters,
+        iman.anions, iman.cations, iman.rings, iman.overlap, iman.universe,
+        iman.resids, iman.names, iman.n_frames, iman.traj_frames,
+        iman.inters_requested)
+
+    # =========================================================================
+    # 3. Parse the interactions & cutoffs
+    # =========================================================================
+    cuts = CutoffsManager(args, iman)
+    (cuts_aro, cuts_others, selected_aro, selected_others, len_aro, len_others,
+     max_dist_aro, max_dist_others) = (
+
+        cuts.cuts_aro, cuts.cuts_others, cuts.selected_aro,
+        cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
+        cuts.max_dist_others)
+
+    hba_idx = inters_requested.index(
+        'HBAcceptor') if 'HBAcceptor' in inters_requested else None
+    hbd_idx = inters_requested.index(
+        'HBDonor') if 'HBDonor' in inters_requested else None
     idxs = [hba_idx, hbd_idx]
 
-    total_pairs, total_inters = 0, 0
-    N = traj_frames.size // args.chunk_size
-    chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
+    # =========================================================================
+    # 4. Estimating memory allocation
+    # =========================================================================
+    ijf_shape, inters_shape = estimate(
+        universe, xyz_aro_idx, args.chunk_size, s1_idx, s2_idx, cations,
+        s1_cat_idx, s2_cat_idx, s1_cat, s2_cat, s1_rings, s2_rings,
+        s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, cuts_aro,
+        selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
+        hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
+        selected_others, len_others, max_dist_aro, max_dist_others, overlap)
 
+    # =========================================================================
+    # 5. Trim the trajectory
+    # =========================================================================
+    n_chunks = traj_frames.size // args.chunk_size
+    chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
+    last = chunk_frames[-1][-1]
     trajiter = md.iterload(args.trajectory, top=args.topology,
                            stride=args.stride, chunk=args.chunk_size)
 
-    n_frames_proc = 0
-    for i, chunk in tqdm(enumerate(trajiter), desc='Detecting Interactions',
-                         unit='chunk', total=N, ):
-        # break
-        # Stop the iteration if the user-declared last frame  is reached
+    # %%=======================================================================
+    # 6. Detect the interactions
+    # =========================================================================
+    container = ContainerManager(args, iman, cuts)
+    total_pairs, total_inters, n_frames_proc = 0, 0, 0
+    for i, chunk in tqdm(enumerate(trajiter),
+                         desc='Detecting Interactions',
+                         unit='chunk', total=n_chunks, ):
+
+        # Stop the iterations if the user-declared last frame  is reached
         n_frames_proc += chunk.n_frames
         M = chunk_frames[i].size
         if n_frames_proc >= last:
@@ -194,55 +115,54 @@ def run(mode='production'):
         # LOAD the coordinates
         xyz_chunk = chunk.xyz.astype(np.float32)[:, sel_idx] * 10
 
-        trees_chunk = cmn.get_trees(xyz_chunk, s2_indices)
+        trees_chunk = cmn.get_trees(xyz_chunk, s2_idx)
 
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
         aro_balls = aro.get_balls(
-            xyzs_aro, s1_aro_indices, s2_aro_indices, dist_cut_aro)
+            xyzs_aro, s1_aro_idx, s2_aro_idx, max_dist_aro)
 
-        ijf_chunk, inters_chunk = macro.runpar(
-            xyz_chunk, xyzs_aro, xyz_aro_real_idx, trees_chunk, aro_balls,
-            ijf_shape, inters_shape, s1_indices, s2_indices, anions, cations,
-            s1_cat_idx, s2_cat_idx, hydrophobes, metal_donors, metal_acceptors,
-            vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
-            xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
-            s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
-            cutoffs_aro, selected_aro, overlap)
+        ijf_chunk, inters_chunk = runpar(
+            xyz_chunk, xyzs_aro, xyz_aro_idx, trees_chunk, aro_balls,
+            ijf_shape, inters_shape, s1_idx, s2_idx, anions, cations,
+            s1_cat_idx, s2_cat_idx, hydroph, met_don, met_acc,
+            vdw_radii, max_vdw, hb_hydr, hb_don, hb_acc, xb_hal,
+            xb_don, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
+            s1_aro_idx, s2_aro_idx, cuts_others, selected_others,
+            cuts_aro, selected_aro, overlap)
+
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
-        print(total_pairs, total_inters)
 
+        # Fill interactions in ijf and wb interactions in ijkf
         frames = chunk_frames[i]
         if ijf_chunk.shape[0] > 0:
-            # Fill interactions in ijf
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            self.fill(ijf_chunk, inters_chunk)
-
+            container.fill(ijf_chunk, inters_chunk)
             if waters.size > 0:
-                # Fill wb interactions in ijkf
                 ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
-                self.fill(ijkf, inters='wb')
+                container.fill(ijkf, inters='wb')
 
+    # %%=======================================================================
+    # 7. Save the interactions
     # =========================================================================
-    # Save the interactions
-    # =========================================================================
-    job_name = basename(args.job_name)
-    pickle_name = f"{job_name}_InterMap.tsv"
-    pickle_path = join(args.output_dir, pickle_name)
-    logger.info(f"Saving the interactions in {pickle_path}")
-    self.save(pickle_path)
+    out_name = f"{basename(args.job_name)}_InterMap.tsv"
+    pickle_path = join(args.output_dir, out_name)
+    container.save(pickle_path)
 
-    # =========================================================================
-    # Timing
+    # %%=======================================================================
+    # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(self.dict)
-    logger.info(f"Total number of unique atom pairs detected:, {ldict}")
-    logger.info(f"Total number of interactions detected: {total_inters}")
-    logger.info(f"Total elapsed time: {tot} s")
-    logger.info(f"Normal termination of InterMap job '{job_name}'")
+    ldict = len(container.dict)
+    print('\n\n')
+    logger.info(
+        f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
+        f" Interactions saved in {pickle_path}\n"
+        f" Total number of unique atom pairs detected: {ldict}\n"
+        f" Total number of interactions detected: {total_inters}\n"
+        f" Elapsed time: {tot} s")
 
 
-run(mode='debug')
+run()
