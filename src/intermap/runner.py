@@ -6,6 +6,8 @@ import logging
 import time
 from argparse import Namespace
 from os.path import basename, join
+from os.path import basename, join, dirname
+from pprint import pformat
 
 import mdtraj as md
 import numpy as np
