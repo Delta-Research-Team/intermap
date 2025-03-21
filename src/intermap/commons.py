@@ -2,12 +2,25 @@
 """
 Common functions used in the different modules of the package
 """
+import logging
 import os
 
 import numpy as np
 from numba import njit
 from numba.typed import List
 from numba_kdtree import KDTree as nckd
+
+logger = logging.getLogger('InterMapLogger')
+
+
+def trajiter(universe, chunk_frames, sel_idx):
+    for chunk in chunk_frames:
+        xyz_chunk = np.empty((chunk.size, sel_idx.size, 3),
+                             dtype=np.float32)
+        for i, frame in enumerate(chunk):
+            xyz_chunk[i] = universe.trajectory[frame].positions[
+                sel_idx]
+        yield xyz_chunk
 
 
 def parse_last_param(last, traj_len):

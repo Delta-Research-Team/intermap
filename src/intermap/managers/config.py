@@ -8,7 +8,7 @@ from os.path import abspath, basename, dirname, isabs, join, normpath
 import numpy as np
 
 import intermap.commons as cmn
-import managers.cutoffs as cf
+import intermap.managers.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
@@ -146,6 +146,7 @@ def detect_config_path(mode='debug'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = '/home/gonzalezroy/test_data/imap1.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path

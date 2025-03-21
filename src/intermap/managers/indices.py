@@ -12,7 +12,7 @@ import rdkit
 from rdkit import Chem
 
 import intermap.commons as cmn
-import managers.cutoffs as cf
+import intermap.managers.cutoffs as cf
 import intermap.interactions.geometry as geom
 
 logger = logging.getLogger('InterMapLogger')
@@ -231,6 +231,15 @@ class IndexManager:
             logger.warning(
                 f"This universe contained H-H bonds. Removed in {del_time:.2f} s")
 
+        # Ensure all elements are present
+        elements = universe.atoms.elements
+        if '' in elements:
+            missing = np.where(elements == '')[0]
+            names = universe.atoms.names[missing]
+            guessed = [x[0] for x in names]
+            elements[missing] = guessed
+        universe.atoms.elements = elements
+
         # Output load time
         loading = time.time() - stamp0
 
@@ -359,10 +368,9 @@ class IndexManager:
                     mono_res = self.universe.residues[similar]
                     selected_dh = mono_res.atoms.indices[match_dh]
                     for i, x in enumerate(selected_dh):
-                        if i % 2 == 0:
-                            hx_D.append(x[0])
-                        else:
-                            hx_H.append(x[1])
+                        hx_D.append(x[0])
+                        hx_H.append(x[1])
+
             match_a = [x for x in mono_mol.GetSubstructMatches(query_a)]
             if match_a:
                 for similar in self.uniq_disconnected[case]:

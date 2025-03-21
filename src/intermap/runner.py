@@ -6,11 +6,7 @@ import logging
 import time
 from argparse import Namespace
 from os.path import basename, join
-from os.path import basename, join, dirname
-from pprint import pformat
 
-import mdtraj as md
-import numpy as np
 from numba import set_num_threads
 from tqdm import tqdm
 
@@ -37,7 +33,8 @@ def run():
     # 1. Parse the configuration file
     # =========================================================================
     start_time = time.time()
-    config = ConfigManager(mode='debug')
+    # config = ConfigManager(mode='debug')
+    config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
@@ -87,35 +84,24 @@ def run():
         s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, cuts_aro,
         selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
         hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
-        selected_others, len_others, max_dist_aro, max_dist_others, overlap)
+        selected_others, len_others, max_dist_aro, max_dist_others, overlap,
+        n_samples=10)
 
     # =========================================================================
     # 5. Trim the trajectory
     # =========================================================================
-    n_chunks = traj_frames.size // args.chunk_size
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
-    last = chunk_frames[-1][-1]
-    trajiter = md.iterload(args.trajectory, top=args.topology,
-                           stride=args.stride, chunk=args.chunk_size)
+    n_chunks = traj_frames.size // args.chunk_size
+    trajiter = cmn.trajiter(universe, chunk_frames, sel_idx)
 
     # %%=======================================================================
     # 6. Detect the interactions
     # =========================================================================
     container = ContainerManager(args, iman, cuts)
-    total_pairs, total_inters, n_frames_proc = 0, 0, 0
-    for i, chunk in tqdm(enumerate(trajiter),
-                         desc='Detecting Interactions',
-                         unit='chunk', total=n_chunks, ):
-
-        # Stop the iterations if the user-declared last frame  is reached
-        n_frames_proc += chunk.n_frames
-        M = chunk_frames[i].size
-        if n_frames_proc >= last:
-            chunk = chunk[:M]
-            trajiter.close()
-
-        # LOAD the coordinates
-        xyz_chunk = chunk.xyz.astype(np.float32)[:, sel_idx] * 10
+    total_pairs, total_inters = 0, 0
+    for i, xyz_chunk in tqdm(enumerate(trajiter),
+                             desc='Detecting Interactions',
+                             unit='chunk', total=n_chunks, ):
 
         trees_chunk = cmn.get_trees(xyz_chunk, s2_idx)
 

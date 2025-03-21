@@ -95,9 +95,9 @@ def estimate(
         selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
         hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
-        factor=1.5):
+        factor=1.5, n_samples=100):
     # Get the samples coordinates along the trajectory
-    n_samples = 10
+
     n_frames = universe.trajectory.n_frames
     sub = universe.trajectory[::n_frames // n_samples]
     positions = np.asarray([ts.positions.copy() for ts in sub],
@@ -111,7 +111,7 @@ def estimate(
         positions, s1_rings, s2_rings, s1_cat, s2_cat)
     aro_balls = aro.get_balls(xyzs_aro, s1_aro_idx, s2_aro_idx, max_dist_aro)
 
-    for i in prange(N):
+    for i in range(N):
         xyz = positions[i]
         xyz_aro = xyzs_aro[i]
 
@@ -144,7 +144,7 @@ def estimate(
 
     # Estimate the number of contacts
     ijf_vert = np.int32(num_detected.max() * factor)
-    if ijf_vert == 0:
+    if ijf_vert < 1000:
         ijf_vert = 1500
     inters_hori = len_others + len_aro
 
