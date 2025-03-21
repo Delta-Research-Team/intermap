@@ -108,7 +108,7 @@ class ContainerManager:
 
         # Parse arguments from cuts
         self.cuts = cuts
-        self.inter_names = self.get_inter_names()
+        self.inter_names, self.hb_idx = self.get_inter_names()
 
         # Parse arguments from iman
         self.iman = iman
@@ -121,12 +121,13 @@ class ContainerManager:
         self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
     def fill(self, ijfs, inters):
-        if not isinstance(inters, str):
-            to_assign = transform(ijfs, inters)
-        else:
-            to_assign = transform_wb(ijfs)
-        for key, value in to_assign.items():
-            self.dict[key][value.tolist()] = True
+        if ijfs.size > 0:
+            if not isinstance(inters, str):
+                to_assign = transform(ijfs, inters)
+            else:
+                to_assign = transform_wb(ijfs)
+            for key, value in to_assign.items():
+                self.dict[key][value.tolist()] = True
 
     # def lock(self):
     #     """
@@ -208,4 +209,7 @@ class ContainerManager:
         selected_aro = self.cuts.selected_aro
         inter_names = np.asarray([x for x in selected_others if x != 'None'] +
                                  [x for x in selected_aro if x != 'None'])
-        return inter_names
+        hba = np.where(inter_names == 'HBAcceptor')[0]
+        hbd = np.where(inter_names == 'HBDonor')[0]
+        hb_idx = np.concatenate((hba, hbd))
+        return inter_names, hb_idx

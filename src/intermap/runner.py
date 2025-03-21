@@ -7,6 +7,7 @@ import time
 from argparse import Namespace
 from os.path import basename, join
 
+import numpy as np
 from numba import set_num_threads
 from tqdm import tqdm
 
@@ -19,10 +20,16 @@ from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
 
-logger = logging.getLogger('InterMapLogger')
 
-
-# %% todo: check docstrings
+# %%
+# todo: check docstrings
+# todo: check logging
+# todo: investigate recompilation issues
+# todo: assert identity against  prolif
+# todo: do not gather balls and trees outside runpar / estimate functions
+# todo: clean up the code
+# todo: assert changing cfg does not interfere with cache=True
+# todo: start writing tests
 
 
 def run():
@@ -33,6 +40,7 @@ def run():
     # 1. Parse the configuration file
     # =========================================================================
     start_time = time.time()
+    logger = logging.getLogger('InterMapLogger')
     # config = ConfigManager(mode='debug')
     config = ConfigManager()
     args = Namespace(**config.config_args)
@@ -69,12 +77,6 @@ def run():
         cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
         cuts.max_dist_others)
 
-    hba_idx = inters_requested.index(
-        'HBAcceptor') if 'HBAcceptor' in inters_requested else None
-    hbd_idx = inters_requested.index(
-        'HBDonor') if 'HBDonor' in inters_requested else None
-    idxs = [hba_idx, hbd_idx]
-
     # =========================================================================
     # 4. Estimating memory allocation
     # =========================================================================
@@ -93,11 +95,15 @@ def run():
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
     n_chunks = traj_frames.size // args.chunk_size
     trajiter = cmn.trajiter(universe, chunk_frames, sel_idx)
+    contiguous = list(cmn.split_in_chunks(np.arange(traj_frames.size),
+                                          args.chunk_size))
 
     # %%=======================================================================
     # 6. Detect the interactions
     # =========================================================================
-    container = ContainerManager(args, iman, cuts)
+    self = ContainerManager(args, iman, cuts)
+    hb_idx = self.hb_idx
+    detect_wb = (waters.size > 0) and (hb_idx.size > 0)
     total_pairs, total_inters = 0, 0
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
@@ -124,26 +130,26 @@ def run():
         total_inters += inters_chunk.sum()
 
         # Fill interactions in ijf and wb interactions in ijkf
-        frames = chunk_frames[i]
+        frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            container.fill(ijf_chunk, inters_chunk)
-            if waters.size > 0:
-                ijkf = wb1(ijf_chunk, inters_chunk, waters, idxs)
-                container.fill(ijkf, inters='wb')
+            self.fill(ijf_chunk, inters_chunk)
+            if detect_wb:
+                ijkf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
+                self.fill(ijkf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
     out_name = f"{basename(args.job_name)}_InterMap.tsv"
     pickle_path = join(args.output_dir, out_name)
-    container.save(pickle_path)
+    self.save(pickle_path)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(container.dict)
+    ldict = len(self.dict)
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
@@ -153,4 +159,4 @@ def run():
         f" Elapsed time: {tot} s")
 
 
-run()
+# run()

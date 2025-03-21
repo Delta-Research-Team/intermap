@@ -585,7 +585,7 @@ class IndexManager:
         }
 
         raw = self.raw_inters
-        if raw == 'all':
+        if isinstance(raw, str):
             requested = cf.interactions
         else:
             requested = raw
@@ -654,10 +654,9 @@ class IndexManager:
         return inters_requested
 
 # =============================================================================
-# import intermap.config as conf
+# import intermap.managers.config as conf
 # from argparse import Namespace
 #
-# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
-# config = conf.ConfigManager(config_path, conf.allowed_parameters)
+# config = conf.ConfigManager(mode='debug')
 # args = Namespace(**config.config_args)
 # self = IndexManager(args)

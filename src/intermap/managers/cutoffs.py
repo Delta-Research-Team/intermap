@@ -246,7 +246,7 @@ class CutoffsManager:
         """
 
         inters_requested = self.args.interactions
-        if inters_requested == 'all':
+        if isinstance(inters_requested, str) and (inters_requested == 'all'):
             inters_requested = self.inters_all
 
         # Parse aromatics

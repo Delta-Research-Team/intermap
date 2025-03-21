@@ -34,6 +34,9 @@ def wb1(ijf_chunk, inters_chunk, waters, idxs):
     ijf_wat[i_len:, 1] = t2_j
 
     # Group the interactions by the water atoms
+    if ijf_wat.size == 0:
+        return np.zeros((0, 4), dtype=np.int32)
+
     groups = npi.group_by(ijf_wat[:, [0, 2]])
     sorter = groups.index.sorter
     slices = groups.index.slices

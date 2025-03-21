@@ -13,7 +13,6 @@ import intermap.managers.cutoffs as cf
 inf_int = sys.maxsize
 inf_float = float(inf_int)
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
-logger = logging.getLogger('InterMapLogger')
 
 
 def start_logger(log_path):
@@ -26,7 +25,7 @@ def start_logger(log_path):
     Returns:
         logger (logging.Logger): Logger object.
     """
-
+    logger = logging.getLogger('InterMapLogger')
     logger.setLevel("DEBUG")
 
     console_handler = logging.StreamHandler()
@@ -42,6 +41,29 @@ def start_logger(log_path):
     file_handler.setLevel("DEBUG")
     logger.addHandler(file_handler)
     return logger
+
+
+def detect_config_path(mode='debug'):
+    """
+    Detect the configuration file path
+
+    Args:
+        mode: running mode
+
+    Returns:
+        config_path: path to the configuration file
+    """
+    if mode == 'production':
+        if len(sys.argv) != 2:
+            raise ValueError(
+                '\nInterMap syntax is: intermap path-to-config-file')
+        config_path = sys.argv[1]
+    elif mode == 'debug':
+        # config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = '/home/gonzalezroy/test_data/imap1.cfg'
+    else:
+        raise ValueError('Only modes allowed are production and running')
+    return config_path
 
 
 #: Allowed section templates in the config file
@@ -127,29 +149,6 @@ class ChoiceParam(Param):
             raise ValueError(
                 f'\n Error in {self.key}. Passed "{self.value}" but available'
                 f' options are: {choices}.')
-
-
-def detect_config_path(mode='debug'):
-    """
-    Detect the configuration file path
-
-    Args:
-        mode: running mode
-
-    Returns:
-        config_path: path to the configuration file
-    """
-    if mode == 'production':
-        if len(sys.argv) != 2:
-            raise ValueError(
-                '\nInterMap syntax is: intermap path-to-config-file')
-        config_path = sys.argv[1]
-    elif mode == 'debug':
-        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
-        config_path = '/home/gonzalezroy/test_data/imap1.cfg'
-    else:
-        raise ValueError('Only modes allowed are production and running')
-    return config_path
 
 
 class Config:
@@ -281,13 +280,13 @@ class ConfigManager(Config):
         self.parse_cutoffs()
 
         # 3. Parse the interactions
-        # self.parse_interactions()
+        self.parse_interactions()
 
         # 4. Start logging
         args = self.config_args
         base_name = basename(args['job_name'])
         log_path = join(args['output_dir'], f"{base_name}_InterMap.log")
-        start_logger(log_path)
+        logger = start_logger(log_path)
         logger.info(
             f"Starting InterMap with the following static parameters:\n"
             f"\n Job name: {args['job_name']}"
@@ -350,7 +349,7 @@ class ConfigManager(Config):
 
     def parse_interactions(self):
         raw_inters = self.config_obj['interactions']['interactions']
-        if raw_inters == 'all':
+        if isinstance(raw_inters, str) and (raw_inters == 'all'):
             parsed_inters = np.asarray(cf.interactions)
         else:
             parsed_inters = [x.strip() for x in raw_inters.split(',') if
