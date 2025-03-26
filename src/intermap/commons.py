@@ -6,8 +6,8 @@ import logging
 import os
 
 import numpy as np
-from numba import njit
-from numba.typed import List
+from numba import njit, prange
+from numba.typed import Dict, List
 from numba_kdtree import KDTree as nckd
 
 logger = logging.getLogger('InterMapLogger')
@@ -128,6 +128,28 @@ def get_trees(xyz_chunk, s2_indices):
     trees = List()
     for x in xyz_chunk:
         trees.append(nckd(x[s2_indices]))
+    return trees
+
+
+@njit(parallel=True, cache=True)
+def get_trees2(xyz_chunk, s2_idx):
+    """
+
+    Args:
+        xyz_chunk:
+        s2_idx:
+
+    Returns:
+
+    """
+    N = len(xyz_chunk)
+    trees = Dict()
+    value = nckd(xyz_chunk[0][s2_idx])
+    for i in range(N):
+        trees[i] = value
+
+    for i in prange(N):
+        trees[i] = nckd(xyz_chunk[i][s2_idx])
     return trees
 
 

@@ -10,13 +10,12 @@ import intermap.interactions.geometry as aot
 
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
 
-def get_balls(xyzs_aro, s1_aro_indices, s2_aro_indices, dist_cut):
-    balls = List()
+def get_trees(xyzs_aro, s2_aro_indices):
+    trees = List()
     for xyz_aro in xyzs_aro:
         s2_tree = nckd(xyz_aro[s2_aro_indices])
-        ball = s2_tree.query_radius(xyz_aro[s1_aro_indices], dist_cut)
-        balls.append(ball)
-    return balls
+        trees.append(s2_tree)
+    return trees
 
 
 @njit(parallel=True, cache=True)

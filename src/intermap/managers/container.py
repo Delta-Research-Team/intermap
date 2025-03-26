@@ -93,7 +93,6 @@ def groupby(ijfs: types.Array(types.int64, 2, 'C')) -> types.DictType(
     return indices_as_array
 
 
-# todo: numba the fill method of ContainerManager
 class ContainerManager:
     """
     A dictionary to store InterMap interactions
@@ -128,50 +127,6 @@ class ContainerManager:
                 to_assign = transform_wb(ijfs)
             for key, value in to_assign.items():
                 self.dict[key][value.tolist()] = True
-
-    # def lock(self):
-    #     """
-    #     Lock the dictionary to avoid further modifications
-    #     """
-    #     self.dict = dict(self.dict)
-
-    # def pack(self):
-    #     """
-    #     Get the prevalence of the interactions
-    #     """
-    #
-    #     packed_dict = {}
-    #     keys = list(self.dict.keys())
-    #     for key in keys:
-    #         if len(key) == 3:
-    #             s1_id, s2_id, inter_id = key
-    #             s1_name = self.atom_names[s1_id]
-    #             s2_name = self.atom_names[s2_id]
-    #             inter_name = self.inter_names[inter_id]
-    #             key2save = (s1_name, s2_name, inter_name)
-    #
-    #         elif len(key) == 4:
-    #             s1_id, s2_id, wat_id, inter_id = key
-    #             s1_name = self.atom_names[s1_id]
-    #             s2_name = self.atom_names[s2_id]
-    #             wat_name = self.atom_names[wat_id]
-    #             key2save = (s1_name, s2_name, wat_name, inter_id)
-    #         else:
-    #             raise ValueError('The key must have 3 or 4 elements')
-    #
-    #         time = self.dict[key]
-    #         prevalence = round(time.count() / self.n_frames * 100, 2)
-    #         del self.dict[key]
-    #         if prevalence < self.min_prevalence:
-    #             continue
-    #
-    #         if self.format == 'extended':
-    #             packed_dict[key2save] = {'time': bu.sc_encode(time),
-    #                                      'prevalence': prevalence}
-    #         else:
-    #             packed_dict[key2save] = prevalence
-    #
-    #     self.dict = packed_dict
 
     def generate_lines(self):
         for key in self.dict:
