@@ -8,9 +8,6 @@ from argparse import Namespace
 from os.path import basename, join
 
 import numpy as np
-from numba import set_num_threads
-from tqdm import tqdm
-
 from intermap import commons as cmn
 from intermap.interactions import aro
 from intermap.interactions.runners import estimate, runpar
@@ -19,9 +16,12 @@ from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
+from numba import set_num_threads
+from tqdm import tqdm
 
 
 # %%
+# todo: check the interactions naming
 # todo: check logging
 # todo: check docstrings
 # todo: investigate recompilation issues
@@ -31,7 +31,7 @@ from intermap.managers.indices import IndexManager
 # todo: assert changing cfg does not interfere with cache=True
 # todo: start writing tests
 
-
+@profile
 def run():
     """
     Main function to run InterMap
@@ -41,8 +41,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    # config = ConfigManager(mode='debug')
-    config = ConfigManager()
+    config = ConfigManager(mode='debug')
+    # config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
@@ -108,6 +108,7 @@ def run():
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
+        break
 
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
@@ -115,7 +116,6 @@ def run():
         # todo: join into the same function
         trees_aro = aro.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
-
 
         ijf_chunk, inters_chunk = runpar(xyz_chunk, xyzs_aro, xyz_aro_idx,
                                          trees_others, trees_aro, ijf_shape,
@@ -166,19 +166,27 @@ def run():
 # =============================================================================
 #
 # =============================================================================
-# from numba_kdtree import KDTree
-# import numpy as np
-# from numba import njit
-# from numba import prange
-#
-# data = np.random.random(6_000_000).reshape(-1, 3).astype(np.float32)
-# @njit(parallel=False, cache=False)
-# def get_ball2(data):
-#     for i in prange(10):
-#         kdtree = KDTree(data)
-#         # query all points in a radius around the first 100 points
-#         indices = kdtree.query_radius(data[:100], r=0.5)
-#     return indices
-#
-#
-# indices = get_ball2(data)
+from numba import njit, prange
+
+
+@njit(parallel=True)
+def condense(ijf_chunk, inters_chunk):
+    n_ijf = ijf_chunk.shape[0]
+    n_on = inters_chunk.sum()
+    ijft = np.zeros((n_on, 4), dtype=np.int32)
+    sums = inters_chunk.sum(axis=1)
+    ends = np.cumsum(sums)
+    starts = ends - sums
+
+    for x in prange(n_ijf):
+        i, j, f = ijf_chunk[x]
+        s = starts[x]
+        e = ends[x]
+        inters = inters_chunk[x].nonzero()[0]
+        indices = np.arange(s, e)
+        for y, z in enumerate(inters):
+            ijft[indices[y]] = i, j, np.int32(z), f
+    return ijft
+
+
+ijft = condense(ijf_chunk, inters_chunk)

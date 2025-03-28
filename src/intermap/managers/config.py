@@ -5,14 +5,36 @@ import os
 import sys
 from os.path import abspath, basename, dirname, isabs, join, normpath
 
-import numpy as np
-
 import intermap.commons as cmn
 import intermap.managers.cutoffs as cf
+import numpy as np
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+
+
+def detect_config_path(mode='debug'):
+    """
+    Detect the configuration file path
+
+    Args:
+        mode: running mode
+
+    Returns:
+        config_path: path to the configuration file
+    """
+    if mode == 'production':
+        if len(sys.argv) != 2:
+            raise ValueError(
+                '\nInterMap syntax is: intermap path-to-config-file')
+        config_path = sys.argv[1]
+    elif mode == 'debug':
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap5.cfg'
+        # config_path = '/home/gonzalezroy/test_data/imap1.cfg'
+    else:
+        raise ValueError('Only modes allowed are production and running')
+    return config_path
 
 
 def start_logger(log_path):
@@ -41,29 +63,6 @@ def start_logger(log_path):
     file_handler.setLevel("DEBUG")
     logger.addHandler(file_handler)
     return logger
-
-
-def detect_config_path(mode='debug'):
-    """
-    Detect the configuration file path
-
-    Args:
-        mode: running mode
-
-    Returns:
-        config_path: path to the configuration file
-    """
-    if mode == 'production':
-        if len(sys.argv) != 2:
-            raise ValueError(
-                '\nInterMap syntax is: intermap path-to-config-file')
-        config_path = sys.argv[1]
-    elif mode == 'debug':
-        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
-        # config_path = '/home/gonzalezroy/test_data/imap1.cfg'
-    else:
-        raise ValueError('Only modes allowed are production and running')
-    return config_path
 
 
 #: Allowed section templates in the config file

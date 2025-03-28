@@ -119,6 +119,7 @@ class ContainerManager:
         # Initialize containers
         self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
+    # @profile
     def fill(self, ijfs, inters):
         if ijfs.size > 0:
             if not isinstance(inters, str):
