@@ -209,17 +209,15 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 
 
 @njit(parallel=False, cache=True)
-def aro(xyz_aro, xyz_aro_real_idx, n_pairs_aro, ijf_view, dists, inters_view,
+def aro(xyz_aro, xyz_aro_idx, n_pairs_aro, ijf_view, dists, inters_view,
         s1_rings_idx,
         s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
         s2_ctrs, cutoffs_aro, selected_aro):
     row1 = ijf_view[:n_pairs_aro, 0]
     row2 = ijf_view[:n_pairs_aro, 1]
 
-    # if 'None' in selected_aro:
-    #     ijf_view = np.zeros((0, 3), dtype=np.int32)
-    #     inters_view = np.zeros((0, 0), dtype=np.bool_)
-    #     return ijf_view, inters_view
+    if 'None' in selected_aro:
+        return ijf_view, inters_view, np.int32(0)
 
     if 'PiCation' in selected_aro:
         pi_idx, pi_cat = pications('PiCation', xyz_aro, row1, row2, dists,
@@ -283,16 +281,15 @@ def aro(xyz_aro, xyz_aro_real_idx, n_pairs_aro, ijf_view, dists, inters_view,
             idx, pi_stacking = stackings('PiStacking', ring_dists, n1n2,
                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
                                          selected_aro)
-            inters_view[:n_pairs_aro][pairs][:, idx] = \
-                etf_stacking | ftf_stacking
+            inters_view[:n_pairs_aro][pairs][:, idx] = pi_stacking
 
     frame_id = ijf_view[0][-1]
     mask = aot.get_compress_mask(inters_view[:n_pairs_aro])
     ijf_mask = ijf_view[:n_pairs_aro][mask]
     inters_mask = inters_view[:n_pairs_aro][mask]
 
-    ijf_real_0 = xyz_aro_real_idx[ijf_mask[:, 0]]
-    ijf_real_1 = xyz_aro_real_idx[ijf_mask[:, 1]]
+    ijf_real_0 = xyz_aro_idx[ijf_mask[:, 0]]
+    ijf_real_1 = xyz_aro_idx[ijf_mask[:, 1]]
     ijf_real_2 = np.full(ijf_real_0.shape[0], frame_id, dtype=np.int32)
     ijf_real = np.stack((ijf_real_0, ijf_real_1, ijf_real_2), axis=1)
 

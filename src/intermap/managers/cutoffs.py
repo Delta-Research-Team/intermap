@@ -96,11 +96,12 @@ class CutoffsManager:
     def __init__(self, args, iman):
         # Parse args from the config file
         self.args = args
+        self.iman = iman
 
         # Get all the interactions and their parsed cutoffs
         self.max_vdw = iman.get_max_vdw_dist()
         self.parsed_cutoffs = self.parse_cutoffs()
-        self.inters_all, self.cuts_table = self.get_inters_cutoffs()
+        self.inters_internal, self.cuts_internal = self.get_inters_cutoffs()
 
         # Split the cutoffs and interactions to compute
         (self.selected_aro, self.selected_others, self.cuts_aro,
@@ -245,30 +246,29 @@ class CutoffsManager:
             cutoffs_others (ndarray): Cutoffs for the non-aromatic interactions
         """
 
-        inters_requested = self.args.interactions
-        if isinstance(inters_requested, str) and (inters_requested == 'all'):
-            inters_requested = self.inters_all
+        inters_requested = self.iman.inters_requested
 
         # Parse aromatics
         bit_aro = [y for x in inters_requested if re.search(r'Pi|Face', x) for
-                   y in npi.indices(self.inters_all, [x])]
+                   y in npi.indices(self.inters_internal, [x])]
         if len(bit_aro) == 0:
             selected_aro = List(['None'])
         else:
-            selected_aro = List([self.inters_all[x] for x in bit_aro])
+            selected_aro = List([self.inters_internal[x] for x in bit_aro])
 
         # Parse non-aromatics
         bit_others = [y for x in inters_requested if
                       not re.search(r'Pi|Face', x) for y
-                      in npi.indices(self.inters_all, [x])]
+                      in npi.indices(self.inters_internal, [x])]
         if len(bit_others) == 0:
             selected_others = List(['None'])
         else:
-            selected_others = List([self.inters_all[x] for x in bit_others])
+            selected_others = List(
+                [self.inters_internal[x] for x in bit_others])
 
         # Get the cutoffs
-        cutoffs_aro = self.cuts_table[:, bit_aro]
-        cutoffs_others = self.cuts_table[:, bit_others]
+        cutoffs_aro = self.cuts_internal[:, bit_aro]
+        cutoffs_others = self.cuts_internal[:, bit_others]
 
         # Get the lengths
         len_others = len(

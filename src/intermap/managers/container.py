@@ -163,8 +163,8 @@ class ContainerManager:
     def get_inter_names(self):
         selected_others = self.cuts.selected_others
         selected_aro = self.cuts.selected_aro
-        inter_names = np.asarray([x for x in selected_others if x != 'None'] +
-                                 [x for x in selected_aro if x != 'None'])
+        inter_names = np.asarray([x for x in selected_aro if x != 'None'] +
+                                 [x for x in selected_others if x != 'None'])
         hba = np.where(inter_names == 'HBAcceptor')[0]
         hbd = np.where(inter_names == 'HBDonor')[0]
         hb_idx = np.concatenate((hba, hbd))

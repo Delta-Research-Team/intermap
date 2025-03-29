@@ -41,6 +41,6 @@ def test_aro(iman, conf_path):
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
 
     iff_aro, inters_aro = aro(xyz, k, s1_indices, s2_indices, cations, rings,
-                              cutoffs_aro, selected_aro,,,
+                              cutoffs_aro, selected_aro,,, ,
     assert iff_aro.any()
     assert inters_aro.any()

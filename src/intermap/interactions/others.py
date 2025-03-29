@@ -205,9 +205,9 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
     """
     Fill the not-aromatic interactions
     """
-    # if 'None' in selected_others:
-    #     return (np.zeros((0, 3), dtype=np.int32),
-    #             np.zeros((0, 0), dtype=np.bool_))
+    if 'None' in selected_others:
+        return (np.zeros((0, 3), dtype=np.int32),
+                np.zeros((0, 0), dtype=np.bool_))
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = \

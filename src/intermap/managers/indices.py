@@ -12,8 +12,8 @@ import rdkit
 from rdkit import Chem
 
 import intermap.commons as cmn
-import intermap.managers.cutoffs as cf
 import intermap.interactions.geometry as geom
+import intermap.managers.cutoffs as cf
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -581,7 +581,7 @@ class IndexManager:
             'CationPi': (len_rings > 0) and (len_ca > 0),
             'FaceToFace': len_rings > 0,
             'EdgeToFace': len_rings > 0,
-            'WaterBridges': len(self.waters) > 0,
+            'WaterBridge': len(self.waters) > 0,
         }
 
         raw = self.raw_inters
