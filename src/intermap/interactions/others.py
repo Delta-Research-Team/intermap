@@ -129,7 +129,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
     dist_cutoff = cutoffs_others[0, inter_idx]
     passing_dists = dists <= dist_cutoff
 
-    if inter_name == 'CloseContacts':
+    if inter_name == 'CloseContact':
         return inter_idx, passing_dists
     else:
         s1_is_type = aot.isin(row1, type1)
@@ -221,8 +221,8 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
         inters[:, vdw_idx] = vdw_bit
 
     # [Close Contacts]
-    if 'CloseContacts' in selected_others:
-        cc_idx, cc = detect_1d('CloseContacts', dists, row1, row1, row2, row2,
+    if 'CloseContact' in selected_others:
+        cc_idx, cc = detect_1d('CloseContact', dists, row1, row1, row2, row2,
                                cutoffs_others, selected_others)
         inters[:, cc_idx] = cc
 

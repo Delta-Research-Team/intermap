@@ -326,8 +326,7 @@ class ConfigManager(Config):
         """
 
         # Get the internal cutoffs
-        prefixes = ('min', 'max', 'dist')
-        internal_names = [x for x in dir(cf) if x.startswith(prefixes)]
+        internal_names = list(cf.cutoffs.keys())
 
         # Parse the cutoffs from the config file
         try:

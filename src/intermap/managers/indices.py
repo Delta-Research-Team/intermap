@@ -565,7 +565,7 @@ class IndexManager:
 
         # Gather the interactions constraints
         is_possible = {
-            'CloseContacts': (len_s1 > 0) and (len_s2 > 0),
+            'CloseContact': (len_s1 > 0) and (len_s2 > 0),
             'VdWContact': (len_s1 > 0) and (len_s2 > 0),
             'Hydrophobic': len_hp > 0,
             'Anionic': (len_an > 0) and (len_ca > 0),

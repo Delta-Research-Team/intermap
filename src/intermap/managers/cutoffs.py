@@ -14,7 +14,7 @@ logger = logging.getLogger('InterMapLogger')
 
 cutoffs = {
 
-    'dist_cut_CloseContacts': 3.0,
+    'dist_cut_CloseContact': 3.0,
     'dist_cut_Hydrophobic': 4.5,
     'dist_cut_Ionic': 4.5,
     'dist_cut_Metalic': 2.8,
@@ -54,7 +54,7 @@ cutoffs = {
 }
 
 interactions = [
-    'CloseContacts', 'VdWContact', 'Hydrophobic', 'Anionic',
+    'CloseContact', 'VdWContact', 'Hydrophobic', 'Anionic',
     'Cationic', 'MetalDonor', 'MetalAcceptor', 'HBAcceptor',
     'HBDonor', 'XBAcceptor', 'XBDonor', 'FaceToFace', 'EdgeToFace',
     'PiStacking', 'PiCation', 'CationPi']
@@ -124,8 +124,8 @@ class CutoffsManager:
         cuts = self.args.cutoffs
         cutoffs_raw = {
             # Undirected 1D interactions
-            'CloseContacts':
-                {'distCut1': get_cutoff('dist_cut_CloseContacts', cuts)},
+            'CloseContact':
+                {'distCut1': get_cutoff('dist_cut_CloseContact', cuts)},
             'VdWContact':
                 {'distCut1': 0},
             'Hydrophobic':

@@ -22,24 +22,28 @@ from intermap.managers.indices import IndexManager
 
 
 # %%
-# todo: investigate recompilation issues
-# todo: assert changing cfg does not interfere with cache=True
 
-# todo: check hard-coded cutoffs
-# done: check the interactions naming / parsing
+# High Priority
 # todo: update filling dict when water
-
-# todo: join into the same function: aro.get_trees, cmn.get_trees
-# todo: put n_samples in config
-# todo: rename CloseContacts to CloseContact in all files
-# todo: implement selecting interactions from config
-# todo: implement granularity as a way to condense information
 # todo: assert identity against  prolif, again
-# todo: clean up the code
 
+# Medium Priority
+# todo: put n_samples / n_factor in config
+# todo: rename  to CloseContact in all files
+# todo: implement granularity as a way to condense information
+
+# Low Priority
+# todo: Reorganize the code
+# todo: join into the same function: aro.get_trees, cmn.get_trees
 # todo: check logging
 # todo: check docstrings
 # todo: start writing tests
+
+# done: check hard-coded cutoffs
+# done: implement selecting interactions from config
+# done: assert changing cfg does not interfere with cache=True
+# done: investigate recompilation issues
+# done: check the interactions naming / parsing
 # done: do not gather balls and trees outside runpar / estimate functions
 
 def run():
@@ -124,21 +128,16 @@ def run():
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
-
         trees_aro = aro.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
 
-        ijf_chunk, inters_chunk = runpar(xyz_chunk, xyzs_aro, xyz_aro_idx,
-                                         trees_others, trees_aro, ijf_shape,
-                                         inters_shape, s1_idx, s2_idx, anions,
-                                         cations, s1_cat_idx, s2_cat_idx,
-                                         hydroph, met_don, met_acc, vdw_radii,
-                                         max_vdw, hb_hydr, hb_don, hb_acc,
-                                         xb_hal, xb_don, xb_acc, s1_rings,
-                                         s2_rings, s1_rings_idx, s2_rings_idx,
-                                         s1_aro_idx, s2_aro_idx, cuts_others,
-                                         selected_others, cuts_aro,
-                                         selected_aro, overlap)
+        ijf_chunk, inters_chunk = runpar(
+            xyz_chunk, xyzs_aro, xyz_aro_idx, trees_others, trees_aro,
+            ijf_shape, inters_shape, s1_idx, s2_idx, anions, cations,
+            s1_cat_idx, s2_cat_idx, hydroph, met_don, met_acc, vdw_radii,
+            max_vdw, hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, s1_rings,
+            s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx,
+            cuts_others, selected_others, cuts_aro, selected_aro, overlap)
 
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
