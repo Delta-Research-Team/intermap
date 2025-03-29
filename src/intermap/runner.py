@@ -22,16 +22,21 @@ from intermap.managers.indices import IndexManager
 
 
 # %%
+# todo: investigate recompilation issues
+# todo: assert changing cfg does not interfere with cache=True
+
 # todo: check the interactions naming
+# todo: update filling dict when water
+
+# todo: implement selecting interactions from config
+# todo: implement granularity as a way to condense information
+# todo: assert identity against  prolif, again
+# todo: clean up the code
+
 # todo: check logging
 # todo: check docstrings
-# todo: investigate recompilation issues
-# todo: assert identity against  prolif, again
-# todo: do not gather balls and trees outside runpar / estimate functions
-# todo: clean up the code
-# todo: assert changing cfg does not interfere with cache=True
 # todo: start writing tests
-# todo: update filling dict when water
+# done: do not gather balls and trees outside runpar / estimate functions
 
 def run():
     """
