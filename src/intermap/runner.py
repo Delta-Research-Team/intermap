@@ -14,7 +14,6 @@ from tqdm import tqdm
 from intermap import commons as cmn
 from intermap.interactions import aro
 from intermap.interactions.runners import estimate, runpar
-from intermap.interactions.waters import wb1
 from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
@@ -25,14 +24,13 @@ from intermap.managers.indices import IndexManager
 
 # High Priority
 # todo: update filling dict when water
-# todo: assert identity against  prolif, again
+# todo: implement granularity as a way to condense information
 
 # Medium Priority
 # todo: put n_samples / n_factor in config
-# todo: rename  to CloseContact in all files
-# todo: implement granularity as a way to condense information
 
 # Low Priority
+# todo: assert identity against  prolif, again
 # todo: Reorganize the code
 # todo: join into the same function: aro.get_trees, cmn.get_trees
 # todo: check logging
@@ -45,6 +43,7 @@ from intermap.managers.indices import IndexManager
 # done: investigate recompilation issues
 # done: check the interactions naming / parsing
 # done: do not gather balls and trees outside runpar / estimate functions
+# done: rename  to CloseContact in all files
 
 def run():
     """
@@ -147,9 +146,9 @@ def run():
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
             container.fill(ijf_chunk, inters_chunk)
-            if detect_wb:
-                ijkf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
-                container.fill(ijkf, inters='wb')
+            # if detect_wb:
+            #     ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
+            #     container.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions

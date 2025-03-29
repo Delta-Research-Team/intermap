@@ -192,8 +192,9 @@ class CutoffsManager:
             'CationPi':
                 {'distCut1': get_cutoff('dist_cut_PiCation', cuts),
                  'minAng1': get_cutoff('min_ang_PiCation', cuts),
-                 'maxAng1': get_cutoff('max_ang_PiCation', cuts)}}
-
+                 'maxAng1': get_cutoff('max_ang_PiCation', cuts)},
+            'WaterBridge': {}
+        }
         return cutoffs_raw
 
     def get_inters_cutoffs(self):
@@ -247,24 +248,24 @@ class CutoffsManager:
         """
 
         inters_requested = self.iman.inters_requested
+        inters_internal = self.inters_internal
 
         # Parse aromatics
         bit_aro = [y for x in inters_requested if re.search(r'Pi|Face', x) for
-                   y in npi.indices(self.inters_internal, [x])]
+                   y in npi.indices(inters_internal, [x])]
         if len(bit_aro) == 0:
             selected_aro = List(['None'])
         else:
-            selected_aro = List([self.inters_internal[x] for x in bit_aro])
+            selected_aro = List([inters_internal[x] for x in bit_aro])
 
         # Parse non-aromatics
         bit_others = [y for x in inters_requested if
                       not re.search(r'Pi|Face', x) for y
-                      in npi.indices(self.inters_internal, [x])]
+                      in npi.indices(inters_internal, [x])]
         if len(bit_others) == 0:
             selected_others = List(['None'])
         else:
-            selected_others = List(
-                [self.inters_internal[x] for x in bit_others])
+            selected_others = List([inters_internal[x] for x in bit_others])
 
         # Get the cutoffs
         cutoffs_aro = self.cuts_internal[:, bit_aro]
