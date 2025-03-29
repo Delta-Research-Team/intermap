@@ -143,8 +143,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
 @njit(parallel=False, cache=True)
 def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
-              cutoffs_aro,
-              selected_aro):
+              cutoffs_aro, selected_aro):
     """
     Helper function to compute the pi-stacking interactions
 
@@ -152,32 +151,16 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 
     # Parse the cutoffs
     idx = selected_aro.index(inter_name)
-    # dist_cut = cutoffs_aro[0, idx]
-    # min_ang1 = cutoffs_aro[2, idx]
-    # max_ang1 = cutoffs_aro[3, idx]
-    # min_ang2 = 0
-    # max_ang2 = 30
-    # iradius = 1.5
+    dist_cut = cutoffs_aro[0, idx]
+    min_ang1 = cutoffs_aro[2, idx]
+    max_ang1 = cutoffs_aro[3, idx]
+    min_ang2 = cutoffs_aro[4, idx]
+    max_ang2 = cutoffs_aro[5, idx]
     if inter_name == 'FaceToFace':
-        dist_cut = 5.5
-        min_ang1 = 0
-        max_ang1 = 35
-        min_ang2 = 0
-        max_ang2 = 30
         iradius = np.inf
     elif inter_name == 'EdgeToFace':
-        dist_cut = 6.5
-        min_ang1 = 50
-        max_ang1 = 90
-        min_ang2 = 0
-        max_ang2 = 30
         iradius = 1.5
     elif inter_name == 'PiStacking':
-        dist_cut = 6.5
-        min_ang1 = 0
-        max_ang1 = 90
-        min_ang2 = 0
-        max_ang2 = 180
         iradius = np.inf
     else:
         raise Exception(f"Invalid interaction name: {inter_name}")
