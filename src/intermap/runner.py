@@ -8,6 +8,9 @@ from argparse import Namespace
 from os.path import basename, join
 
 import numpy as np
+from numba import set_num_threads
+from tqdm import tqdm
+
 from intermap import commons as cmn
 from intermap.interactions import aro
 from intermap.interactions.runners import estimate, runpar
@@ -16,8 +19,6 @@ from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
-from numba import set_num_threads
-from tqdm import tqdm
 
 
 # %%
@@ -30,8 +31,8 @@ from tqdm import tqdm
 # todo: clean up the code
 # todo: assert changing cfg does not interfere with cache=True
 # todo: start writing tests
+# todo: update filling dict when water
 
-@profile
 def run():
     """
     Main function to run InterMap
@@ -108,8 +109,6 @@ def run():
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
-        break
-
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
@@ -161,32 +160,4 @@ def run():
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
 
-
 # run()
-# =============================================================================
-#
-# =============================================================================
-from numba import njit, prange
-
-
-@njit(parallel=True)
-def condense(ijf_chunk, inters_chunk):
-    n_ijf = ijf_chunk.shape[0]
-    n_on = inters_chunk.sum()
-    ijft = np.zeros((n_on, 4), dtype=np.int32)
-    sums = inters_chunk.sum(axis=1)
-    ends = np.cumsum(sums)
-    starts = ends - sums
-
-    for x in prange(n_ijf):
-        i, j, f = ijf_chunk[x]
-        s = starts[x]
-        e = ends[x]
-        inters = inters_chunk[x].nonzero()[0]
-        indices = np.arange(s, e)
-        for y, z in enumerate(inters):
-            ijft[indices[y]] = i, j, np.int32(z), f
-    return ijft
-
-
-ijft = condense(ijf_chunk, inters_chunk)
