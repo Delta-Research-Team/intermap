@@ -139,6 +139,10 @@ def run():
             cuts_others, selected_others, cuts_aro, selected_aro, overlap,
             atomic, resconv)
 
+        if not atomic:
+            ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
+
+
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
 
@@ -154,7 +158,7 @@ def run():
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    out_name = f"{basename(args.job_name)}_InterMap.tsv"
+    out_name = f"{basename(args.job_name)}_InterMap.csv"
     pickle_path = join(args.output_dir, out_name)
     container.save(pickle_path)
 
