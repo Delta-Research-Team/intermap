@@ -31,8 +31,8 @@ def detect_config_path(mode='debug'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap5.cfg'
-        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
+        # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -89,8 +89,8 @@ allowed_parameters = {
         'selection_1': {'dtype': str, 'values': None},
         'selection_2': {'dtype': str, 'values': None},
         'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
-        'interactions': {'dtype': str,
-                         'values': None},
+        'interactions': {'dtype': str, 'values': None},
+        'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
         'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 
     # ____ cutoffs

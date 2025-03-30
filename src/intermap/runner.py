@@ -21,8 +21,6 @@ from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
 
 
-# %%
-
 # High Priority
 # todo: update filling dict when water
 # todo: implement granularity as a way to condense information
@@ -46,6 +44,8 @@ from intermap.managers.indices import IndexManager
 # done: do not gather balls and trees outside runpar / estimate functions
 # done: rename  to CloseContact in all files
 
+# %%
+
 def run():
     """
     Main function to run InterMap
@@ -68,7 +68,8 @@ def run():
      s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx,
      vdw_radii, max_vdw, hydroph, met_don, met_acc, hb_hydr, hb_don, hb_acc,
      xb_hal, xb_don, xb_acc, waters, anions, cations, rings, overlap, universe,
-     resids, names, n_frames, traj_frames, inters_requested) = (
+     resid_names, atom_names, resindex, n_frames, traj_frames,
+     inters_requested) = (
 
         iman.sel_idx, iman.s1_idx, iman.s2_idx, iman.s1_cat, iman.s2_cat,
         iman.s1_cat_idx, iman.s2_cat_idx, iman.s1_rings, iman.s2_rings,
@@ -77,8 +78,8 @@ def run():
         iman.hydroph, iman.met_don, iman.met_acc, iman.hb_hydro, iman.hb_don,
         iman.hb_acc, iman.xb_hal, iman.xb_don, iman.xb_acc, iman.waters,
         iman.anions, iman.cations, iman.rings, iman.overlap, iman.universe,
-        iman.resids, iman.names, iman.n_frames, iman.traj_frames,
-        iman.inters_requested)
+        iman.resid_names, iman.atom_names, iman.resindex, iman.n_frames,
+        iman.traj_frames, iman.inters_requested)
 
     # =========================================================================
     # 3. Parse the interactions & cutoffs
