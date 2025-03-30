@@ -330,12 +330,12 @@ def calc_normal_vector(p1, p2, p3):
 
 
 @njit("Tuple((i4[:, :], f4[:], b1[:, :]))"
-      "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i8)",
+      "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i8, b1, i4[:])",
       cache=True)
-def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
-                   n_types):
+def get_containers(xyz_aro, k, xyz_aro_idx, ball_aro, s1_aro_idx, s2_aro_idx,
+                   n_types, atomic, resconv):
     # Find the contacts
-    n_contacts = sum([len(x) for x in ball_1])
+    n_contacts = sum([len(x) for x in ball_aro])
     if n_contacts == 0:
         return (
             np.zeros((0, 3), dtype=np.int32), np.zeros(0, dtype=np.float32),
@@ -343,24 +343,31 @@ def get_containers(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
 
     ijf = np.zeros((n_contacts, 3), dtype=np.int32)
     counter = 0
-    for i, x in enumerate(ball_1):
-        X1 = s1_indices[i]
+    for i, x in enumerate(ball_aro):
+        X1 = s1_aro_idx[i]
         for j in x:
-            X2 = s2_indices[j]
+            X2 = s2_aro_idx[j]
             ijf[counter][0] = X1
             ijf[counter][1] = X2
             ijf[counter][2] = k
             counter += 1
 
+    # Remove self-residues if not atomic resolution requested
+    if not atomic:
+        r1 = resconv[xyz_aro_idx[ijf[:, 0]]]
+        r2 = resconv[xyz_aro_idx[ijf[:, 1]]]
+        idems = r1 == r2
+        ijf = ijf[~idems]
+
     # Remove idems (self-contacts appearing if both selections overlap)
-    idems = ext_idx[ijf[:, 0]] == ext_idx[ijf[:, 1]]
+    idems = xyz_aro_idx[ijf[:, 0]] == xyz_aro_idx[ijf[:, 1]]
     if idems.any():
         ijf = ijf[~idems]
 
     # Compute distances
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
-    dists = calc_dist(xyz[row1], xyz[row2])
+    dists = calc_dist(xyz_aro[row1], xyz_aro[row2])
 
     # Create the container for interaction types
     interactions = np.zeros((ijf.shape[0], n_types), dtype=np.bool_)

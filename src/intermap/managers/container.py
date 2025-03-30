@@ -142,9 +142,8 @@ class ContainerManager:
 
         # Parse arguments from iman
         self.iman = iman
-        self.resids = self.iman.resids
         self.waters = self.iman.waters
-        self.atom_names = self.iman.names
+        self.atom_names = self.iman.atom_names
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
@@ -171,9 +170,14 @@ class ContainerManager:
             else:
                 raise ValueError('The key must have 3 or 4 elements')
 
-            s1_name = self.atom_names[s1]
-            s2_name = self.atom_names[s2]
-            s3_name = self.atom_names[wat] if wat else ''
+            if self.args.resolution == 'residue':
+                names = self.iman.resid_names
+            else:
+                names = self.iman.atom_names
+
+            s1_name = names[s1]
+            s2_name = names[s2]
+            s3_name = names[wat] if wat else ''
             time = self.dict[key]
             prevalence = round(time.count() / self.n_frames * 100, 2)
 

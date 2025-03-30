@@ -195,7 +195,7 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 def aro(xyz_aro, xyz_aro_idx, n_pairs_aro, ijf_view, dists, inters_view,
         s1_rings_idx,
         s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
-        s2_ctrs, cutoffs_aro, selected_aro):
+        s2_ctrs, cuts_aro, selected_aro):
     row1 = ijf_view[:n_pairs_aro, 0]
     row2 = ijf_view[:n_pairs_aro, 1]
 
@@ -205,14 +205,14 @@ def aro(xyz_aro, xyz_aro_idx, n_pairs_aro, ijf_view, dists, inters_view,
     if 'PiCation' in selected_aro:
         pi_idx, pi_cat = pications('PiCation', xyz_aro, row1, row2, dists,
                                    s1_rings_idx, s2_rings_idx, s1_cat_idx,
-                                   s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
+                                   s2_cat_idx, s1_norm, s2_norm, cuts_aro,
                                    selected_aro)
         inters_view[:n_pairs_aro, pi_idx] = pi_cat
 
     if 'CationPi' in selected_aro:
         cat_idx, cat_pi = pications('CationPi', xyz_aro, row1, row2, dists,
                                     s1_rings_idx, s2_rings_idx, s1_cat_idx,
-                                    s2_cat_idx, s1_norm, s2_norm, cutoffs_aro,
+                                    s2_cat_idx, s1_norm, s2_norm, cuts_aro,
                                     selected_aro)
         inters_view[:n_pairs_aro, cat_idx] = cat_pi
 
@@ -250,19 +250,19 @@ def aro(xyz_aro, xyz_aro_idx, n_pairs_aro, ijf_view, dists, inters_view,
 
         if 'EdgeToFace' in selected_aro:
             idx, etf_stacking = stackings('EdgeToFace', ring_dists, n1n2,
-                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
+                                          n1c1c2, n2c2c1, idists, cuts_aro,
                                           selected_aro)
             inters_view[:n_pairs_aro][pairs][:, idx] = etf_stacking
 
         if 'FaceToFace' in selected_aro:
             idx, ftf_stacking = stackings('FaceToFace', ring_dists, n1n2,
-                                          n1c1c2, n2c2c1, idists, cutoffs_aro,
+                                          n1c1c2, n2c2c1, idists, cuts_aro,
                                           selected_aro)
             inters_view[:n_pairs_aro][pairs][:, idx] = ftf_stacking
 
         if 'PiStacking' in selected_aro:
             idx, pi_stacking = stackings('PiStacking', ring_dists, n1n2,
-                                         n1c1c2, n2c2c1, idists, cutoffs_aro,
+                                         n1c1c2, n2c2c1, idists, cuts_aro,
                                          selected_aro)
             inters_view[:n_pairs_aro][pairs][:, idx] = pi_stacking
 

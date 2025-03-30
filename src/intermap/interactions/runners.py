@@ -19,7 +19,7 @@ def runpar(
         vdw_radii, max_vdw, hb_hydros, hb_donors, hb_acc, xb_halogens,
         xb_donors, xb_acc, s1_rings, s2_rings, s1_rings_idx, s2_rings_idx,
         s1_aro_indices, s2_aro_indices, cutoffs_others, selected_others,
-        cutoffs_aro, selected_aro, overlap):
+        cutoffs_aro, selected_aro, overlap, atomic, resconv):
     # Get the number of frames in the chunk
     dim1 = np.int64(xyz_chunk.shape[0])
     dim2 = np.int64(ijf_shape[0])
@@ -46,34 +46,40 @@ def runpar(
 
         # >>>> Get the aromatic interactions
         tree_aro = trees_aro[i]
+
         ball_aro = tree_aro.query_radius(xyz_aro[s1_aro_indices], dist_cut2)
 
         s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_normals_and_centroids(
             xyz, s1_rings, s2_rings)
+
         ijf_view, dists = geom.get_containers_run(
             xyz_aro, i, xyz_aro_real_idx, ball_aro, s1_aro_indices,
             s2_aro_indices, ijf_view)
+
         n_pairs_aro = dists.shape[0]
-        ijf_view, inters_view, n_aro = aro.aro(xyz_aro, xyz_aro_real_idx,
-                                               n_pairs_aro, ijf_view, dists,
-                                               inters_view, s1_rings_idx,
-                                               s2_rings_idx, s1_cat_idx,
-                                               s2_cat_idx, s1_norm, s2_norm,
-                                               s1_ctrs, s2_ctrs, cutoffs_aro,
-                                               selected_aro)
+
+        ijf_view, inters_view, n_aro = aro.aro(
+            xyz_aro, xyz_aro_real_idx, n_pairs_aro, ijf_view, dists,
+            inters_view, s1_rings_idx, s2_rings_idx, s1_cat_idx, s2_cat_idx,
+            s1_norm, s2_norm, s1_ctrs, s2_ctrs, cutoffs_aro, selected_aro)
+
         n_aros[i] = n_aro
 
         # >>>> Get the non-aromatic interactions
         tree_others = trees_others[i]
+
         ball_others = tree_others.query_radius(xyz[s1_indices], dist_cut1)
+
         ijf_others, inters_others = others.others(
             xyz, i, s1_indices, s2_indices, ball_others, hydrophobes, anions,
             cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
             hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
-            selected_others, overlap)
+            selected_others, overlap, atomic, resconv)
+
         n_others[i] = ijf_others.shape[0]
 
         M = inters_view.shape[1] - inters_others.shape[1]
+
         ijf_view[n_aros[i]:n_aros[i] + n_others[i]] = ijf_others
         inters_view[n_aros[i]:n_aros[i] + n_others[i], M:] = inters_others
         markers[i] = n_aros[i] + n_others[i]
@@ -94,7 +100,7 @@ def estimate(
         selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
         hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
-        factor=1.5, n_samples=10):
+        atomic, resconv, factor=1.5, n_samples=10):
     # Get the samples coordinates along the trajectory
 
     n_frames = universe.trajectory.n_frames
@@ -117,28 +123,26 @@ def estimate(
             xyz, s1_rings, s2_rings)
 
         tree_aro = aro_trees[i]
-        ball_aro = tree_aro.query_radius_parallel(xyz_aro[s1_aro_idx],
-                                                  max_dist_aro)
+        ball_aro = tree_aro.query_radius_parallel(
+            xyz_aro[s1_aro_idx], max_dist_aro)
 
         ijf, dists, inters = geom.get_containers(
-            xyz_aro, i, xyz_aro_idx, ball_aro, s1_aro_idx,
-            s2_aro_idx, len(selected_aro))
+            xyz_aro, i, xyz_aro_idx, ball_aro, s1_aro_idx, s2_aro_idx,
+            len(selected_aro), atomic, resconv)
 
         n_pairs_aro = dists.shape[0]
 
-        ijf_aro, inters_aro, n_aro = aro.aro(xyz_aro, xyz_aro_idx, n_pairs_aro,
-                                             ijf, dists, inters, s1_rings_idx,
-                                             s2_rings_idx, s1_cat_idx,
-                                             s2_cat_idx, s1_norm, s2_norm,
-                                             s1_ctrs, s2_ctrs, cuts_aro,
-                                             selected_aro)
+        ijf_aro, inters_aro, n_aro = aro.aro(
+            xyz_aro, xyz_aro_idx, n_pairs_aro, ijf, dists, inters,
+            s1_rings_idx, s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm,
+            s2_norm, s1_ctrs, s2_ctrs, cuts_aro, selected_aro)
 
         ball_1 = others.get_ball(xyz, s1_idx, s2_idx, max_dist_others)
 
         ijf_others, inters_others = others.others(
             xyz, i, s1_idx, s2_idx, ball_1, hydroph, anions, cations, met_don,
             met_acc, hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc,
-            vdw_radii, cuts_others, selected_others, overlap)
+            vdw_radii, cuts_others, selected_others, overlap, atomic, resconv)
         num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
 
     # Estimate the number of contacts
