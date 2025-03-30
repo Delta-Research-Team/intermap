@@ -94,7 +94,7 @@ def estimate(
         selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
         hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
-        factor=1.5, n_samples=10):
+        atomic, resconv, factor=1.5, n_samples=10):
     # Get the samples coordinates along the trajectory
 
     n_frames = universe.trajectory.n_frames
@@ -120,9 +120,10 @@ def estimate(
         ball_aro = tree_aro.query_radius_parallel(xyz_aro[s1_aro_idx],
                                                   max_dist_aro)
 
-        ijf, dists, inters = geom.get_containers(
-            xyz_aro, i, xyz_aro_idx, ball_aro, s1_aro_idx,
-            s2_aro_idx, len(selected_aro))
+        ijf, dists, inters = geom.get_containers(xyz_aro, i, xyz_aro_idx,
+                                                 ball_aro, s1_aro_idx,
+                                                 s2_aro_idx, len(selected_aro),
+                                                 atomic, resconv)
 
         n_pairs_aro = dists.shape[0]
 

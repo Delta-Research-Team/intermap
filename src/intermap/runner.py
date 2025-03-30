@@ -31,11 +31,11 @@ from intermap.managers.indices import IndexManager
 # Low Priority
 # todo: assert identity against  prolif, again
 # todo: Reorganize the code
-# todo: join into the same function: aro.get_trees, cmn.get_trees
 # todo: check logging
 # todo: check docstrings
 # todo: start writing tests
 
+# done: join into the same function: aro.get_trees, cmn.get_trees
 # done: check hard-coded cutoffs
 # done: implement selecting interactions from config
 # done: assert changing cfg does not interfere with cache=True
@@ -68,7 +68,7 @@ def run():
      s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx,
      vdw_radii, max_vdw, hydroph, met_don, met_acc, hb_hydr, hb_don, hb_acc,
      xb_hal, xb_don, xb_acc, waters, anions, cations, rings, overlap, universe,
-     resid_names, atom_names, resindex, n_frames, traj_frames,
+     resid_names, atom_names, resconv, n_frames, traj_frames,
      inters_requested) = (
 
         iman.sel_idx, iman.s1_idx, iman.s2_idx, iman.s1_cat, iman.s2_cat,
@@ -78,7 +78,7 @@ def run():
         iman.hydroph, iman.met_don, iman.met_acc, iman.hb_hydro, iman.hb_don,
         iman.hb_acc, iman.xb_hal, iman.xb_don, iman.xb_acc, iman.waters,
         iman.anions, iman.cations, iman.rings, iman.overlap, iman.universe,
-        iman.resid_names, iman.atom_names, iman.resindex, iman.n_frames,
+        iman.resid_names, iman.atom_names, iman.resconv, iman.n_frames,
         iman.traj_frames, iman.inters_requested)
 
     # =========================================================================
@@ -95,17 +95,15 @@ def run():
     # =========================================================================
     # 4. Estimating memory allocation
     # =========================================================================
-    ijf_shape, inters_shape = estimate(universe, xyz_aro_idx, args.chunk_size,
-                                       s1_idx, s2_idx, cations, s1_cat_idx,
-                                       s2_cat_idx, s1_cat, s2_cat, s1_rings,
-                                       s2_rings, s1_rings_idx, s2_rings_idx,
-                                       s1_aro_idx, s2_aro_idx, cuts_aro,
-                                       selected_aro, len_aro, anions, hydroph,
-                                       met_don, met_acc, vdw_radii, hb_hydr,
-                                       hb_don, hb_acc, xb_hal, xb_don, xb_acc,
-                                       cuts_others, selected_others,
-                                       len_others, max_dist_aro,
-                                       max_dist_others, overlap)
+    atomic = True if args.resolution == 'atom' else False
+    ijf_shape, inters_shape = estimate(
+        universe, xyz_aro_idx, args.chunk_size, s1_idx, s2_idx, cations,
+        s1_cat_idx, s2_cat_idx, s1_cat, s2_cat, s1_rings, s2_rings,
+        s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, cuts_aro,
+        selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
+        hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
+        selected_others, len_others, max_dist_aro, max_dist_others, overlap,
+        atomic, resconv)
 
     # =========================================================================
     # 5. Trim the trajectory
@@ -129,7 +127,7 @@ def run():
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
-        trees_aro = aro.get_trees(xyzs_aro, s2_aro_idx)
+        trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
 
         ijf_chunk, inters_chunk = runpar(

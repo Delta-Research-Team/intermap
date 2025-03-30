@@ -163,7 +163,7 @@ class IndexManager:
          self.overlap) = self.get_selections_indices()
 
         # Get the names of the atoms
-        (self.resindex, self.resid_names,
+        (self.resconv, self.resid_names,
          self.atom_names) = self.get_resids_and_names()
 
         # Get triads (connected) / monomers (disconnected) of residues
@@ -622,9 +622,9 @@ class IndexManager:
                       for i, x in enumerate(self.sel_idx)]
 
         resindex = self.universe.atoms.resindices[self.sel_idx]
-        resindex, idx = np.unique(resindex, return_index=True)
+        resconv, idx = np.unique(resindex, return_index=True)
         resid_names = [f"{resnames[i]}_{resids[i]}" for i in idx]
-        return resindex, resid_names, atom_names
+        return resindex.astype(np.int32), resid_names, atom_names
 
     def report(self):
         """
