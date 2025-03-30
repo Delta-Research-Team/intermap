@@ -52,8 +52,7 @@ def wb1(ijf_chunk, inters_chunk, waters, idxs):
         k = section[0][0]
         f = section[0][2]
         combinations = list(it.combinations(section[:, 1], 2))
-        for (i, j) in combinations:
-            ijkf[c] = (i, j, k, f)
+        for (v, j) in combinations:
+            ijkf[c] = (v, j, k, f)
             c += 1
-
     return ijkf

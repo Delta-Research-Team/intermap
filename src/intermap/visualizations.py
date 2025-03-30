@@ -1,21 +1,18 @@
-
-import numpy as np
 import pandas as pd
 from shiny import App, render, ui, reactive
-import plotly.graph_objects as go
-
-import webbrowser
 import threading
-import os
-import base64
+import webbrowser
 
+import pandas as pd
+import plotly.graph_objects as go
+from shiny import App, reactive, render, ui
 
 all_interactions_colors = {
     'HBDonor': '#E41A1C',
     'HBAcceptor': '#377EB8',
     'Hydrophobic': '#4DAF4A',
     'VdWContact': '#FF7F00',
-    'CloseContacts': '#984EA3',
+    'CloseContact': '#984EA3',
     'PiStacking': '#F781BF',
     'PiCation': '#A65628',
     'CationPi': '#999999',
@@ -296,7 +293,7 @@ def server(input, output, session):
             # Weak interactions
             'Hydrophobic': 14,
             'VdWContact': 15,
-            'CloseContacts': 16
+            'CloseContact': 16
         }
 
         df_filtered = df[df['interaction'].isin(selected_interactions)]

@@ -55,13 +55,11 @@ def runpar(
             s2_aro_indices, ijf_view)
         n_pairs_aro = dists.shape[0]
         ijf_view, inters_view, n_aro = aro.aro(xyz_aro, xyz_aro_real_idx,
-                                               n_pairs_aro,
-                                               ijf_view, dists, inters_view,
-                                               s1_rings_idx, s2_rings_idx,
-                                               s1_cat_idx,
+                                               n_pairs_aro, ijf_view, dists,
+                                               inters_view, s1_rings_idx,
+                                               s2_rings_idx, s1_cat_idx,
                                                s2_cat_idx, s1_norm, s2_norm,
-                                               s1_ctrs,
-                                               s2_ctrs, cutoffs_aro,
+                                               s1_ctrs, s2_ctrs, cutoffs_aro,
                                                selected_aro)
         n_aros[i] = n_aro
 
@@ -96,7 +94,7 @@ def estimate(
         selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
         hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
-        factor=1.5, n_samples=100):
+        factor=1.5, n_samples=10):
     # Get the samples coordinates along the trajectory
 
     n_frames = universe.trajectory.n_frames
@@ -128,14 +126,12 @@ def estimate(
 
         n_pairs_aro = dists.shape[0]
 
-        ijf_aro, inters_aro, n_aro = aro.aro(xyz_aro, xyz_aro_idx,
-                                             n_pairs_aro, ijf, dists,
-                                             inters, s1_rings_idx,
-                                             s2_rings_idx,
-                                             s1_cat_idx, s2_cat_idx, s1_norm,
-                                             s2_norm,
+        ijf_aro, inters_aro, n_aro = aro.aro(xyz_aro, xyz_aro_idx, n_pairs_aro,
+                                             ijf, dists, inters, s1_rings_idx,
+                                             s2_rings_idx, s1_cat_idx,
+                                             s2_cat_idx, s1_norm, s2_norm,
                                              s1_ctrs, s2_ctrs, cuts_aro,
-                                             selected_aro, )
+                                             selected_aro)
 
         ball_1 = others.get_ball(xyz, s1_idx, s2_idx, max_dist_others)
 

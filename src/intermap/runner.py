@@ -22,21 +22,29 @@ from intermap.managers.indices import IndexManager
 
 
 # %%
-# todo: investigate recompilation issues
-# todo: assert changing cfg does not interfere with cache=True
 
-# todo: check the interactions naming
+# High Priority
 # todo: update filling dict when water
-
-# todo: implement selecting interactions from config
 # todo: implement granularity as a way to condense information
-# todo: assert identity against  prolif, again
-# todo: clean up the code
 
+# Medium Priority
+# todo: put n_samples / n_factor in config
+
+# Low Priority
+# todo: assert identity against  prolif, again
+# todo: Reorganize the code
+# todo: join into the same function: aro.get_trees, cmn.get_trees
 # todo: check logging
 # todo: check docstrings
 # todo: start writing tests
+
+# done: check hard-coded cutoffs
+# done: implement selecting interactions from config
+# done: assert changing cfg does not interfere with cache=True
+# done: investigate recompilation issues
+# done: check the interactions naming / parsing
 # done: do not gather balls and trees outside runpar / estimate functions
+# done: rename  to CloseContact in all files
 
 def run():
     """
@@ -86,14 +94,17 @@ def run():
     # =========================================================================
     # 4. Estimating memory allocation
     # =========================================================================
-    ijf_shape, inters_shape = estimate(
-        universe, xyz_aro_idx, args.chunk_size, s1_idx, s2_idx, cations,
-        s1_cat_idx, s2_cat_idx, s1_cat, s2_cat, s1_rings, s2_rings,
-        s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, cuts_aro,
-        selected_aro, len_aro, anions, hydroph, met_don, met_acc, vdw_radii,
-        hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, cuts_others,
-        selected_others, len_others, max_dist_aro, max_dist_others, overlap,
-        n_samples=10)
+    ijf_shape, inters_shape = estimate(universe, xyz_aro_idx, args.chunk_size,
+                                       s1_idx, s2_idx, cations, s1_cat_idx,
+                                       s2_cat_idx, s1_cat, s2_cat, s1_rings,
+                                       s2_rings, s1_rings_idx, s2_rings_idx,
+                                       s1_aro_idx, s2_aro_idx, cuts_aro,
+                                       selected_aro, len_aro, anions, hydroph,
+                                       met_don, met_acc, vdw_radii, hb_hydr,
+                                       hb_don, hb_acc, xb_hal, xb_don, xb_acc,
+                                       cuts_others, selected_others,
+                                       len_others, max_dist_aro,
+                                       max_dist_others, overlap)
 
     # =========================================================================
     # 5. Trim the trajectory
@@ -107,8 +118,8 @@ def run():
     # %%=======================================================================
     # 6. Detect the interactions
     # =========================================================================
-    self = ContainerManager(args, iman, cuts)
-    hb_idx = self.hb_idx
+    container = ContainerManager(args, iman, cuts)
+    hb_idx = container.hb_idx
     detect_wb = (waters.size > 0) and (hb_idx.size > 0)
     total_pairs, total_inters = 0, 0
     for i, xyz_chunk in tqdm(enumerate(trajiter),
@@ -117,21 +128,16 @@ def run():
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
-        # todo: join into the same function
         trees_aro = aro.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
 
-        ijf_chunk, inters_chunk = runpar(xyz_chunk, xyzs_aro, xyz_aro_idx,
-                                         trees_others, trees_aro, ijf_shape,
-                                         inters_shape, s1_idx, s2_idx, anions,
-                                         cations, s1_cat_idx, s2_cat_idx,
-                                         hydroph, met_don, met_acc, vdw_radii,
-                                         max_vdw, hb_hydr, hb_don, hb_acc,
-                                         xb_hal, xb_don, xb_acc, s1_rings,
-                                         s2_rings, s1_rings_idx, s2_rings_idx,
-                                         s1_aro_idx, s2_aro_idx, cuts_others,
-                                         selected_others, cuts_aro,
-                                         selected_aro, overlap)
+        ijf_chunk, inters_chunk = runpar(
+            xyz_chunk, xyzs_aro, xyz_aro_idx, trees_others, trees_aro,
+            ijf_shape, inters_shape, s1_idx, s2_idx, anions, cations,
+            s1_cat_idx, s2_cat_idx, hydroph, met_don, met_acc, vdw_radii,
+            max_vdw, hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, s1_rings,
+            s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx,
+            cuts_others, selected_others, cuts_aro, selected_aro, overlap)
 
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
@@ -140,23 +146,23 @@ def run():
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            self.fill(ijf_chunk, inters_chunk)
+            container.fill(ijf_chunk, inters_chunk)
             if detect_wb:
-                ijkf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
-                self.fill(ijkf, inters='wb')
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
+                container.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
     out_name = f"{basename(args.job_name)}_InterMap.tsv"
     pickle_path = join(args.output_dir, out_name)
-    self.save(pickle_path)
+    container.save(pickle_path)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(self.dict)
+    ldict = len(container.dict)
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"

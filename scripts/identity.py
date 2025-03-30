@@ -83,7 +83,7 @@ print(
 count = 0
 for im_inter in imap_dict:
     if (im_inter not in prolif_dict) and (
-            im_inter[-1] not in ['CloseContacts']):
+            im_inter[-1] not in ['CloseContact']):
         count += 1
         print(f'InterMap interaction {im_inter} not in Prolif')
 print(

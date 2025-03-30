@@ -5,9 +5,10 @@ import os
 import sys
 from os.path import abspath, basename, dirname, isabs, join, normpath
 
+import numpy as np
+
 import intermap.commons as cmn
 import intermap.managers.cutoffs as cf
-import numpy as np
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
@@ -30,8 +31,8 @@ def detect_config_path(mode='debug'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap5.cfg'
-        # config_path = '/home/gonzalezroy/test_data/imap1.cfg'
+        # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap5.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -325,8 +326,7 @@ class ConfigManager(Config):
         """
 
         # Get the internal cutoffs
-        prefixes = ('min', 'max', 'dist')
-        internal_names = [x for x in dir(cf) if x.startswith(prefixes)]
+        internal_names = list(cf.cutoffs.keys())
 
         # Parse the cutoffs from the config file
         try:
@@ -348,14 +348,14 @@ class ConfigManager(Config):
 
     def parse_interactions(self):
         raw_inters = self.config_obj['interactions']['interactions']
-        if isinstance(raw_inters, str) and (raw_inters == 'all'):
-            parsed_inters = np.asarray(cf.interactions)
+        if raw_inters == 'all':
+            parsed_inters = np.asarray(cf.interactions + ['WaterBridge'])
         else:
             parsed_inters = [x.strip() for x in raw_inters.split(',') if
                              x != '']
             parsed_inters = np.asarray(parsed_inters)
 
-        implemented = cf.interactions
+        implemented = cf.interactions + ['WaterBridge']
         for inter in parsed_inters:
             if inter not in implemented:
                 raise ValueError(
