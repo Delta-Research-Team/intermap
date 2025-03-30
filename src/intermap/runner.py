@@ -136,7 +136,8 @@ def run():
             s1_cat_idx, s2_cat_idx, hydroph, met_don, met_acc, vdw_radii,
             max_vdw, hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, s1_rings,
             s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx,
-            cuts_others, selected_others, cuts_aro, selected_aro, overlap)
+            cuts_others, selected_others, cuts_aro, selected_aro, overlap,
+            atomic, resconv)
 
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()

@@ -43,16 +43,16 @@ def unswap_frame(ijf):
 
 
 @njit(parallel=False, cache=True)
-def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
-               overlap):
+def containers(xyz, k, s1_idx, s2_idx, ball_1, selected_others,
+               overlap, atomic, resconv):
     """
     Get the containers to find interactions not related to aromatic rings
 
     Args:
         xyz (ndarray): Coordinates of the atoms in the system
         k (int): Index of the frame in the trajectory
-        s1_indices (ndarray): Indices of the atoms in the first selection
-        s2_indices (ndarray): Indices of the atoms in the second selection
+        s1_idx (ndarray): Indices of the atoms in the first selection
+        s2_idx (ndarray): Indices of the atoms in the second selection
         max_vdw: Maximum van der Waals distance in the current universe
         cutoffs_others (ndarray): Cutoff distances for the interactions
         selected_others (ndarray): Selected nteractions to compute
@@ -70,9 +70,9 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
     ijf = np.empty((n_contacts, 3), dtype=np.int32)
     counter = 0
     for i, x in enumerate(ball_1):
-        X1 = s1_indices[i]
+        X1 = s1_idx[i]
         for j in x:
-            X2 = s2_indices[j]
+            X2 = s2_idx[j]
             if X1 == X2:
                 continue
             ijf[counter][0] = X1
@@ -85,6 +85,13 @@ def containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
     if overlap:
         uniques = unswap_frame(ijf)
         ijf = ijf[uniques]
+
+    # Remove self-residues if not atomic resolution requested
+    if not atomic:
+        r1 = resconv[ijf[:, 0]]
+        r2 = resconv[ijf[:, 1]]
+        idems = r1 == r2
+        ijf = ijf[~idems]
 
     # Compute distances
     row1 = ijf[:, 0]
@@ -197,11 +204,10 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 
 @njit(parallel=False, cache=True)
-def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
-           cations, metal_donors,
-           metal_acceptors, hb_hydros, hb_donors, hb_acc, xb_halogens,
-           xb_donors, xb_acc, vdw_radii, cutoffs_others, selected_others,
-           overlap):
+def others(xyz, k, s1_idx, s2_idx, ball_1, hydrophobes, anions,
+           cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
+           hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
+           selected_others, overlap, atomic, resconv):
     """
     Fill the not-aromatic interactions
     """
@@ -211,8 +217,8 @@ def others(xyz, k, s1_indices, s2_indices, ball_1, hydrophobes, anions,
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = \
-        containers(xyz, k, s1_indices, s2_indices, ball_1, selected_others,
-                   overlap)
+        containers(xyz, k, s1_idx, s2_idx, ball_1, selected_others, overlap,
+                   atomic, resconv)
 
     # [Van der Waals]
     if 'VdWContact' in selected_others:

@@ -12,10 +12,11 @@ from os.path import join
 
 import mdtraj as md
 import pytest
-from managers.indices import IndexManager
+
 from interactions.others import others
 from intermap import commons as cmn
 from managers import config as conf, cutoffs as cf
+from managers.indices import IndexManager
 
 
 @pytest.fixture(scope="module")
@@ -181,9 +182,9 @@ def others_containers(others_arguments):
      args) = others_arguments
 
     ijf, inters = others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
-                         cations, met_donors, met_acc, hb_hydros,
-                         hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
-                         max_vdw, vdw_radii, cutoffs_others, selected_others)
+                         cations, met_donors, met_acc, hb_hydros, hb_donors,
+                         hb_acc, xb_halogens, xb_donors, xb_acc, max_vdw,
+                         vdw_radii, cutoffs_others, selected_others, )
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
     return ijf, inters, row1, row2
@@ -200,9 +201,9 @@ def others_containers_all(others_arguments_all):
      selected_others, args) = others_arguments_all
 
     ijf, inters = others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
-                         cations, met_donors, met_acc, hb_hydros,
-                         hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
-                         max_vdw, vdw_radii, cutoffs_others, selected_others)
+                         cations, met_donors, met_acc, hb_hydros, hb_donors,
+                         hb_acc, xb_halogens, xb_donors, xb_acc, max_vdw,
+                         vdw_radii, cutoffs_others, selected_others, )
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
     return ijf, inters, row1, row2
