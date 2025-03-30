@@ -80,7 +80,7 @@ def get_cutoff(cutoff_name, args=()):
             f"{[x for x in cutoffs.keys() if not x.startswith('__')]}")
 
     # Get the value from the config file
-    elif cutoff_name in cutoffs:
+    elif cutoff_name in cutoffs and cutoff_name in args:
         return args[cutoff_name]
 
     # Get the value from the class
