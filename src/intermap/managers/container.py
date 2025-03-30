@@ -34,24 +34,18 @@ def transform(ijfs, inters):
 
 
 @njit(parallel=False, cache=True)
-def transform_wb(ijfs):
+def transform_wb(ijwf):
     # Initialize containers
-    i = 0
-    j = 0
-    inter = 0
-    key = (i, j, inter)
-    value = np.asarray([i, j, inter], dtype=np.int32)
-    to_assign = {key: value}
-    del to_assign[key]
+    to_assign = {}
 
     # Group the interactions
-    indices = groupby(ijfs)
+    indices = groupby_wb(ijwf)
     for index in indices.values():
-        sel_ijfs = ijfs[index]
+        sel_ijfs = ijwf[index]
         i, j, wat, f = sel_ijfs[0]
         frames = sel_ijfs[:, 3]
-        key = (i, j, wat, 'wb1')
-        to_assign.update({key: frames})
+        key = (i, j, wat, 'WaterBridge')
+        to_assign[key] = frames
     return to_assign
 
 
@@ -80,6 +74,43 @@ def groupby(ijfs: types.Array(types.int64, 2, 'C')) -> types.DictType(
             indices[pair] = List([i])
         else:
             indices[pair].append(i)
+
+    # Convert the lists to numpy arrays
+    key = list(indices.keys())[0]
+    value = np.asarray(indices[key], dtype=np.int32)
+    indices_as_array = {key: value}
+    del indices_as_array[key]
+
+    for key, value in indices.items():
+        indices_as_array[key] = np.asarray(value, dtype=np.int32)
+
+    return indices_as_array
+
+
+@njit(parallel=False, cache=False)
+def groupby_wb(ijfw):
+    """
+    Group the interactions by their indices
+    """
+    # Initialize typed containers
+    dim1, _ = ijfw.shape
+    zero32 = np.int32(0)
+    pair = (zero32, zero32, zero32)
+    seen = {pair}
+    seen.pop()
+    empty_frames = List([zero32])
+    indices = {pair: empty_frames}
+    del indices[pair]
+    empty_frames.pop()
+
+    for i in range(dim1):
+        a, b, c, d = ijfw[i]
+        pair = (a, b, c)
+        if pair not in seen:
+            seen.add(pair)
+            indices[pair] = List([np.int32(i)])
+        else:
+            indices[pair].append(np.int32(i))
 
     # Convert the lists to numpy arrays
     key = list(indices.keys())[0]

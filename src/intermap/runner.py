@@ -14,6 +14,7 @@ from tqdm import tqdm
 from intermap import commons as cmn
 from intermap.interactions import aro
 from intermap.interactions.runners import estimate, runpar
+from intermap.interactions.waters import wb1
 from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
@@ -146,9 +147,9 @@ def run():
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
             container.fill(ijf_chunk, inters_chunk)
-            # if detect_wb:
-            #     ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
-            #     container.fill(ijwf, inters='wb')
+            if detect_wb:
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
+                container.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
