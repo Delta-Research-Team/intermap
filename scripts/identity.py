@@ -8,8 +8,8 @@ from rgpack import generals as gnl
 # =============================================================================
 # User-defined variables
 # =============================================================================
-prolif_pickle = '/media/rglez/Expansion1/RoyData/intermap/correctness/prolif/lig-prot.pkl'
-imap_pickle = '/media/rglez/Expansion1/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
+prolif_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+imap_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 
 df = gnl.unpickle_from_file(prolif_pickle)
 imap = pd.read_csv(imap_pickle)
@@ -94,24 +94,22 @@ print(
 # Comparing Prolif and InterMap data in specific terms
 # =============================================================================
 # count = 0
-# for inter in imap_dict:
-#     if inter[-1] == 'EdgeToFace':
-#         break
-#         plf_time = prolif_dict[inter].nonzero()[0]
-#         imap_time = imap_dict[inter].nonzero()[0]
-#         equal = np.array_equal(plf_time, imap_time)
-#         if not equal:
+# for inter in prolif_dict:
+#     plf_time = prolif_dict[inter].nonzero()[0]
+#     imap_time = imap_dict[inter].nonzero()[0]
+#     equal = np.array_equal(plf_time, imap_time)
+#     if not equal:
+#         diff1 = np.setdiff1d(plf_time, imap_time)
+#         diff2 = np.setdiff1d(imap_time, plf_time)
+#         if diff1.size > 0:
+#             print(f'Prolif time values {diff1} not in InterMap for {inter}')
+#             print(plf_time)
+#             print(imap_time)
+#         if (diff2.size > 0):
 #             count += 1
-#             diff1 = np.setdiff1d(plf_time, imap_time)
-#             diff2 = np.setdiff1d(imap_time, plf_time)
-#             if diff1.size > 0:
-#                 print(f'Prolif time values {diff1} not in InterMap for {inter}')
-#                 print(plf_time)
-#                 print(imap_time)
-#             if diff2.size > 0:
-#                 print(f'InterMap time values {diff2} not in Prolif for {inter}')
-#                 print(plf_time)
-#                 print(imap_time)
+#             print(f'InterMap time values {diff2} not in Prolif for {inter}')
+#             print(plf_time)
+#             print(imap_time)
 # =============================================================================
 # plotting
 # =============================================================================
@@ -122,7 +120,9 @@ font = {'family': 'sans-serif',
         'size': 12}
 
 matplotlib.rc('font', **font)
-inters = sorted(list(imap_dict.keys()), key=lambda x: x[2])
+inters_imap = list(imap_dict.keys())
+inters_prolif = list(prolif_dict.keys())
+inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
 
 data = defaultdict(lambda: defaultdict(list))
 for inter in inters:
@@ -209,7 +209,7 @@ for i, inter in enumerate(condensed):
     ax1.bar(i, plif, color='k', bottom=both, zorder=1)
     ax2.bar(i, plif, color='k', bottom=both, zorder=1)
 
-ax1.set_ylim(0, 5500)  # outliers only
+ax1.set_ylim(15, 5500)  # outliers only
 ax2.set_ylim(0, 15)  # most of the data
 
 ax1.spines.bottom.set_visible(False)

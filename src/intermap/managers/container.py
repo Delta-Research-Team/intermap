@@ -204,3 +204,40 @@ class ContainerManager:
         hbd = np.where(inter_names == 'HBDonor')[0]
         hb_idx = np.concatenate((hba, hbd))
         return inter_names, hb_idx
+
+    def pack(self):
+        """
+        Destructive packing of the dictionary
+        """
+        packed_dict = {}
+        keys = list(self.dict.keys())
+        for key in keys:
+            if len(key) == 3:
+                s1_id, s2_id, inter_id = key
+                s1_name = self.atom_names[s1_id]
+                s2_name = self.atom_names[s2_id]
+                inter_name = self.inter_names[inter_id]
+                key2save = (s1_name, s2_name, inter_name)
+
+            elif len(key) == 4:
+                s1_id, s2_id, wat_id, inter_id = key
+                s1_name = self.atom_names[s1_id]
+                s2_name = self.atom_names[s2_id]
+                wat_name = self.atom_names[wat_id]
+                key2save = (s1_name, s2_name, wat_name, inter_id)
+            else:
+                raise ValueError('The key must have 3 or 4 elements')
+
+            time = self.dict[key]
+            prevalence = round(time.count() / self.n_frames * 100, 2)
+            del self.dict[key]
+            if prevalence < self.min_prevalence:
+                continue
+
+            if self.format == 'extended':
+                packed_dict[key2save] = {'time': bu.sc_encode(time),
+                                         'prevalence': prevalence}
+            else:
+                packed_dict[key2save] = prevalence
+
+        self.dict = packed_dict

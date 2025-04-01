@@ -48,7 +48,7 @@ from intermap.managers.indices import IndexManager
 
 def run():
     """
-    Main function to run InterMap
+    Entry point to run the InterMap workflow.
     """
     # %%=======================================================================
     # 1. Parse the configuration file
@@ -126,7 +126,9 @@ def run():
                              unit='chunk', total=n_chunks, ):
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
-        # break
+
+        # if i == 6:
+        #     break
 
         trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
@@ -168,6 +170,7 @@ def run():
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
+    packed = self.pack()
     tot = round(time.time() - start_time, 2)
     ldict = len(self.dict)
     print('\n\n')
@@ -177,5 +180,6 @@ def run():
         f" Total number of unique atom pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
+    return packed
 
 # run()

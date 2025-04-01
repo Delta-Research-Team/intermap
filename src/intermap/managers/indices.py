@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 from pprint import pformat
 
+
 import MDAnalysis as mda
 import numpy as np
 import numpy_indexed as npi
@@ -61,6 +62,17 @@ def ag2rdkit(ag):
         return ag.convert_to("RDKIT", force=False)
     except AttributeError:
         return ag.convert_to("RDKIT", force=True)
+
+
+def match_rings(mol):
+    aromatic_atoms = set([atom.GetIdx() for atom in mol.GetAtoms() if
+                          atom.GetIsAromatic()])
+
+    aromatic_rings = []
+    for ring in mol.GetRingInfo().AtomRings():
+        if all(atom in aromatic_atoms for atom in ring):
+            aromatic_rings.append(list(ring))
+    return aromatic_rings
 
 
 def get_uniques_triads(universe):
@@ -127,7 +139,7 @@ class IndexManager:
     Class to manage the indices of the selections in a trajectory.
     """
     smarts = {
-        'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
+        'hydroph': '[c,s,Br,I,S&v2&H0,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
         'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
         'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
         'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',

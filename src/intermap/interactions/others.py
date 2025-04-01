@@ -183,6 +183,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
         DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
         DA_dists = aot.calc_dist(xyz[D], xyz[t2])
         DHA_angles[DA_dists > da_cut] = -1
+
     elif "HBAcceptor" in inter_name:
         idx_hydros = aot.indices(type2, t2)
         D = hb_donors[idx_hydros]

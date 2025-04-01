@@ -4,16 +4,16 @@
 import MDAnalysis as mda
 import pandas as pd
 import prolif as plf
-from rgpack import generals as gnl
 
 # =============================================================================
 #
 # =============================================================================
-out_name = '/media/rglez/Expansion1/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+out_name = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
 
 # load topology and trajectory
 u = mda.Universe(plf.datafiles.TOP, plf.datafiles.TRAJ)
 
+from rgpack import generals as gnl
 # create selections for the ligand and protein
 ligand_selection = u.select_atoms("resname LIG")
 protein_selection = u.select_atoms("protein")
@@ -24,12 +24,12 @@ fp = plf.Fingerprint(
      'HBAcceptor', 'HBDonor', 'Hydrophobic', 'MetalAcceptor', 'MetalDonor',
      'PiCation', 'PiStacking', 'VdWContact', 'XBAcceptor', 'XBDonor'],
     count=True, parameters={"VdWContact": {"preset": "rdkit"}})
-fp.run(u.trajectory, ligand_selection, protein_selection)
-fp.to_pickle(out_name)
-df = fp.to_dataframe()
-gnl.pickle_to_file(df, out_name)
+# fp.run(u.trajectory, ligand_selection, protein_selection)
+# fp.to_pickle(out_name)
+# df = fp.to_dataframe()
+# gnl.pickle_to_file(df, out_name)
 
-u.trajectory[0]
+u.trajectory[6]
 prot = plf.Molecule.from_mda(protein_selection)
 lig = plf.Molecule.from_mda(ligand_selection)
 data = fp.generate(lig, prot, metadata=True)
