@@ -269,39 +269,39 @@ def calc_normal_vector(p1, p2, p3):
 
 
 @njit("Tuple((i4[:, :], f4[:]))"
-      "(f4[:, :], i8, i4[:], ListType(i8[:]), i4[:], i4[:], i4[:, :])",
+      "(f4[:, :], i8, ListType(i8[:]), i4[:], i4[:])",
       cache=True)
-def get_containers_run(xyz, k, ext_idx, ball_1, s1_indices, s2_indices,
-                       ijf_view):
+def get_containers_run(xyz, k, ball_aro, s1_idx, s2_idx, ):
     # Find the contacts
-    n_contacts = sum([len(x) for x in ball_1])
-    if n_contacts == 0:
-        return ijf_view, np.zeros(0, dtype=np.float32)
+    n_contacts = sum([len(x) for x in ball_aro])
+    ijf = np.zeros((n_contacts, 3), dtype=np.int32)
 
-    # ijf = np.zeros((n_contacts, 3), dtype=np.int32)
+    if n_contacts == 0:
+        return ijf, np.zeros(0, dtype=np.float32)
+
     counter = 0
-    for i, x in enumerate(ball_1):
-        X1 = s1_indices[i]
+    for i, x in enumerate(ball_aro):
+        X1 = s1_idx[i]
         for j in x:
-            X2 = s2_indices[j]
-            ijf_view[counter][0] = X1
-            ijf_view[counter][1] = X2
-            ijf_view[counter][2] = k
+            X2 = s2_idx[j]
+            ijf[counter][0] = X1
+            ijf[counter][1] = X2
+            ijf[counter][2] = k
             counter += 1
 
     # Remove idems (self-contacts appearing if both selections overlap)
-    idems = ext_idx[ijf_view[:, 0]] == ext_idx[ijf_view[:, 1]]
-    uniques = ijf_view[~idems].copy()
+    idems = ijf[:counter, 0] == ijf[:counter, 1]
+    uniques = ijf[:counter][~idems].copy()
     n_uniques = uniques.shape[0]
-    ijf_view[:n_uniques] = uniques
+    ijf[:n_uniques] = uniques
 
     # Compute distances
-    row1 = ijf_view[:n_uniques, 0]
-    row2 = ijf_view[:n_uniques, 1]
+    row1 = ijf[:n_uniques, 0]
+    row2 = ijf[:n_uniques, 1]
     dists = calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
-    return ijf_view, dists
+    return ijf, dists
 
 
 @njit("f4[:, :](f4[:, :], f4[:, :], f4[:, :])", parallel=False, cache=True)

@@ -249,22 +249,22 @@ def aro(xyz_aro, xyz_aro_idx, n_pairs_aro, ijf_view, dists, inters_view,
                             aot.calc_dist(ipoints, s2_centroids))
 
         if 'EdgeToFace' in selected_aro:
-            idx, etf_stacking = stackings('EdgeToFace', ring_dists, n1n2,
-                                          n1c1c2, n2c2c1, idists, cuts_aro,
-                                          selected_aro)
-            inters_view[:n_pairs_aro][pairs][:, idx] = etf_stacking
+            idx_etf, etf_stacking = stackings(
+                'EdgeToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
+                cuts_aro, selected_aro)
+            inters_view[:n_pairs_aro, idx_etf][pairs] = etf_stacking
 
         if 'FaceToFace' in selected_aro:
-            idx, ftf_stacking = stackings('FaceToFace', ring_dists, n1n2,
-                                          n1c1c2, n2c2c1, idists, cuts_aro,
-                                          selected_aro)
-            inters_view[:n_pairs_aro][pairs][:, idx] = ftf_stacking
+            idx_ftf, ftf_stacking = stackings(
+                'FaceToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
+                cuts_aro, selected_aro)
+            inters_view[:n_pairs_aro, idx_ftf][pairs] = ftf_stacking
 
         if 'PiStacking' in selected_aro:
-            idx, pi_stacking = stackings('PiStacking', ring_dists, n1n2,
-                                         n1c1c2, n2c2c1, idists, cuts_aro,
-                                         selected_aro)
-            inters_view[:n_pairs_aro][pairs][:, idx] = pi_stacking
+            idx_pi, pi_stacking = stackings(
+                'PiStacking', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
+                cuts_aro, selected_aro)
+            inters_view[:n_pairs_aro, idx_pi][pairs] = pi_stacking
 
     frame_id = ijf_view[0][-1]
     mask = aot.get_compress_mask(inters_view[:n_pairs_aro])

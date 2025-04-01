@@ -55,8 +55,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    # config = ConfigManager(mode='debug')
-    config = ConfigManager()
+    config = ConfigManager(mode='debug')
+    # config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
@@ -117,8 +117,8 @@ def run():
     # %%=======================================================================
     # 6. Detect the interactions
     # =========================================================================
-    container = ContainerManager(args, iman, cuts)
-    hb_idx = container.hb_idx
+    self = ContainerManager(args, iman, cuts)
+    hb_idx = self.hb_idx
     detect_wb = (waters.size > 0) and (hb_idx.size > 0)
     total_pairs, total_inters = 0, 0
     for i, xyz_chunk in tqdm(enumerate(trajiter),
@@ -126,6 +126,7 @@ def run():
                              unit='chunk', total=n_chunks, ):
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
+        # break
 
         trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
@@ -139,9 +140,11 @@ def run():
             cuts_others, selected_others, cuts_aro, selected_aro, overlap,
             atomic, resconv)
 
+        # print(list(zip(list(selected_aro) + list(selected_others),
+        #                inters_chunk.sum(axis=0))))
+
         if not atomic:
             ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
-
 
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
@@ -150,23 +153,23 @@ def run():
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            container.fill(ijf_chunk, inters_chunk)
+            self.fill(ijf_chunk, inters_chunk)
             if detect_wb:
                 ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
-                container.fill(ijwf, inters='wb')
+                self.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
     out_name = f"{basename(args.job_name)}_InterMap.csv"
     pickle_path = join(args.output_dir, out_name)
-    container.save(pickle_path)
+    self.save(pickle_path)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(container.dict)
+    ldict = len(self.dict)
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"

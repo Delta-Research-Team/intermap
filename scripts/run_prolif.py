@@ -2,13 +2,14 @@
 
 
 import MDAnalysis as mda
+import pandas as pd
 import prolif as plf
 from rgpack import generals as gnl
-import pandas as pd
+
 # =============================================================================
 #
 # =============================================================================
-out_name = '/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif'
+out_name = '/media/rglez/Expansion1/RoyData/intermap/correctness/prolif/lig-prot.pkl'
 
 # load topology and trajectory
 u = mda.Universe(plf.datafiles.TOP, plf.datafiles.TRAJ)
@@ -28,7 +29,7 @@ fp.to_pickle(out_name)
 df = fp.to_dataframe()
 gnl.pickle_to_file(df, out_name)
 
-u.trajectory[4]
+u.trajectory[0]
 prot = plf.Molecule.from_mda(protein_selection)
 lig = plf.Molecule.from_mda(ligand_selection)
 data = fp.generate(lig, prot, metadata=True)

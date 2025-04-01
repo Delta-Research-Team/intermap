@@ -31,7 +31,7 @@ def detect_config_path(mode='debug'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = '/media/rglez/Expansion1/RoyData/intermap/correctness/intermap/imap1.cfg'
         # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')

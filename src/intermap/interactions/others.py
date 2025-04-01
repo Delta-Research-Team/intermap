@@ -204,10 +204,10 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
 
 @njit(parallel=False, cache=True)
-def others(xyz, k, s1_idx, s2_idx, ball_1, hydrophobes, anions,
-           cations, metal_donors, metal_acceptors, hb_hydros, hb_donors,
-           hb_acc, xb_halogens, xb_donors, xb_acc, vdw_radii, cutoffs_others,
-           selected_others, overlap, atomic, resconv):
+def others(
+        xyz, k, s1_idx, s2_idx, ball_others, hydroph, anions, cations, met_don,
+        met_acc, hb_hydr, hb_don, hb_acc, xb_hal, xb_don, xb_acc, vdw_radii,
+        cuts_others, selected_others, overlap, atomic, resconv):
     """
     Fill the not-aromatic interactions
     """
@@ -217,7 +217,8 @@ def others(xyz, k, s1_idx, s2_idx, ball_1, hydrophobes, anions,
 
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = \
-        containers(xyz, k, s1_idx, s2_idx, ball_1, selected_others, overlap,
+        containers(xyz, k, s1_idx, s2_idx, ball_others, selected_others,
+                   overlap,
                    atomic, resconv)
 
     # [Van der Waals]
@@ -229,57 +230,56 @@ def others(xyz, k, s1_idx, s2_idx, ball_1, hydrophobes, anions,
     # [Close Contacts]
     if 'CloseContact' in selected_others:
         cc_idx, cc = detect_1d('CloseContact', dists, row1, row1, row2, row2,
-                               cutoffs_others, selected_others)
+                               cuts_others, selected_others)
         inters[:, cc_idx] = cc
 
     # [Hydrophobic]
     if 'Hydrophobic' in selected_others:
-        hp_idx, hp = detect_1d('Hydrophobic', dists, row1, hydrophobes, row2,
-                               hydrophobes, cutoffs_others, selected_others)
+        hp_idx, hp = detect_1d('Hydrophobic', dists, row1, hydroph, row2,
+                               hydroph, cuts_others, selected_others)
         inters[:, hp_idx] = hp
 
     # [Cationic]
     if 'Cationic' in selected_others:
         cat_idx, cat = detect_1d('Cationic', dists, row1, cations, row2,
-                                 anions, cutoffs_others, selected_others)
+                                 anions, cuts_others, selected_others)
         inters[:, cat_idx] = cat
 
     # [Anionic]
     if 'Anionic' in selected_others:
         an_idx, an = detect_1d('Anionic', dists, row1, anions, row2,
-                               cations, cutoffs_others, selected_others)
+                               cations, cuts_others, selected_others)
         inters[:, an_idx] = an
 
     # [MetalDonor]
     if 'MetalDonor' in selected_others:
-        md_idx, md = detect_1d('MetalDonor', dists, row1, metal_donors, row2,
-                               metal_acceptors, cutoffs_others,
+        md_idx, md = detect_1d('MetalDonor', dists, row1, met_don, row2,
+                               met_acc, cuts_others,
                                selected_others)
         inters[:, md_idx] = md
 
     # [MetalAcceptor]
     if 'MetalAcceptor' in selected_others:
-        ma_idx, ma = detect_1d('MetalAcceptor', dists, row1, metal_acceptors,
-                               row2, metal_donors, cutoffs_others,
+        ma_idx, ma = detect_1d('MetalAcceptor', dists, row1, met_acc,
+                               row2, met_don, cuts_others,
                                selected_others)
         inters[:, ma_idx] = ma
 
     # [HBonds]
     if ('HBAcceptor' in selected_others) or ('HBDonor' in selected_others):
         idx_hb = selected_others.index('HBAcceptor')
-        da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cutoffs_others[:4,
-                                                       idx_hb]
+        da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cuts_others[:4, idx_hb]
 
         if 'HBAcceptor' in selected_others:
             hba_idx, hba = detect_hbonds('HBAcceptor', row1, hb_acc, row2,
-                                         hb_hydros, dists, xyz, hb_donors,
+                                         hb_hydr, dists, xyz, hb_don,
                                          ha_cut_hb, da_cut_hb, min_ang_hb,
                                          max_ang_hb, selected_others)
             inters[:, hba_idx] = hba
 
         if 'HBDonor' in selected_others:
-            hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydros, row2,
-                                         hb_acc, dists, xyz, hb_donors,
+            hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydr, row2,
+                                         hb_acc, dists, xyz, hb_don,
                                          ha_cut_hb, da_cut_hb, min_ang_hb,
                                          max_ang_hb, selected_others)
             inters[:, hbd_idx] = hbd
@@ -287,19 +287,18 @@ def others(xyz, k, s1_idx, s2_idx, ball_1, hydrophobes, anions,
     # [XBonds]
     if ('XBAcceptor' in selected_others) or ('XBDonor' in selected_others):
         idx_xb = selected_others.index('XBAcceptor')
-        da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cutoffs_others[:4,
-                                                       idx_xb]
+        da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cuts_others[:4, idx_xb]
 
         if 'XBAcceptor' in selected_others:
             xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
-                                         xb_halogens, dists, xyz, xb_donors,
+                                         xb_hal, dists, xyz, xb_don,
                                          ha_cut_xb, da_cut_xb, min_ang_xb,
                                          max_ang_xb, selected_others)
             inters[:, xba_idx] = xba
 
         if 'XBDonor' in selected_others:
-            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_halogens, row2,
-                                         xb_acc, dists, xyz, xb_donors,
+            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_hal, row2,
+                                         xb_acc, dists, xyz, xb_don,
                                          ha_cut_xb, da_cut_xb, min_ang_xb,
                                          max_ang_xb, selected_others)
             inters[:, xbd_idx] = xbd

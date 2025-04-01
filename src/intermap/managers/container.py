@@ -160,6 +160,11 @@ class ContainerManager:
                 self.dict[key][value.tolist()] = True
 
     def generate_lines(self):
+        if self.args.resolution == 'residue':
+            names = self.iman.resid_names
+        else:
+            names = self.iman.atom_names
+
         for key in self.dict:
             if len(key) == 3:
                 s1, s2, inter = key
@@ -169,11 +174,6 @@ class ContainerManager:
                 s1, s2, wat, inter_name = key
             else:
                 raise ValueError('The key must have 3 or 4 elements')
-
-            if self.args.resolution == 'residue':
-                names = self.iman.resid_names
-            else:
-                names = self.iman.atom_names
 
             s1_name = names[s1]
             s2_name = names[s2]

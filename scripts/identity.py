@@ -1,17 +1,18 @@
 from collections import defaultdict
 
-import bitarray.util as bu
 import numpy as np
+import pandas as pd
+from bitarray import bitarray as ba
 from rgpack import generals as gnl
 
 # =============================================================================
 # User-defined variables
 # =============================================================================
-imap_pickle = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/outputs/lig-prot/lig-prot_InterMap.pickle'
-prolif_pickle = '/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif'
+prolif_pickle = '/media/rglez/Expansion1/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+imap_pickle = '/media/rglez/Expansion1/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 
 df = gnl.unpickle_from_file(prolif_pickle)
-imap = gnl.unpickle_from_file(imap_pickle)
+imap = pd.read_csv(imap_pickle)
 
 # =============================================================================
 # Transforming Prolif data
@@ -33,14 +34,14 @@ for x in prolif_dict:
 # Reducing InterMap data
 # =============================================================================
 imap_dict_raw = dict()
-for x in imap:
-    a1, a2, inter_raw = x
+for x in imap.values:
+    a1, a2, a3, inter_raw, prev, time = x
     inter = str(inter_raw)
     a1_resname, a1_resid, a1_atname = a1.split('_')
     a1_label = f'{a1_resname}{a1_resid}'
     a2_resname, a2_resid, a2_atname = a2.split('_')
     a2_label = f'{a2_resname}{a2_resid}'
-    current_time = bu.sc_decode(imap[x]['time'])
+    current_time = ba(time)
 
     if (a1_label, a2_label, inter) in imap_dict_raw:
         previous_time = imap_dict_raw[(a1_label, a2_label, inter)]
