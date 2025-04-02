@@ -44,7 +44,6 @@ from intermap.managers.indices import IndexManager
 # done: do not gather balls and trees outside runpar / estimate functions
 # done: rename  to CloseContact in all files
 
-# %%
 
 def run():
     """
@@ -55,12 +54,12 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    # config = ConfigManager(mode='debug')
-    config = ConfigManager()
+    config = ConfigManager(mode='debug')
+    # config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
-    # =========================================================================
+    # %%=======================================================================
     # 2. Load the indices & interactions to compute
     # =========================================================================
     iman = IndexManager(args)
@@ -81,7 +80,7 @@ def run():
         iman.resid_names, iman.atom_names, iman.resconv, iman.n_frames,
         iman.traj_frames, iman.inters_requested)
 
-    # =========================================================================
+    # %%=======================================================================
     # 3. Parse the interactions & cutoffs
     # =========================================================================
     cuts = CutoffsManager(args, iman)
@@ -92,7 +91,7 @@ def run():
         cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
         cuts.max_dist_others)
 
-    # =========================================================================
+    # %%=======================================================================
     # 4. Estimating memory allocation
     # =========================================================================
     atomic = True if args.resolution == 'atom' else False
@@ -105,7 +104,7 @@ def run():
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
         atomic, resconv)
 
-    # =========================================================================
+    # %%=======================================================================
     # 5. Trim the trajectory
     # =========================================================================
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
@@ -127,9 +126,6 @@ def run():
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
-        # if i == 4:
-        #     break
-
         trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
 
@@ -141,9 +137,6 @@ def run():
             s2_rings, s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx,
             cuts_others, selected_others, cuts_aro, selected_aro, overlap,
             atomic, resconv)
-
-        # print(list(zip(list(selected_aro) + list(selected_others),
-        #                inters_chunk.sum(axis=0))))
 
         if not atomic:
             ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
@@ -163,14 +156,14 @@ def run():
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    out_name = f"{basename(args.job_name)}_InterMap.csv"
-    csv_path = join(args.output_dir, out_name)
+    out_name = f"{basename(args.job_name)}_InterMap"
+    csv_path = join(args.output_dir, f'{out_name}.csv')
     self.save(csv_path)
+    packed = self.pack()
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
-    packed = self.pack()
     tot = round(time.time() - start_time, 2)
     ldict = len(self.dict)
     print('\n\n')
