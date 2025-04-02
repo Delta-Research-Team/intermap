@@ -1,0 +1,405 @@
+"""
+Configuration settings for the InterMap Visualizations app.
+Contains color schemes, plot settings, and UI styles.
+
+"""
+
+from shiny import ui
+
+# Color scheme for different interaction types
+all_interactions_colors = {
+    'HBDonor': '#E41A1C',
+    'HBAcceptor': '#377EB8',
+    'Hydrophobic': '#4DAF4A',
+    'VdWContact': '#FF7F00',
+    'CloseContacts': '#984EA3',
+    'PiStacking': '#F781BF',
+    'PiCation': '#A65628',
+    'CationPi': '#999999',
+    'Anionic': '#B2182B',
+    'Cationic': '#2166AC',
+    'MetalDonor': '#A8A8A8',
+    'MetalAcceptor': '#8C510A',
+    'FaceToFace': '#762A83',
+    'EdgeToFace': '#1B7837',
+    'XBAcceptor': '#5E3C99',
+    'XBDonor': '#2B5C8C'
+}
+
+# Error messages dictionary
+ERROR_MESSAGES = {
+    'no_file': "Please upload a TSV file.",
+    'invalid_file': "Invalid file format. Please upload a TSV file.",
+    'no_data': "No data available for plotting.",
+    'processing_error': "Error processing file: {}",
+    'no_interactions': "No interactions found with current filters.",
+    'plot_error': "Error generating plot: {}",
+    'no_topology': "No topology file found in directory.",
+    'invalid_selection': "Invalid MDAnalysis selection: {}"
+}
+
+# CSS styles for UI components
+CSS_STYLES = {
+    'file_input_container': """
+    .file-input-container {
+        margin-bottom: 15px;
+    }
+    """,
+
+    'file_browse_container': """
+    .file-browse-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    """,
+
+    'topology_indicator': """
+    .topology-indicator {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 10px;
+        cursor: help;
+        position: relative;
+    }
+    
+    .topology-indicator i {
+        font-size: 14px;
+        color: #808080;
+        transition: color 0.3s ease;
+    }
+    
+    .topology-indicator.active i {
+        color: #4CAF50;
+    }
+    
+    .topology-indicator::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 8px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    .topology-indicator:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
+    """,
+
+    'mda_selection_container': """
+    .mda-selection-container {
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .mda-selection-container input {
+        font-family: 'Ubuntu Mono', monospace;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        width: 100%;
+    }
+    
+    .mda-selection-container input:focus {
+        border-color: #ff5555ff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255,85,85,0.2);
+    }
+    
+    .mda-selection-container label {
+        display: block;
+        margin-bottom: 5px;
+        font-family: 'Ubuntu Mono', monospace;
+        color: #383747ff;
+    }
+    """,
+
+    'file_upload': """
+    .progress-bar {
+        background-color: #ff5555ff !important;
+    }
+
+    .btn-file {
+        background-color: #383747ff !important;
+        color: white !important;
+        border: none !important;
+        padding: 6px 12px !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        transition: background-color 0.3s ease !important;
+    }
+
+    .btn-file:hover {
+        background-color: #ff3333ff !important;
+    }
+
+    .progress {
+        border-radius: 4px !important;
+        margin-top: 5px !important;
+        background-color: #f0f0f0 !important;
+    }
+    """,
+
+    'error_message': """
+    .error-message {
+        color: #ff5555ff !important;
+        font-family: 'Ubuntu Mono', monospace !important;
+        padding: 10px !important;
+        margin: 10px 0 !important;
+        border-radius: 4px !important;
+        background-color: rgba(255, 85, 85, 0.1) !important;
+        display: block !important;
+        border-left: 4px solid #ff5555ff !important;
+    }
+    """,
+
+    'font_import': """
+    @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap');
+    """,
+
+    'custom_controls': """
+    .irs--shiny .irs-bar {
+        background: #ff5555ff !important;
+        border-top: 1px solid #ff5555ff !important;
+        border-bottom: 1px solid #ff5555ff !important;
+    }
+
+    .irs--shiny .irs-single {
+        background: #ff5555ff !important;
+        border-color: #ff5555ff !important;
+    }
+
+    .irs--shiny .irs-handle {
+        border: 3px solid #383747ff !important;
+        background-color: #383747ff !important;
+    }
+
+    .irs--shiny .irs-handle > i:first-child {
+        background-color: #383747ff !important;
+    }
+
+    .irs--shiny .irs-handle.state_hover > i:first-child,
+    .irs--shiny .irs-handle:hover > i:first-child {
+        background-color: #383747ff !important;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        width: 16px !important;
+        height: 16px !important;
+        border: 2px solid #ff5555ff !important;
+        border-radius: 3px !important;
+        background-color: #FEFBF6 !important;
+        cursor: pointer !important;
+        margin-right: 8px !important;
+        position: relative !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .checkbox-group input[type="checkbox"]:checked {
+        background-color: #ff5555ff !important;
+    }
+
+    .checkbox-group input[type="checkbox"]:checked::after {
+        content: '✓' !important;
+        color: #FEFBF6 !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-size: 12px !important;
+    }
+
+    .form-switch .form-check-input:checked {
+        background-color: #ff5555ff !important;
+        border-color: #ff5555ff !important;
+    }
+
+    .search-button {
+        background-color: #ff5555ff !important;
+        color: white !important;
+        border: none !important;
+        padding: 6px 12px !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        transition: background-color 0.3s ease !important;
+        font-family: 'Ubuntu Mono', monospace !important;
+    }
+
+    .search-button:hover {
+        background-color: #ff3333ff !important;
+    }
+
+    .form-control:focus {
+        border-color: #ff5555ff !important;
+        box-shadow: 0 0 0 0.2rem rgba(255, 85, 85, 0.25) !important;
+    }
+    """,
+
+    'welcome_section': """
+    .welcome-section {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: #F7F7F7;
+        width: 100%;
+        font-family: 'Ubuntu Mono', monospace;
+        color: #383747ff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    """,
+
+    'welcome_text': """
+    .welcome-text {
+        text-align: right;
+        padding-right: 20px;
+        font-family: 'Ubuntu Mono', monospace;
+        color: #383747ff;
+    }
+    """,
+
+    'welcome_title': """
+    .welcome-title {
+        font-size: 36px;
+        font-weight: bold;
+        margin: 0;
+        color: #383747ff;
+        font-family: 'Ubuntu Mono', monospace;
+    }
+    """,
+
+    'welcome_subtitle': """
+    .welcome-subtitle {
+        font-size: 18px;
+        color: #383747ff;
+        margin-top: 5px;
+        font-family: 'Ubuntu Mono', monospace;
+        opacity: 0.8;
+    }
+    """,
+
+    'welcome_image': """
+    .welcome-image {
+        max-width: 250px;
+        height: auto;
+        margin-left: 1px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    """,
+
+    'interaction_filter': """
+    .interaction-filter {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-family: 'Ubuntu Mono', monospace;
+        color: #383747ff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    """,
+
+    'checkbox_group': """
+    .checkbox-group {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: 'Ubuntu Mono', monospace;
+        scrollbar-width: thin;
+        scrollbar-color: #ff5555ff #f0f0f0;
+    }
+
+    .checkbox-group::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .checkbox-group::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 4px;
+    }
+
+    .checkbox-group::-webkit-scrollbar-thumb {
+        background-color: #ff5555ff;
+        border-radius: 4px;
+    }
+    """,
+
+    'interaction_count': """
+    .interaction-count {
+        color: #383747ff;
+        font-size: 0.9em;
+        margin-left: 4px;
+        font-family: 'Ubuntu Mono', monospace;
+        opacity: 0.8;
+    }
+    """,
+
+    'search_container': """
+    .search-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-family: 'Ubuntu Mono', monospace;
+    }
+    """,
+
+    'plot_container': """
+    .plot-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin: 20px auto;
+        padding: 0 15px;
+        font-family: 'Ubuntu Mono', monospace;
+    }
+    """,
+
+    'centered_plot': """
+    .centered-plot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 100%;
+        font-family: 'Ubuntu Mono', monospace;
+    }
+    """,
+
+    'plot_output_container': """
+    .plot-output-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Ubuntu Mono', monospace;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    """
+}
