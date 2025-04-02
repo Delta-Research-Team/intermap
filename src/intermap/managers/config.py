@@ -75,6 +75,8 @@ allowed_parameters = {
         'output_dir': {'dtype': 'path', 'check_exist': False},
         'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
         'job_name': {'dtype': 'path', 'check_exist': False},
+        'n_samples': {'dtype': int, 'min': 1, 'max': inf_int},
+        'n_factor': {'dtype': float, 'min': 1, 'max': inf_float},
     },
     # ____ topo-traj
     'topo-traj': {

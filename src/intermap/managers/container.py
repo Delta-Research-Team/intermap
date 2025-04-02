@@ -149,6 +149,9 @@ class ContainerManager:
         # Initialize containers
         self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
+        # Detect water bridges ?
+        self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
+
     # @profile
     def fill(self, ijfs, inters):
         if ijfs.size > 0:
