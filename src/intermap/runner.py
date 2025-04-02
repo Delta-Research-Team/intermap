@@ -23,18 +23,16 @@ from intermap.managers.indices import IndexManager
 
 # High Priority
 # todo: update filling dict when water
-# todo: implement granularity as a way to condense information
-
-# Medium Priority
-# todo: put n_samples / n_factor in config
 
 # Low Priority
 # todo: assert identity against  prolif, again
 # todo: Reorganize the code
-# todo: check logging
 # todo: check docstrings
 # todo: start writing tests
 
+# done: check logging
+# done: put n_samples / n_factor in config
+# done: implement granularity as a way to condense information
 # done: join into the same function: aro.get_trees, cmn.get_trees
 # done: check hard-coded cutoffs
 # done: implement selecting interactions from config
@@ -44,11 +42,10 @@ from intermap.managers.indices import IndexManager
 # done: do not gather balls and trees outside runpar / estimate functions
 # done: rename  to CloseContact in all files
 
-# %%
 
 def run():
     """
-    Main function to run InterMap
+    Entry point to run the InterMap workflow.
     """
     # %%=======================================================================
     # 1. Parse the configuration file
@@ -60,7 +57,7 @@ def run():
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
-    # =========================================================================
+    # %%=======================================================================
     # 2. Load the indices & interactions to compute
     # =========================================================================
     iman = IndexManager(args)
@@ -81,7 +78,7 @@ def run():
         iman.resid_names, iman.atom_names, iman.resconv, iman.n_frames,
         iman.traj_frames, iman.inters_requested)
 
-    # =========================================================================
+    # %%=======================================================================
     # 3. Parse the interactions & cutoffs
     # =========================================================================
     cuts = CutoffsManager(args, iman)
@@ -92,7 +89,7 @@ def run():
         cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
         cuts.max_dist_others)
 
-    # =========================================================================
+    # %%=======================================================================
     # 4. Estimating memory allocation
     # =========================================================================
     atomic = True if args.resolution == 'atom' else False
@@ -105,7 +102,7 @@ def run():
         selected_others, len_others, max_dist_aro, max_dist_others, overlap,
         atomic, resconv)
 
-    # =========================================================================
+    # %%=======================================================================
     # 5. Trim the trajectory
     # =========================================================================
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
@@ -115,21 +112,22 @@ def run():
                                           args.chunk_size))
 
     # %%=======================================================================
-    # 6. Detect the interactions
+    # 6. Detect the interactions & Fill the container
     # =========================================================================
-    container = ContainerManager(args, iman, cuts)
-    hb_idx = container.hb_idx
-    detect_wb = (waters.size > 0) and (hb_idx.size > 0)
     total_pairs, total_inters = 0, 0
+    container = ContainerManager(args, iman, cuts)
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
-        s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
+        # 6.1 Get centroids & coordinates of aromatic rings
+        s1_ctrs, s2_ctrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
+        # 6.2 Get the kdtrees of aromatic & non-aromatic coordinates
         trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)
         trees_others = cmn.get_trees(xyz_chunk, s2_idx)
 
+        # 6.3 Detect interactions in parallel
         ijf_chunk, inters_chunk = runpar(
             xyz_chunk, xyzs_aro, xyz_aro_idx, trees_others, trees_aro,
             ijf_shape, inters_shape, s1_idx, s2_idx, anions, cations,
@@ -139,40 +137,46 @@ def run():
             cuts_others, selected_others, cuts_aro, selected_aro, overlap,
             atomic, resconv)
 
+        # 6.4 Renumber from atom to residue indices if resolution is 'residue'
         if not atomic:
             ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
 
-
+        # 6.5 Update counters
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
 
-        # Fill interactions in ijf and wb interactions in ijkf
+        # 6.6 Fill the container with the interactions
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
             container.fill(ijf_chunk, inters_chunk)
-            if detect_wb:
-                ijwf = wb1(ijf_chunk, inters_chunk, waters, hb_idx)
+
+            # 6.7 Fill the container with the water bridges
+            if container.detect_wb:
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, container.hb_idx)
                 container.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    out_name = f"{basename(args.job_name)}_InterMap.csv"
-    pickle_path = join(args.output_dir, out_name)
-    container.save(pickle_path)
+    out_name = f"{basename(args.job_name)}_InterMap"
+    csv_path = join(args.output_dir, f'{out_name}.csv')
+    container.save(csv_path)
+    packed = container.pack()
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
     ldict = len(container.dict)
+    pair_type = 'atom' if atomic else 'residue'
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        f" Interactions saved in {pickle_path}\n"
-        f" Total number of unique atom pairs detected: {ldict}\n"
+        f" Interactions saved in {csv_path}\n"
+        f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
+    return packed
 
 # run()

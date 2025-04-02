@@ -1,7 +1,7 @@
 # Created by gonzalezroy at 3/25/25
 
 info = {
-    'InterMap': {
+    'InterMap (atoms)': {
         'GPCR-Lig': {
             'Lig-Prot': {
                 'time': 5,
@@ -66,6 +66,72 @@ info = {
                 'n_inters': 0}
         },
     },
+    'InterMap (residues)': {
+        'GPCR-Lig': {
+            'Lig-Prot': {
+                'time': 5,
+                'ram': .3,
+                'n_inters': 0},
+            'Prot-Prot': {
+                'time': 30,
+                'ram': 1.1,
+                'n_inters': 0},
+        },
+        'IgG3-M1': {
+            'Lig-Prot': {
+                'time': 254,
+                'ram': 0.8,
+                'n_inters': 0},
+
+            'Prot-Prot': {
+                'time': 1658,
+                'ram': 3.4,
+                'n_inters': 0},
+        },
+        'Nucleosome_A': {
+            'DNA-Prot': {
+                'time': 62,
+                'ram': 1.6,
+                'n_inters': 0},
+            'DNA-DNA': {
+                'time': 75,
+                'ram': 2.2,
+                'n_inters': 0},
+            'Prot-Prot': {
+                'time': 98,
+                'ram': 3.0,
+                'n_inters': 0}
+        },
+        'Nucleosome_B': {
+            'DNA-Prot': {
+                'time': 48,
+                'ram': 1.3,
+                'n_inters': 0},
+            'DNA-DNA': {
+                'time': 193,
+                'ram': 2.4,
+                'n_inters': 0},
+            'Prot-Prot': {
+                'time': 385,
+                'ram': 3.9,
+                'n_inters': 0}
+        },
+        'Nucleosome_C': {
+            'DNA-Prot': {
+                'time': 809,
+                'ram': 60.3,
+                'n_inters': 0},
+            'DNA-DNA': {
+                'time': 10953,
+                'ram': 58.8,
+                'n_inters': 0},
+            'Prot-Prot': {
+                'time': 5249,
+                'ram': 59.5,
+                'n_inters': 0}
+        },
+    },
+
     'ProLIF': {
         'GPCR-Lig': {
             'Lig-Prot': {

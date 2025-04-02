@@ -1,17 +1,32 @@
 from collections import defaultdict
 
-import bitarray.util as bu
 import numpy as np
+import pandas as pd
+from bitarray import bitarray as ba
 from rgpack import generals as gnl
+
+# import itertools as it
+# pi_ring=(
+#             "[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1",
+#             "[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1",
+#         )
+#
+# for pi_rings in it.product(pi_ring, repeat=2):
+#     print(pi_rings[0])
+#     print(pi_rings[1])
+#     print('---')
+#             res_matches = residue.GetSubstructMatches(pi_rings[0])
+#
+#
 
 # =============================================================================
 # User-defined variables
 # =============================================================================
-imap_pickle = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/outputs/lig-prot/lig-prot_InterMap.pickle'
-prolif_pickle = '/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif'
+prolif_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+imap_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 
 df = gnl.unpickle_from_file(prolif_pickle)
-imap = gnl.unpickle_from_file(imap_pickle)
+imap = pd.read_csv(imap_pickle)
 
 # =============================================================================
 # Transforming Prolif data
@@ -33,14 +48,14 @@ for x in prolif_dict:
 # Reducing InterMap data
 # =============================================================================
 imap_dict_raw = dict()
-for x in imap:
-    a1, a2, inter_raw = x
+for x in imap.values:
+    a1, a2, a3, inter_raw, prev, time = x
     inter = str(inter_raw)
     a1_resname, a1_resid, a1_atname = a1.split('_')
     a1_label = f'{a1_resname}{a1_resid}'
     a2_resname, a2_resid, a2_atname = a2.split('_')
     a2_label = f'{a2_resname}{a2_resid}'
-    current_time = bu.sc_decode(imap[x]['time'])
+    current_time = ba(time)
 
     if (a1_label, a2_label, inter) in imap_dict_raw:
         previous_time = imap_dict_raw[(a1_label, a2_label, inter)]
@@ -92,25 +107,23 @@ print(
 # =============================================================================
 # Comparing Prolif and InterMap data in specific terms
 # =============================================================================
-# count = 0
-# for inter in imap_dict:
-#     if inter[-1] == 'EdgeToFace':
-#         break
-#         plf_time = prolif_dict[inter].nonzero()[0]
-#         imap_time = imap_dict[inter].nonzero()[0]
-#         equal = np.array_equal(plf_time, imap_time)
-#         if not equal:
-#             count += 1
-#             diff1 = np.setdiff1d(plf_time, imap_time)
-#             diff2 = np.setdiff1d(imap_time, plf_time)
-#             if diff1.size > 0:
-#                 print(f'Prolif time values {diff1} not in InterMap for {inter}')
-#                 print(plf_time)
-#                 print(imap_time)
-#             if diff2.size > 0:
-#                 print(f'InterMap time values {diff2} not in Prolif for {inter}')
-#                 print(plf_time)
-#                 print(imap_time)
+count = 0
+for inter in prolif_dict:
+    plf_time = prolif_dict[inter].nonzero()[0]
+    imap_time = imap_dict[inter].nonzero()[0]
+    equal = np.array_equal(plf_time, imap_time)
+    if not equal:
+        diff1 = np.setdiff1d(plf_time, imap_time)
+        diff2 = np.setdiff1d(imap_time, plf_time)
+        if diff1.size > 0:
+            print(f'Prolif time values {diff1} not in InterMap for {inter}')
+            print(plf_time)
+            print(imap_time)
+        if diff2.size > 0:
+            count += 1
+            print(f'InterMap time values {diff2} not in Prolif for {inter}')
+            print(plf_time)
+            print(imap_time)
 # =============================================================================
 # plotting
 # =============================================================================
@@ -121,10 +134,14 @@ font = {'family': 'sans-serif',
         'size': 12}
 
 matplotlib.rc('font', **font)
-inters = sorted(list(imap_dict.keys()), key=lambda x: x[2])
+inters_imap = list(imap_dict.keys())
+inters_prolif = list(prolif_dict.keys())
+inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
 
 data = defaultdict(lambda: defaultdict(list))
 for inter in inters:
+    if inter[-1] == 'CloseContact':
+        continue
     try:
         plif_time = (prolif_dict[inter] > 0).astype(int)
     except KeyError:
@@ -163,32 +180,32 @@ for inter in condensed:
     percentage[inter]['both'].append(both / total * 100)
 
 order = sorted([(x, percentage[x]['both']) for x in condensed],
-               key=lambda x: x[1], reverse=False)
+               key=lambda x: x[1])
 
-fig, ax = plt.subplots(dpi=600)
-ax.set_xlabel('Interaction type', fontweight='bold')
-ax.set_ylabel('Interactions detected (%)', fontweight='bold')
-ax.set_ylim(0, 105)
-for i, inter in enumerate(percentage):
-    both = percentage[order[i][0]]['both'][0]
-    plif = percentage[order[i][0]]['plif'][0]
-    imap = percentage[order[i][0]]['imap'][0]
-    ax.bar(i, both, color='lightgray', zorder=1, lw=0.5)
-    ax.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
-    ax.bar(i, plif, color='k', bottom=both, zorder=1)
-
-ax.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
-ax.bar(i, both, color='lightgray', label='Both')
-ax.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
-ax.bar(i, plif, color='k', label='ProLIF only', bottom=both)
-
-ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
-          framealpha=0.95)
-ax.set_xticks(range(len(order)))
-ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
-plt.tight_layout()
-plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif.png')
-plt.close()
+# fig, ax = plt.subplots(dpi=600)
+# ax.set_xlabel('Interaction type', fontweight='bold')
+# ax.set_ylabel('Interactions detected (%)', fontweight='bold')
+# ax.set_ylim(0, 105)
+# for i, inter in enumerate(percentage):
+#     both = percentage[order[i][0]]['both'][0]
+#     plif = percentage[order[i][0]]['plif'][0]
+#     imap = percentage[order[i][0]]['imap'][0]
+#     ax.bar(i, both, color='lightgray', zorder=1, lw=0.5)
+#     ax.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
+#     ax.bar(i, plif, color='k', bottom=both, zorder=1)
+#
+# ax.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
+# ax.bar(i, both, color='lightgray', label='Both')
+# ax.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
+# ax.bar(i, plif, color='k', label='ProLIF only', bottom=both)
+#
+# ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
+#           framealpha=0.95)
+# ax.set_xticks(range(len(order)))
+# ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
+# plt.tight_layout()
+# plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-global.png')
+# plt.close()
 
 # %%
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -209,7 +226,7 @@ for i, inter in enumerate(condensed):
     ax2.bar(i, plif, color='k', bottom=both, zorder=1)
 
 ax1.set_ylim(0, 5500)  # outliers only
-ax2.set_ylim(0, 15)  # most of the data
+ax2.set_ylim(0, 10)  # most of the data
 
 ax1.spines.bottom.set_visible(False)
 ax2.spines.top.set_visible(False)
@@ -240,5 +257,6 @@ ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
 ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
 
 plt.tight_layout()
-plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif2.png')
+plt.savefig(
+    '/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-detailed.png')
 plt.close()

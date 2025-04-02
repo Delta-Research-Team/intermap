@@ -63,6 +63,17 @@ def ag2rdkit(ag):
         return ag.convert_to("RDKIT", force=True)
 
 
+def match_rings(mol):
+    aromatic_atoms = set([atom.GetIdx() for atom in mol.GetAtoms() if
+                          atom.GetIsAromatic()])
+
+    aromatic_rings = []
+    for ring in mol.GetRingInfo().AtomRings():
+        if all(atom in aromatic_atoms for atom in ring):
+            aromatic_rings.append(list(ring))
+    return aromatic_rings
+
+
 def get_uniques_triads(universe):
     """
     Get the unique residues in the universe taking into account the connected
@@ -127,13 +138,13 @@ class IndexManager:
     Class to manage the indices of the selections in a trajectory.
     """
     smarts = {
-        'hydroph': '[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
+        'hydroph': '[c,s,Br,I,S&v2&H0,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
         'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
         'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
         'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
         'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
-        'hb_acc': '[#7&!$([n&X3])&!$([N&X3]-*=[O,N,P,S])&!$([N&X3]-a)&!$([N&v4&+]),O&!$([O&X2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O&-]-N=O),o&+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
-        'xb_acc': '[#7,#8,P,S,#34,#52,a;!+{1-}]!#*',
+        'hb_acc': '[#7&!$([nX3])&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4&+1]),O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O),o+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
+        'xb_acc': '[$([O,S;+0]),$([N;v3,v4&+1]),n+0]-[H]',
         'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
         'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
         'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
@@ -377,7 +388,7 @@ class IndexManager:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
                     selected_a = mono_res.atoms.indices[match_a]
-                    hx_A.extend(selected_a[0])
+                    hx_A.extend(selected_a[:, 0])
 
         # Filter the indices
         hx_D_raw = npi.indices(self.sel_idx, np.asarray(hx_D), missing=-1)

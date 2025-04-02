@@ -2,13 +2,13 @@
 
 
 import MDAnalysis as mda
-import prolif as plf
-from rgpack import generals as gnl
 import pandas as pd
+import prolif as plf
+
 # =============================================================================
 #
 # =============================================================================
-out_name = '/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif'
+out_name = '/media/rglez/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
 
 # load topology and trajectory
 u = mda.Universe(plf.datafiles.TOP, plf.datafiles.TRAJ)
@@ -23,10 +23,10 @@ fp = plf.Fingerprint(
      'HBAcceptor', 'HBDonor', 'Hydrophobic', 'MetalAcceptor', 'MetalDonor',
      'PiCation', 'PiStacking', 'VdWContact', 'XBAcceptor', 'XBDonor'],
     count=True, parameters={"VdWContact": {"preset": "rdkit"}})
-fp.run(u.trajectory, ligand_selection, protein_selection)
-fp.to_pickle(out_name)
-df = fp.to_dataframe()
-gnl.pickle_to_file(df, out_name)
+# fp.run(u.trajectory, ligand_selection, protein_selection)
+# fp.to_pickle(out_name)
+# df = fp.to_dataframe()
+# gnl.pickle_to_file(df, out_name)
 
 u.trajectory[4]
 prot = plf.Molecule.from_mda(protein_selection)
