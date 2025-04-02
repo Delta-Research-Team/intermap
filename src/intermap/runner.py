@@ -127,7 +127,7 @@ def run():
         s1_centrs, s2_centrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
 
-        # if i == 6:
+        # if i == 4:
         #     break
 
         trees_aro = cmn.get_trees(xyzs_aro, s2_aro_idx)

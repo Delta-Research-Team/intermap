@@ -5,11 +5,25 @@ import pandas as pd
 from bitarray import bitarray as ba
 from rgpack import generals as gnl
 
+# import itertools as it
+# pi_ring=(
+#             "[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1",
+#             "[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1",
+#         )
+#
+# for pi_rings in it.product(pi_ring, repeat=2):
+#     print(pi_rings[0])
+#     print(pi_rings[1])
+#     print('---')
+#             res_matches = residue.GetSubstructMatches(pi_rings[0])
+#
+#
+
 # =============================================================================
 # User-defined variables
 # =============================================================================
-prolif_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
-imap_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
+prolif_pickle = '/media/rglez/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+imap_pickle = '/media/rglez/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 
 df = gnl.unpickle_from_file(prolif_pickle)
 imap = pd.read_csv(imap_pickle)
@@ -93,23 +107,23 @@ print(
 # =============================================================================
 # Comparing Prolif and InterMap data in specific terms
 # =============================================================================
-# count = 0
-# for inter in prolif_dict:
-#     plf_time = prolif_dict[inter].nonzero()[0]
-#     imap_time = imap_dict[inter].nonzero()[0]
-#     equal = np.array_equal(plf_time, imap_time)
-#     if not equal:
-#         diff1 = np.setdiff1d(plf_time, imap_time)
-#         diff2 = np.setdiff1d(imap_time, plf_time)
-#         if diff1.size > 0:
-#             print(f'Prolif time values {diff1} not in InterMap for {inter}')
-#             print(plf_time)
-#             print(imap_time)
-#         if (diff2.size > 0):
-#             count += 1
-#             print(f'InterMap time values {diff2} not in Prolif for {inter}')
-#             print(plf_time)
-#             print(imap_time)
+count = 0
+for inter in prolif_dict:
+    plf_time = prolif_dict[inter].nonzero()[0]
+    imap_time = imap_dict[inter].nonzero()[0]
+    equal = np.array_equal(plf_time, imap_time)
+    if not equal:
+        diff1 = np.setdiff1d(plf_time, imap_time)
+        diff2 = np.setdiff1d(imap_time, plf_time)
+        if diff1.size > 0:
+            print(f'Prolif time values {diff1} not in InterMap for {inter}')
+            print(plf_time)
+            print(imap_time)
+        if diff2.size > 0:
+            count += 1
+            print(f'InterMap time values {diff2} not in Prolif for {inter}')
+            print(plf_time)
+            print(imap_time)
 # =============================================================================
 # plotting
 # =============================================================================
@@ -164,7 +178,7 @@ for inter in condensed:
     percentage[inter]['both'].append(both / total * 100)
 
 order = sorted([(x, percentage[x]['both']) for x in condensed],
-               key=lambda x: x[1], reverse=False)
+               key=lambda x: x[1])
 
 fig, ax = plt.subplots(dpi=600)
 ax.set_xlabel('Interaction type', fontweight='bold')
@@ -188,7 +202,7 @@ ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
 ax.set_xticks(range(len(order)))
 ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
 plt.tight_layout()
-plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif.png')
+plt.savefig('/home/rglez/RoyHub/intermap/scripts/identity-per-type-global.png')
 plt.close()
 
 # %%
@@ -241,5 +255,6 @@ ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
 ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
 
 plt.tight_layout()
-plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/lig-prot-prolif2.png')
+plt.savefig(
+    '/home/rglez/RoyHub/intermap/scripts/identity-per-type-detailed.png')
 plt.close()

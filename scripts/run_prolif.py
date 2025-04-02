@@ -8,12 +8,11 @@ import prolif as plf
 # =============================================================================
 #
 # =============================================================================
-out_name = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+out_name = '/media/rglez/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
 
 # load topology and trajectory
 u = mda.Universe(plf.datafiles.TOP, plf.datafiles.TRAJ)
 
-from rgpack import generals as gnl
 # create selections for the ligand and protein
 ligand_selection = u.select_atoms("resname LIG")
 protein_selection = u.select_atoms("protein")
@@ -29,7 +28,7 @@ fp = plf.Fingerprint(
 # df = fp.to_dataframe()
 # gnl.pickle_to_file(df, out_name)
 
-u.trajectory[6]
+u.trajectory[4]
 prot = plf.Molecule.from_mda(protein_selection)
 lig = plf.Molecule.from_mda(ligand_selection)
 data = fp.generate(lig, prot, metadata=True)

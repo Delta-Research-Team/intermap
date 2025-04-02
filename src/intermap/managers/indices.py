@@ -5,7 +5,6 @@ import time
 from collections import defaultdict
 from pprint import pformat
 
-
 import MDAnalysis as mda
 import numpy as np
 import numpy_indexed as npi
