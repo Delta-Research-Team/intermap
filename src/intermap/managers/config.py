@@ -14,6 +14,40 @@ inf_int = sys.maxsize
 inf_float = float(inf_int)
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
 
+# =============================================================================
+# Allowed sections & parameters
+# =============================================================================
+
+allowed_parameters = {
+    # ____ generals
+    'generals': {
+        'output_dir': {'dtype': 'path', 'check_exist': False},
+        'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
+        'job_name': {'dtype': 'path', 'check_exist': False},
+        'n_samples': {'dtype': int, 'min': 1, 'max': inf_int},
+        'n_factor': {'dtype': float, 'min': 1, 'max': inf_float},
+    },
+    # ____ topo-traj
+    'topo-traj': {
+        'topology': {'dtype': 'path', 'check_exist': True},
+        'trajectory': {'dtype': 'path', 'check_exist': True},
+        'start': {'dtype': int, 'min': 0, 'max': inf_int},
+        'last': {'dtype': int, 'min': -1, 'max': inf_int},
+        'stride': {'dtype': int, 'min': 1, 'max': inf_int},
+        'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
+    # ____ interactions
+    'interactions': {
+        'selection_1': {'dtype': str, 'values': None},
+        'selection_2': {'dtype': str, 'values': None},
+        'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
+        'interactions': {'dtype': str, 'values': None},
+        'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
+        'format': {'dtype': str, 'values': {'simple', 'extended'}}},
+
+    # ____ cutoffs
+    'cutoffs': None
+}
+
 
 def detect_config_path(mode='debug'):
     """
@@ -64,40 +98,6 @@ def start_logger(log_path):
     file_handler.setLevel("DEBUG")
     logger.addHandler(file_handler)
     return logger
-
-
-#: Allowed section templates in the config file
-
-#:  Allowed keys in the config file (dtypes & expected values)
-allowed_parameters = {
-    # ____ generals
-    'generals': {
-        'output_dir': {'dtype': 'path', 'check_exist': False},
-        'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
-        'job_name': {'dtype': 'path', 'check_exist': False},
-        'n_samples': {'dtype': int, 'min': 1, 'max': inf_int},
-        'n_factor': {'dtype': float, 'min': 1, 'max': inf_float},
-    },
-    # ____ topo-traj
-    'topo-traj': {
-        'topology': {'dtype': 'path', 'check_exist': True},
-        'trajectory': {'dtype': 'path', 'check_exist': True},
-        'start': {'dtype': int, 'min': 0, 'max': inf_int},
-        'last': {'dtype': int, 'min': -1, 'max': inf_int},
-        'stride': {'dtype': int, 'min': 1, 'max': inf_int},
-        'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
-    # ____ interactions
-    'interactions': {
-        'selection_1': {'dtype': str, 'values': None},
-        'selection_2': {'dtype': str, 'values': None},
-        'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
-        'interactions': {'dtype': str, 'values': None},
-        'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
-        'format': {'dtype': str, 'values': {'simple', 'extended'}}},
-
-    # ____ cutoffs
-    'cutoffs': None
-}
 
 
 class Param:

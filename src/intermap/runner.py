@@ -24,9 +24,6 @@ from intermap.managers.indices import IndexManager
 # High Priority
 # todo: update filling dict when water
 
-# Medium Priority
-# todo: put n_samples / n_factor in config
-
 # Low Priority
 # todo: assert identity against  prolif, again
 # todo: Reorganize the code
@@ -34,6 +31,7 @@ from intermap.managers.indices import IndexManager
 # todo: start writing tests
 
 # done: check logging
+# done: put n_samples / n_factor in config
 # done: implement granularity as a way to condense information
 # done: join into the same function: aro.get_trees, cmn.get_trees
 # done: check hard-coded cutoffs
@@ -54,8 +52,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    config = ConfigManager(mode='debug')
-    # config = ConfigManager()
+    # config = ConfigManager(mode='debug')
+    config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
@@ -121,7 +119,6 @@ def run():
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
-
         # 6.1 Get centroids & coordinates of aromatic rings
         s1_ctrs, s2_ctrs, xyzs_aro = aro.get_aro_xyzs(
             xyz_chunk, s1_rings, s2_rings, s1_cat, s2_cat)
@@ -182,4 +179,4 @@ def run():
         f" Elapsed time: {tot} s")
     return packed
 
-run()
+# run()

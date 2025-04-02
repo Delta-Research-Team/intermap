@@ -193,7 +193,8 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 
 @njit(parallel=False, cache=True)
 def aro(
-        xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists_aro, s1_rings_idx, s2_rings_idx,
+        xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists_aro, s1_rings_idx,
+        s2_rings_idx,
         s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs, s2_ctrs, cuts_aro,
         selected_aro):
     row1 = ijf_aro_tmp[:, 0]
@@ -206,13 +207,15 @@ def aro(
 
     if 'PiCation' in selected_aro:
         pi_idx, pi_cat = pications(
-            'PiCation', xyz_aro, row1, row2, dists_aro, s1_rings_idx, s2_rings_idx,
+            'PiCation', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
+            s2_rings_idx,
             s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
         inters_aro[:, pi_idx] = pi_cat
 
     if 'CationPi' in selected_aro:
         cat_idx, cat_pi = pications(
-            'CationPi', xyz_aro, row1, row2, dists_aro, s1_rings_idx, s2_rings_idx,
+            'CationPi', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
+            s2_rings_idx,
             s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
         inters_aro[:, cat_idx] = cat_pi
 

@@ -1,6 +1,9 @@
 # Created by gonzalezroy at 3/26/25
+from shutil import which
+
 import matplotlib.pyplot as plt
 import numpy as np
+from dill import extend
 
 import benchmark_data as bd
 
@@ -57,15 +60,19 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def plot_block(array, axis, cmap, cbar_label):
-    im1 = axis.matshow(array, cmap=cmap, norm=LogNorm())
+    im1 = axis.matshow(array, cmap=cmap, norm=LogNorm(), aspect='equal')
     axis.set_xticks(range(num_soft), labels=list(info.keys()), rotation=45,
                     ha='left')
-    axis.set_yticks(range(num_sele), labels=sele_label)
 
-    axis.hlines(limits, -0.5, num_soft - 0.5, color='k', lw=1)
+    axis.set_yticks(range(num_sele), labels=sele_label)
+    axis.tick_params(axis='y', which='minor', length=0)
+    axis.set_yticks(np.arange(-.5, num_sele, 1), minor=True)
+    axis.set_xticks(np.arange(-.5, num_soft, 1), minor=True)
+    axis.grid(color='k', lw=1, alpha=0.5, which='minor')
+
 
     divider = make_axes_locatable(axis)
-    cax = divider.append_axes('right', size='10%', pad=0.0)
+    cax = divider.append_axes('right', size='10%', pad=0.1)
     cb = fig.colorbar(im1, cax=cax, orientation='vertical', label='Time (s)')
     cb.ax.set_ylabel(cbar_label, font="Ubuntu mono", fontsize=16,
                      labelpad=5, color='k', fontweight='bold')
@@ -75,14 +82,15 @@ def plot_block(array, axis, cmap, cbar_label):
         l.set_fontsize(14)
         l.set_color('k')
 
+    plt.subplots_adjust(right=0.99)
 
-cmap = 'cividis'
+
+cmap = 'viridis'
 fig, (ax_time, ax_ram, ax_nints) = plt.subplots(1, 3, figsize=(12, 6),
                                                 dpi=600, )
 plot_block(time_array, ax_time, cmap, 'Wallclock Time (s)')
 plot_block(ram_array, ax_ram, cmap, 'RAM Peak (GB)')
 plot_block(n_inters_array, ax_nints, cmap, '# Detected Interactions')
 plt.tight_layout()
-plt.subplots_adjust(right=0.99)
 plt.savefig('benchmark_plot.png')
 plt.close()

@@ -22,8 +22,8 @@ from rgpack import generals as gnl
 # =============================================================================
 # User-defined variables
 # =============================================================================
-prolif_pickle = '/media/rglez/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
-imap_pickle = '/media/rglez/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
+prolif_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
+imap_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 
 df = gnl.unpickle_from_file(prolif_pickle)
 imap = pd.read_csv(imap_pickle)
@@ -140,6 +140,8 @@ inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
 
 data = defaultdict(lambda: defaultdict(list))
 for inter in inters:
+    if inter[-1] == 'CloseContact':
+        continue
     try:
         plif_time = (prolif_dict[inter] > 0).astype(int)
     except KeyError:
@@ -180,30 +182,30 @@ for inter in condensed:
 order = sorted([(x, percentage[x]['both']) for x in condensed],
                key=lambda x: x[1])
 
-fig, ax = plt.subplots(dpi=600)
-ax.set_xlabel('Interaction type', fontweight='bold')
-ax.set_ylabel('Interactions detected (%)', fontweight='bold')
-ax.set_ylim(0, 105)
-for i, inter in enumerate(percentage):
-    both = percentage[order[i][0]]['both'][0]
-    plif = percentage[order[i][0]]['plif'][0]
-    imap = percentage[order[i][0]]['imap'][0]
-    ax.bar(i, both, color='lightgray', zorder=1, lw=0.5)
-    ax.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
-    ax.bar(i, plif, color='k', bottom=both, zorder=1)
-
-ax.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
-ax.bar(i, both, color='lightgray', label='Both')
-ax.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
-ax.bar(i, plif, color='k', label='ProLIF only', bottom=both)
-
-ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
-          framealpha=0.95)
-ax.set_xticks(range(len(order)))
-ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
-plt.tight_layout()
-plt.savefig('/home/rglez/RoyHub/intermap/scripts/identity-per-type-global.png')
-plt.close()
+# fig, ax = plt.subplots(dpi=600)
+# ax.set_xlabel('Interaction type', fontweight='bold')
+# ax.set_ylabel('Interactions detected (%)', fontweight='bold')
+# ax.set_ylim(0, 105)
+# for i, inter in enumerate(percentage):
+#     both = percentage[order[i][0]]['both'][0]
+#     plif = percentage[order[i][0]]['plif'][0]
+#     imap = percentage[order[i][0]]['imap'][0]
+#     ax.bar(i, both, color='lightgray', zorder=1, lw=0.5)
+#     ax.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
+#     ax.bar(i, plif, color='k', bottom=both, zorder=1)
+#
+# ax.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
+# ax.bar(i, both, color='lightgray', label='Both')
+# ax.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
+# ax.bar(i, plif, color='k', label='ProLIF only', bottom=both)
+#
+# ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
+#           framealpha=0.95)
+# ax.set_xticks(range(len(order)))
+# ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
+# plt.tight_layout()
+# plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-global.png')
+# plt.close()
 
 # %%
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -223,8 +225,8 @@ for i, inter in enumerate(condensed):
     ax1.bar(i, plif, color='k', bottom=both, zorder=1)
     ax2.bar(i, plif, color='k', bottom=both, zorder=1)
 
-ax1.set_ylim(15, 5500)  # outliers only
-ax2.set_ylim(0, 15)  # most of the data
+ax1.set_ylim(0, 5500)  # outliers only
+ax2.set_ylim(0, 10)  # most of the data
 
 ax1.spines.bottom.set_visible(False)
 ax2.spines.top.set_visible(False)
@@ -256,5 +258,5 @@ ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
 
 plt.tight_layout()
 plt.savefig(
-    '/home/rglez/RoyHub/intermap/scripts/identity-per-type-detailed.png')
+    '/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-detailed.png')
 plt.close()
