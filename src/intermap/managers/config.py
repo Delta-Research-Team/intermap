@@ -60,7 +60,7 @@ def start_logger(log_path):
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler = logging.FileHandler(log_path, encoding="utf-8", mode='w')
     file_handler.setLevel("DEBUG")
     logger.addHandler(file_handler)
     return logger

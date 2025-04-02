@@ -23,7 +23,6 @@ from intermap.managers.indices import IndexManager
 
 # High Priority
 # todo: update filling dict when water
-# todo: implement granularity as a way to condense information
 
 # Medium Priority
 # todo: put n_samples / n_factor in config
@@ -31,10 +30,11 @@ from intermap.managers.indices import IndexManager
 # Low Priority
 # todo: assert identity against  prolif, again
 # todo: Reorganize the code
-# todo: check logging
 # todo: check docstrings
 # todo: start writing tests
 
+# done: check logging
+# done: implement granularity as a way to condense information
 # done: join into the same function: aro.get_trees, cmn.get_trees
 # done: check hard-coded cutoffs
 # done: implement selecting interactions from config
@@ -55,8 +55,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    config = ConfigManager(mode='debug')
-    # config = ConfigManager()
+    # config = ConfigManager(mode='debug')
+    config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
@@ -164,8 +164,8 @@ def run():
     # 7. Save the interactions
     # =========================================================================
     out_name = f"{basename(args.job_name)}_InterMap.csv"
-    pickle_path = join(args.output_dir, out_name)
-    self.save(pickle_path)
+    csv_path = join(args.output_dir, out_name)
+    self.save(csv_path)
 
     # %%=======================================================================
     # 8. Normal termination
@@ -176,7 +176,7 @@ def run():
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        f" Interactions saved in {pickle_path}\n"
+        f" Interactions saved in {csv_path}\n"
         f" Total number of unique atom pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
