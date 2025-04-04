@@ -18,7 +18,7 @@ def get_trees(xyzs_aro, s2_aro_indices):
     return trees
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
     d1, d3 = xyzs.shape[0], xyzs.shape[2]
     d2 = (s1_cat.shape[0] + s2_cat.shape[0] + s1_rings.shape[0] +
@@ -40,7 +40,7 @@ def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
     return s1_centrs, s2_centrs, xyzs_aro
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def get_normals_and_centroids(xyz, s1_rings, s2_rings):
     s1_at1, s1_at2 = s1_rings[:, 0], s1_rings[:, 1]
     s2_at1, s2_at2 = s2_rings[:, 0], s2_rings[:, 1]
@@ -51,7 +51,7 @@ def get_normals_and_centroids(xyz, s1_rings, s2_rings):
     return s1_norm, s2_norm, s1_ctrs, s2_ctrs
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def get_intersect_point(s1_normal, s1_centroid, s2_normal, s2_centroid):
     # Calculate the intersect direction as the cross product of the two normal vectors
     intersect_direction = np.array([
@@ -89,7 +89,7 @@ def get_intersect_point(s1_normal, s1_centroid, s2_normal, s2_centroid):
     return point + (intersect_direction_normalized * scalar_proj)
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
               s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
               cutoffs_aro, selected_aro):
@@ -141,7 +141,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     return idx, all_passing
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
               cutoffs_aro, selected_aro):
     """
@@ -191,7 +191,7 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
     return idx, stacking
 
 
-@njit(parallel=False, cache=True)
+@njit(parallel=False, cache=False)
 def aro(
         xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists_aro, s1_rings_idx,
         s2_rings_idx,
@@ -203,13 +203,15 @@ def aro(
     inters_aro = np.zeros((dists_aro.shape[0], len_aro), dtype=np.bool_)
 
     if 'None' in selected_aro:
-        return ijf_aro_tmp, inters_aro
+        print("Warning: 'None' in selected_aro")
+        return ijf_aro_tmp.copy(), inters_aro
 
     if 'PiCation' in selected_aro:
         pi_idx, pi_cat = pications(
             'PiCation', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
             s2_rings_idx,
             s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
+        assert pi_cat is not None, "pi_cat is None"
         inters_aro[:, pi_idx] = pi_cat
 
     if 'CationPi' in selected_aro:
@@ -217,6 +219,7 @@ def aro(
             'CationPi', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
             s2_rings_idx,
             s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
+        assert cat_pi is not None, "cat_pi is None"
         inters_aro[:, cat_idx] = cat_pi
 
     if 'PiStacking' in selected_aro or 'EdgeToFace' in selected_aro or 'FaceToFace' in selected_aro:
@@ -255,18 +258,21 @@ def aro(
             idx_etf, etf_stacking = stackings(
                 'EdgeToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
                 cuts_aro, selected_aro)
+            assert etf_stacking is not None, "etf_stacking is None"
             inters_aro[:, idx_etf][pairs] = etf_stacking
 
         if 'FaceToFace' in selected_aro:
             idx_ftf, ftf_stacking = stackings(
                 'FaceToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
                 cuts_aro, selected_aro)
+            assert ftf_stacking is not None, "ftf_stacking is None"
             inters_aro[:, idx_ftf][pairs] = ftf_stacking
 
         if 'PiStacking' in selected_aro:
             idx_pi, pi_stacking = stackings(
                 'PiStacking', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
                 cuts_aro, selected_aro)
+            assert pi_stacking is not None, "pi_stacking is None"
             inters_aro[:, idx_pi][pairs] = pi_stacking
             # inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
 
@@ -279,5 +285,8 @@ def aro(
     ijf_real_1 = xyz_aro_idx[ijf_aro_tmp[:, 1]]
     ijf_real_2 = np.full(ijf_real_0.shape[0], frame_id, dtype=np.int32)
     ijf_aro_tmp = np.stack((ijf_real_0, ijf_real_1, ijf_real_2), axis=1)
+
+    assert ijf_aro_tmp.shape[0] != 0, "ijf_aro_tmp is empty"
+    assert inters_aro.shape[0] != 0, "inters_aro is empty"
 
     return ijf_aro_tmp, inters_aro

@@ -11,7 +11,7 @@ from intermap.interactions import aro, others
 logger = logging.getLogger('InterMapLogger')
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=False)
 def runpar(
         xyz_chunk, xyzs_aro, xyz_aro_idx, trees_others, trees_aro,
         ijf_shape, inters_shape, s1_idx, s2_idx, anions, cations,
@@ -42,7 +42,6 @@ def runpar(
         # >>>> Get the coordinates for the frame
         xyz = xyz_chunk[i]
         xyz_aro = xyzs_aro[i]
-        # inters_view = inters_template[i].copy()
 
         # >>>> Get the aromatic interactions
         tree_aro = trees_aro[i]
@@ -55,12 +54,22 @@ def runpar(
         ijf_aro_tmp, dists_aro = geom.get_containers_run(
             xyz_aro, i, ball_aro, s1_aro_idx, s2_aro_idx)
 
-        # n_pairs_aro = dists_aro.shape[0]
-
-        ijf_aro, inters_aro = aro.aro(xyz_aro, xyz_aro_idx, ijf_aro_tmp,
-                                      dists_aro, s1_rings_idx, s2_rings_idx,
-                                      s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
-                                      s1_ctrs, s2_ctrs, cuts_aro, selected_aro)
+        ijf_aro, inters_aro = aro.aro(
+            xyz_aro,
+            xyz_aro_idx,
+            ijf_aro_tmp,
+            dists_aro,
+            s1_rings_idx,
+            s2_rings_idx,
+            s1_cat_idx,
+            s2_cat_idx,
+            s1_norm,
+            s2_norm,
+            s1_ctrs,
+            s2_ctrs,
+            cuts_aro,
+            selected_aro
+        )
 
         num_aros = ijf_aro.shape[0]
         n_aros[i] = num_aros
@@ -118,23 +127,23 @@ def estimate(
 
     for i in range(N):
         xyz = positions[i]
-        xyz_aro = xyzs_aro[i]
+        # xyz_aro = xyzs_aro[i]
 
-        s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_normals_and_centroids(
-            xyz, s1_rings, s2_rings)
+        # s1_norm, s2_norm, s1_ctrs, s2_ctrs = aro.get_normals_and_centroids(
+        #     xyz, s1_rings, s2_rings)
 
-        tree_aro = aro_trees[i]
-        ball_aro = tree_aro.query_radius_parallel(
-            xyz_aro[s1_aro_idx], max_dist_aro)
+        # tree_aro = aro_trees[i]
+        # ball_aro = tree_aro.query_radius_parallel(
+        #     xyz_aro[s1_aro_idx], max_dist_aro)
 
-        ijf_aro_tmp, dists, inters = geom.get_containers(
-            xyz_aro, i, xyz_aro_idx, ball_aro, s1_aro_idx, s2_aro_idx,
-            len(selected_aro), atomic, resconv)
+        # ijf_aro_tmp, dists, inters = geom.get_containers(
+        #     xyz_aro, i, xyz_aro_idx, ball_aro, s1_aro_idx, s2_aro_idx,
+        #     len(selected_aro), atomic, resconv)
 
-        ijf_aro, inters_aro = aro.aro(xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists,
-                                      s1_rings_idx, s2_rings_idx, s1_cat_idx,
-                                      s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
-                                      s2_ctrs, cuts_aro, selected_aro)
+        # ijf_aro, inters_aro = aro.aro(xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists,
+        #                               s1_rings_idx, s2_rings_idx, s1_cat_idx,
+        #                               s2_cat_idx, s1_norm, s2_norm, s1_ctrs,
+        #                               s2_ctrs, cuts_aro, selected_aro)
 
 
         ball_1 = others.get_ball(xyz, s1_idx, s2_idx, max_dist_others)
@@ -147,7 +156,8 @@ def estimate(
                                                   vdw_radii, cuts_others,
                                                   selected_others, overlap,
                                                   atomic, resconv)
-        num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
+        # num_detected[i] = ijf_aro.shape[0] + ijf_others.shape[0]
+        num_detected[i] = ijf_others.shape[0]
 
     # Estimate the number of contacts
     ijf_vert = np.int32(num_detected.max() * factor)
