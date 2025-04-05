@@ -18,6 +18,39 @@ import intermap.managers.cutoffs as cf
 logger = logging.getLogger('InterMapLogger')
 
 
+def get_periodic_table_info():
+    """
+    Get the periodic table information
+    """
+    pt = rdkit.Chem.GetPeriodicTable()
+    pt_symbols = {pt.GetElementSymbol(x): x for x in range(1, 119)}
+    pt_masses = {x: pt.GetAtomicWeight(x) for x in range(1, 119)}
+    real_names = {x.lower(): x for x in pt_symbols}
+    return pt_symbols, pt_masses, real_names
+
+
+def guess_from_name(name, mass, pt_symbols, pt_masses, real_names):
+    """
+    Guess the element from the name of the atom
+    """
+
+    if len(name) > 1:
+        name1 = name.strip().lower()[0]
+        name2 = name.strip().lower()[0:2]
+    else:
+        name1 = name.strip().lower()[0]
+        if real_name := real_names[name1]:
+            return real_name
+        else:
+            raise ValueError(f"Unknown element: {name}")
+
+    if name2 in real_names:
+        mass2 = round(pt_masses[pt_symbols[real_names[name2]]])
+        if mass2 == mass:
+            return real_names[name2]
+    return real_names[name1]
+
+
 def any_hh_bonds(universe):
     """
     Get the hydrogen-hydrogen bonds in the Universe
@@ -218,9 +251,32 @@ class IndexManager:
             universe (mda.Universe): Universe object
         """
 
-        # Load the trajectory & Guess the bonds if not present
+        # Load the trajectory
         stamp0 = time.time()
         universe = mda.Universe(self.topo, self.traj)
+        masses = universe.atoms.masses
+        names = universe.atoms.names
+
+        # Ensure all elements are present
+        try:
+            universe.atoms.elements
+        except Exception:
+            logger.warning("Element information not found in the topology."
+                           " Using the atoms name to guess it.")
+            pt_symbols, pt_masses, real_names = get_periodic_table_info()
+            elements = []
+            for i, name in enumerate(names):
+                element = guess_from_name(
+                    name, masses[i], pt_symbols, pt_masses, real_names)
+                if not element:
+                    raise ValueError(
+                        f"Fail to guess element from {name}."
+                        f" Please check the topology.")
+                elements.append(element)
+            elements = np.asarray(elements)
+            universe.add_TopologyAttr('elements', elements)
+
+        # Guess bonds if not present
         try:
             any_bond = universe.bonds[0]
         except:
@@ -242,15 +298,6 @@ class IndexManager:
         if are_hh:
             logger.warning(
                 f"This universe contained H-H bonds. Removed in {del_time:.2f} s")
-
-        # Ensure all elements are present
-        elements = universe.atoms.elements
-        if '' in elements:
-            missing = np.where(elements == '')[0]
-            names = universe.atoms.names[missing]
-            guessed = [x[0] for x in names]
-            elements[missing] = guessed
-        universe.atoms.elements = elements
 
         # Output load time
         loading = time.time() - stamp0
