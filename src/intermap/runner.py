@@ -30,6 +30,7 @@ from intermap.managers.indices import IndexManager
 # todo: check docstrings
 # todo: start writing tests
 
+# done: Guess elements for HH detection
 # done: check logging
 # done: put n_samples / n_factor in config
 # done: implement granularity as a way to condense information

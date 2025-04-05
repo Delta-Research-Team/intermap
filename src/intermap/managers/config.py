@@ -14,40 +14,10 @@ inf_int = sys.maxsize
 inf_float = float(inf_int)
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
 
+
 # =============================================================================
 # Allowed sections & parameters
 # =============================================================================
-
-allowed_parameters = {
-    # ____ generals
-    'generals': {
-        'output_dir': {'dtype': 'path', 'check_exist': False},
-        'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
-        'job_name': {'dtype': 'path', 'check_exist': False},
-        'n_samples': {'dtype': int, 'min': 1, 'max': inf_int},
-        'n_factor': {'dtype': float, 'min': 1, 'max': inf_float},
-    },
-    # ____ topo-traj
-    'topo-traj': {
-        'topology': {'dtype': 'path', 'check_exist': True},
-        'trajectory': {'dtype': 'path', 'check_exist': True},
-        'start': {'dtype': int, 'min': 0, 'max': inf_int},
-        'last': {'dtype': int, 'min': -1, 'max': inf_int},
-        'stride': {'dtype': int, 'min': 1, 'max': inf_int},
-        'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
-    # ____ interactions
-    'interactions': {
-        'selection_1': {'dtype': str, 'values': None},
-        'selection_2': {'dtype': str, 'values': None},
-        'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
-        'interactions': {'dtype': str, 'values': None},
-        'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
-        'format': {'dtype': str, 'values': {'simple', 'extended'}}},
-
-    # ____ cutoffs
-    'cutoffs': None
-}
-
 
 def detect_config_path(mode='debug'):
     """
@@ -65,7 +35,7 @@ def detect_config_path(mode='debug'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap1.cfg'
+        config_path = '/media/rglez/Expansion/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/imap.cfg'
         # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
@@ -157,12 +127,43 @@ class Config:
     """
     Base class for config file parsing
     """
+    allowed_parameters = {
+        # ____ generals
+        'generals': {
+            'output_dir': {'dtype': 'path', 'check_exist': False},
+            'n_procs': {'dtype': int, 'min': 1, 'max': inf_int},
+            'job_name': {'dtype': 'path', 'check_exist': False},
+            'n_samples': {'dtype': int, 'min': 1, 'max': inf_int},
+            'n_factor': {'dtype': float, 'min': 1, 'max': inf_float},
+        },
+
+        # ____ topo-traj
+        'topo-traj': {
+            'topology': {'dtype': 'path', 'check_exist': True},
+            'trajectory': {'dtype': 'path', 'check_exist': True},
+            'start': {'dtype': int, 'min': 0, 'max': inf_int},
+            'last': {'dtype': int, 'min': -1, 'max': inf_int},
+            'stride': {'dtype': int, 'min': 1, 'max': inf_int},
+            'chunk_size': {'dtype': int, 'min': 1, 'max': inf_int}},
+
+        # ____ interactions
+        'interactions': {
+            'selection_1': {'dtype': str, 'values': None},
+            'selection_2': {'dtype': str, 'values': None},
+            'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
+            'interactions': {'dtype': str, 'values': None},
+            'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
+            'format': {'dtype': str, 'values': {'simple', 'extended'}}},
+
+        # ____ cutoffs
+        'cutoffs': None
+    }
 
     def __init__(self, mode='production'):
 
         # Detect config
         self.config_path = cmn.check_path(detect_config_path(mode=mode))
-        self.legal_params = allowed_parameters
+        self.legal_params = self.allowed_parameters
 
         # Parsing from class args
         self.config_dir = abspath(dirname(self.config_path))
@@ -300,7 +301,8 @@ class ConfigManager(Config):
             f"\n Chunk size: {args['chunk_size']}"
             f"\n Number of processors: {args['n_procs']}"
             f"\n Min prevalence: {args['min_prevalence']}"
-            f"\n Report's format: {args['format']}\n"
+            f"\n Report's format: {args['format']}"
+            f"\n Resolution: {args['resolution']}\n"
         )
 
     def build_dir_hierarchy(self):

@@ -49,7 +49,7 @@ def transform_wb(ijwf):
     return to_assign
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def groupby(ijfs: types.Array(types.int64, 2, 'C')) -> types.DictType(
     types.UniTuple(types.int64, 2), types.ListType(types.int32)):
     """
@@ -87,7 +87,7 @@ def groupby(ijfs: types.Array(types.int64, 2, 'C')) -> types.DictType(
     return indices_as_array
 
 
-@njit(parallel=False, cache=False)
+@njit(parallel=False, cache=True)
 def groupby_wb(ijfw):
     """
     Group the interactions by their indices
