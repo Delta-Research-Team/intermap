@@ -22,13 +22,14 @@ from intermap.managers.indices import IndexManager
 
 
 # High Priority
-# todo: update filling dict when water
+# todo: update & optimize filling dict when water
+# todo: accept mutiple repliques with the same topology
 
 # Low Priority
-# todo: assert identity against  prolif, again
 # todo: Reorganize the code
-# todo: check docstrings
 # todo: start writing tests
+# todo: assert identity against  prolif, again
+# todo: check docstrings
 
 # done: Guess elements for HH detection
 # done: check logging
@@ -53,8 +54,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    config = ConfigManager(mode='debug')
-    # config = ConfigManager()
+    # config = ConfigManager(mode='debug')
+    config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 
