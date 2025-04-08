@@ -22,27 +22,12 @@ from intermap.managers.indices import IndexManager
 
 
 # High Priority
-# todo: update & optimize filling dict when water
-# todo: accept mutiple repliques with the same topology
 
 # Low Priority
-# todo: Reorganize the code
-# todo: start writing tests
 # todo: assert identity against  prolif, again
+# todo: start writing tests
+# todo: Reorganize the code
 # todo: check docstrings
-
-# done: Guess elements for HH detection
-# done: check logging
-# done: put n_samples / n_factor in config
-# done: implement granularity as a way to condense information
-# done: join into the same function: aro.get_trees, cmn.get_trees
-# done: check hard-coded cutoffs
-# done: implement selecting interactions from config
-# done: assert changing cfg does not interfere with cache=True
-# done: investigate recompilation issues
-# done: check the interactions naming / parsing
-# done: do not gather balls and trees outside runpar / estimate functions
-# done: rename  to CloseContact in all files
 
 
 def run():
@@ -54,8 +39,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    # config = ConfigManager(mode='debug')
-    config = ConfigManager()
+    config = ConfigManager(mode='debug')
+    # config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 

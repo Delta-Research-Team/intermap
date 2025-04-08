@@ -35,7 +35,7 @@ def detect_config_path(mode='debug'):
                 '\nInterMap syntax is: intermap path-to-config-file')
         config_path = sys.argv[1]
     elif mode == 'debug':
-        config_path = '/media/rglez/Expansion/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/imap.cfg'
+        config_path = '/media/gonzalezroy/Expansion/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/imap.cfg'
         # config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
@@ -140,7 +140,7 @@ class Config:
         # ____ topo-traj
         'topo-traj': {
             'topology': {'dtype': 'path', 'check_exist': True},
-            'trajectory': {'dtype': 'path', 'check_exist': True},
+            'trajectory': {'dtype': str, 'values': None},
             'start': {'dtype': int, 'min': 0, 'max': inf_int},
             'last': {'dtype': int, 'min': -1, 'max': inf_int},
             'stride': {'dtype': int, 'min': 1, 'max': inf_int},
@@ -290,11 +290,15 @@ class ConfigManager(Config):
         base_name = basename(args['job_name'])
         log_path = join(args['output_dir'], f"{base_name}_InterMap.log")
         logger = start_logger(log_path)
+
+        value = args['trajectory']
+        ntrajs = 'Trajectory' if len(value.split(',')) == 1 else 'Trajectories'
+
         logger.info(
             f"Starting InterMap with the following static parameters:\n"
             f"\n Job name: {args['job_name']}"
             f"\n Topology: {args['topology']}"
-            f"\n Trajectory: {args['trajectory']}"
+            f"\n {ntrajs}: {value}"
             f"\n String for selection #1: {args['selection_1']}"
             f"\n String for selection #2: {args['selection_2']}"
             f"\n Output directory: {args['output_dir']}"

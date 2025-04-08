@@ -253,7 +253,8 @@ class IndexManager:
 
         # Load the trajectory
         stamp0 = time.time()
-        universe = mda.Universe(self.topo, self.traj)
+        trajs = [cmn.check_path(x.strip()) for x in self.traj.split(',')]
+        universe = mda.Universe(*([self.topo] + trajs))
         masses = universe.atoms.masses
         names = universe.atoms.names
 
