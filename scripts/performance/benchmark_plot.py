@@ -1,9 +1,7 @@
 # Created by gonzalezroy at 3/26/25
-from shutil import which
 
 import matplotlib.pyplot as plt
 import numpy as np
-from dill import extend
 
 import benchmark_data as bd
 
@@ -60,7 +58,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def plot_block(array, axis, cmap, cbar_label):
-    im1 = axis.matshow(array, cmap=cmap, norm=LogNorm(), aspect='equal')
+    im1 = axis.matshow(array, cmap=cmap, norm=LogNorm(), aspect='equal',
+                       alpha=0.7)
     axis.set_xticks(range(num_soft), labels=list(info.keys()), rotation=45,
                     ha='left')
 
@@ -69,7 +68,6 @@ def plot_block(array, axis, cmap, cbar_label):
     axis.set_yticks(np.arange(-.5, num_sele, 1), minor=True)
     axis.set_xticks(np.arange(-.5, num_soft, 1), minor=True)
     axis.grid(color='k', lw=1, alpha=0.5, which='minor')
-
 
     divider = make_axes_locatable(axis)
     cax = divider.append_axes('right', size='10%', pad=0.1)
@@ -85,7 +83,7 @@ def plot_block(array, axis, cmap, cbar_label):
     plt.subplots_adjust(right=0.99)
 
 
-cmap = 'viridis'
+
 fig, (ax_time, ax_ram, ax_nints) = plt.subplots(1, 3, figsize=(12, 6),
                                                 dpi=600, )
 plot_block(time_array, ax_time, cmap, 'Wallclock Time (s)')

@@ -5,20 +5,6 @@ import pandas as pd
 from bitarray import bitarray as ba
 from rgpack import generals as gnl
 
-# import itertools as it
-# pi_ring=(
-#             "[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1",
-#             "[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1",
-#         )
-#
-# for pi_rings in it.product(pi_ring, repeat=2):
-#     print(pi_rings[0])
-#     print(pi_rings[1])
-#     print('---')
-#             res_matches = residue.GetSubstructMatches(pi_rings[0])
-#
-#
-
 # =============================================================================
 # User-defined variables
 # =============================================================================
@@ -107,23 +93,23 @@ print(
 # =============================================================================
 # Comparing Prolif and InterMap data in specific terms
 # =============================================================================
-count = 0
-for inter in prolif_dict:
-    plf_time = prolif_dict[inter].nonzero()[0]
-    imap_time = imap_dict[inter].nonzero()[0]
-    equal = np.array_equal(plf_time, imap_time)
-    if not equal:
-        diff1 = np.setdiff1d(plf_time, imap_time)
-        diff2 = np.setdiff1d(imap_time, plf_time)
-        if diff1.size > 0:
-            print(f'Prolif time values {diff1} not in InterMap for {inter}')
-            print(plf_time)
-            print(imap_time)
-        if diff2.size > 0:
-            count += 1
-            print(f'InterMap time values {diff2} not in Prolif for {inter}')
-            print(plf_time)
-            print(imap_time)
+# count = 0
+# for inter in prolif_dict:
+#     plf_time = prolif_dict[inter].nonzero()[0]
+#     imap_time = imap_dict[inter].nonzero()[0]
+#     equal = np.array_equal(plf_time, imap_time)
+#     if not equal:
+#         diff1 = np.setdiff1d(plf_time, imap_time)
+#         diff2 = np.setdiff1d(imap_time, plf_time)
+#         if diff1.size > 0:
+#             print(f'Prolif time values {diff1} not in InterMap for {inter}')
+#             print(plf_time)
+#             print(imap_time)
+#         if diff2.size > 0:
+#             count += 1
+#             print(f'InterMap time values {diff2} not in Prolif for {inter}')
+#             print(plf_time)
+#             print(imap_time)
 # =============================================================================
 # plotting
 # =============================================================================
@@ -190,14 +176,14 @@ order = sorted([(x, percentage[x]['both']) for x in condensed],
 #     both = percentage[order[i][0]]['both'][0]
 #     plif = percentage[order[i][0]]['plif'][0]
 #     imap = percentage[order[i][0]]['imap'][0]
-#     ax.bar(i, both, color='lightgray', zorder=1, lw=0.5)
-#     ax.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
-#     ax.bar(i, plif, color='k', bottom=both, zorder=1)
+#     ax.bar(i, both, color=c3, zorder=1, lw=0.5)
+#     ax.bar(i, imap, color=c2, bottom=both + plif, zorder=1)
+#     ax.bar(i, plif, color=c1, bottom=both, zorder=1)
 #
-# ax.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
-# ax.bar(i, both, color='lightgray', label='Both')
-# ax.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
-# ax.bar(i, plif, color='k', label='ProLIF only', bottom=both)
+# ax.grid(axis='y', lw=1, ls='--', color=c1, zorder=5, alpha=0.25)
+# ax.bar(i, both, color=c3, label='Both')
+# ax.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif)
+# ax.bar(i, plif, color=c1, label='ProLIF only', bottom=both)
 #
 # ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
 #           framealpha=0.95)
@@ -211,6 +197,8 @@ order = sorted([(x, percentage[x]['both']) for x in condensed],
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 # fig.subplots_adjust()
 
+c1, c2, c3 = 'slateblue', 'green', 'skyblue'
+c4 = 'k'
 ax2.set_xlabel('Interaction type', fontweight='bold')
 fig.text(0.0, 0.6, 'No. of detected interactions', va='center',
          rotation='vertical', fontweight='bold')
@@ -218,12 +206,12 @@ for i, inter in enumerate(condensed):
     both = condensed[order[i][0]]['both'][0]
     plif = condensed[order[i][0]]['plif'][0]
     imap = condensed[order[i][0]]['imap'][0]
-    ax1.bar(i, both, color='lightgray', zorder=1, lw=0.5)
-    ax2.bar(i, both, color='lightgray', zorder=1, lw=0.5)
-    ax1.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
-    ax2.bar(i, imap, color='darkgray', bottom=both + plif, zorder=1)
-    ax1.bar(i, plif, color='k', bottom=both, zorder=1)
-    ax2.bar(i, plif, color='k', bottom=both, zorder=1)
+    ax1.bar(i, both, color=c3, zorder=1, lw=0.5, alpha=0.7)
+    ax2.bar(i, both, color=c3, zorder=1, lw=0.5, alpha=0.7)
+    ax1.bar(i, imap, color=c2, bottom=both + plif, zorder=1, alpha=0.7)
+    ax2.bar(i, imap, color=c2, bottom=both + plif, zorder=1, alpha=0.7)
+    ax1.bar(i, plif, color=c1, bottom=both, zorder=1, alpha=0.7)
+    ax2.bar(i, plif, color=c1, bottom=both, zorder=1, alpha=0.7)
 
 ax1.set_ylim(0, 5500)  # outliers only
 ax2.set_ylim(0, 10)  # most of the data
@@ -234,15 +222,17 @@ ax2.spines.top.set_visible(False)
 ax1.tick_params(axis='both', bottom=False)  # don't put tick labels at the top
 ax2.xaxis.tick_bottom()
 
-ax1.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
-ax2.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.25)
+ax1.grid(axis='y', lw=1, ls='--', color=c4, zorder=5, alpha=0.25)
+ax2.grid(axis='y', lw=1, ls='--', color=c4, zorder=5, alpha=0.25)
 
-ax1.bar(i, both, color='lightgray', label='Both')
-ax2.bar(i, both, color='lightgray', label='Both')
-ax1.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
-ax2.bar(i, imap, color='darkgray', label='InterMap only', bottom=both + plif)
-ax1.bar(i, plif, color='k', label='ProLIF only', bottom=both)
-ax2.bar(i, plif, color='k', label='ProLIF only', bottom=both)
+ax1.bar(i, both, color=c3, label='Both', alpha=0.7)
+ax2.bar(i, both, color=c3, label='Both', alpha=0.7)
+ax1.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif,
+        alpha=0.7)
+ax2.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif,
+        alpha=0.7)
+ax1.bar(i, plif, color=c1, label='ProLIF only', bottom=both, alpha=0.7)
+ax2.bar(i, plif, color=c1, label='ProLIF only', bottom=both, alpha=0.7)
 
 ax1.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
            framealpha=0.85)
@@ -252,9 +242,9 @@ ax2.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
 
 d = 0  # proportion of vertical to horizontal extent of the slanted line
 kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
-              linestyle="none", color='k', mec='k', mew=1.5, clip_on=False)
-ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
-ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+              linestyle="none", color=c1, mec='k', mew=1.5, clip_on=False)
+ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs, alpha=0.7)
+ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs, alpha=0.7)
 
 plt.tight_layout()
 plt.savefig(
