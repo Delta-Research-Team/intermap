@@ -267,8 +267,8 @@ def aro(
             idx_pi, pi_stacking = stackings(
                 'PiStacking', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
                 cuts_aro, selected_aro)
-            inters_aro[:, idx_pi][pairs] = pi_stacking
-            # inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
+            # inters_aro[:, idx_pi][pairs] = pi_stacking
+            inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
 
     frame_id = ijf_aro[0][-1]
     mask = aot.get_compress_mask(inters_aro)
