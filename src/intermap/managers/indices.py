@@ -255,7 +255,7 @@ class IndexManager:
         stamp0 = time.time()
         trajs = [cmn.check_path(x.strip()) for x in self.traj.split(',')]
         universe = mda.Universe(*([self.topo] + trajs))
-        masses = universe.atoms.masses
+        masses = [round(x) for x in universe.atoms.masses]
         names = universe.atoms.names
 
         # Ensure all elements are present
