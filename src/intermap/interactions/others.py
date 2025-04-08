@@ -219,8 +219,7 @@ def others(
     # Get the containers for the not-aromatic interactions
     ijf, inters, dists, row1, row2 = \
         containers(xyz, k, s1_idx, s2_idx, ball_others, selected_others,
-                   overlap,
-                   atomic, resconv)
+                   overlap, atomic, resconv)
 
     # [Van der Waals]
     if 'VdWContact' in selected_others:

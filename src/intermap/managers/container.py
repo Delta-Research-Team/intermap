@@ -143,7 +143,6 @@ class ContainerManager:
         # Parse arguments from iman
         self.iman = iman
         self.waters = self.iman.waters
-        self.atom_names = self.iman.atom_names
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers

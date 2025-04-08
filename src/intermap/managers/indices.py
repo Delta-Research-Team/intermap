@@ -677,13 +677,15 @@ class IndexManager:
         atnames = self.universe.atoms.names[self.sel_idx]
         resnames = self.universe.atoms.resnames[self.sel_idx]
         resids = self.universe.atoms.resids[self.sel_idx]
-        atom_names = [f"{resnames[i]}_{resids[i]}_{atnames[i]}"
-                      for i, x in enumerate(self.sel_idx)]
+        resindex = self.universe.atoms.resindices[self.sel_idx].astype(np.int32)
 
-        resindex = self.universe.atoms.resindices[self.sel_idx]
-        resconv, idx = np.unique(resindex, return_index=True)
-        resid_names = [f"{resnames[i]}_{resids[i]}" for i in idx]
-        return resindex.astype(np.int32), resid_names, atom_names
+        atom_names = {i: f"{resnames[i]}_{resids[i]}_{atnames[i]}"
+                      for i, x in enumerate(self.sel_idx)}
+
+        resid_names = {resindex[i]: f"{resnames[i]}_{resids[i]}" for i, x in
+                       enumerate(self.sel_idx)}
+
+        return resindex, resid_names, atom_names
 
     def report(self):
         """

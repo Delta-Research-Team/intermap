@@ -22,12 +22,27 @@ from intermap.managers.indices import IndexManager
 
 
 # High Priority
+# todo: update & optimize filling dict when water
+# todo: accept mutiple repliques with the same topology
 
 # Low Priority
-# todo: assert identity against  prolif, again
-# todo: start writing tests
 # todo: Reorganize the code
+# todo: start writing tests
+# todo: assert identity against  prolif, again
 # todo: check docstrings
+
+# done: Guess elements for HH detection
+# done: check logging
+# done: put n_samples / n_factor in config
+# done: implement granularity as a way to condense information
+# done: join into the same function: aro.get_trees, cmn.get_trees
+# done: check hard-coded cutoffs
+# done: implement selecting interactions from config
+# done: assert changing cfg does not interfere with cache=True
+# done: investigate recompilation issues
+# done: check the interactions naming / parsing
+# done: do not gather balls and trees outside runpar / estimate functions
+# done: rename  to CloseContact in all files
 
 
 def run():
@@ -124,13 +139,13 @@ def run():
             cuts_others, selected_others, cuts_aro, selected_aro, overlap,
             atomic, resconv)
 
-        # 6.4 Renumber from atom to residue indices if resolution is 'residue'
-        if not atomic:
-            ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
-
-        # 6.5 Update counters
+        # 6.4 Update counters
         total_pairs += ijf_chunk.shape[0]
         total_inters += inters_chunk.sum()
+
+        # 6.5 Renumber from atom to residue indices if resolution is 'residue'
+        if not atomic:
+            ijf_chunk[:, :2] = resconv[ijf_chunk[:, :2]]
 
         # 6.6 Fill the container with the interactions
         frames = contiguous[i]
@@ -140,7 +155,8 @@ def run():
 
             # 6.7 Fill the container with the water bridges
             if container.detect_wb:
-                ijwf = wb1(ijf_chunk, inters_chunk, waters, container.hb_idx)
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, container.hb_idx,
+                           resconv, atomic=atomic)
                 container.fill(ijwf, inters='wb')
 
     # %%=======================================================================

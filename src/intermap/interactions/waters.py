@@ -7,7 +7,11 @@ import numpy_indexed as npi
 from intermap.interactions import geometry as aot
 
 
-def wb1(ijf_chunk, inters_chunk, waters, idxs):
+def wb1(ijf_chunk, inters_chunk, waters, idxs, resconv, atomic=True):
+
+    if not atomic:
+        waters = resconv[waters]
+
     # Detect waters in i and j rows
     i_is_wat = aot.isin(ijf_chunk[:, 0], waters)
     j_is_wat = aot.isin(ijf_chunk[:, 1], waters)
