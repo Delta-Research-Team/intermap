@@ -1,4 +1,8 @@
 # Created by rglez at 12/29/24
+
+
+
+
 """
 Runner for InterMap
 """
@@ -6,6 +10,7 @@ import logging
 import time
 from argparse import Namespace
 from os.path import basename, join
+from pathlib import Path
 
 import numpy as np
 from numba import set_num_threads
@@ -20,6 +25,9 @@ from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
 
+from intermap.print_ascii_imap import print_colored_ascii
+base_dir = Path(__file__).parents[3]
+ascii_logo = base_dir / 'intermap' / 'scripts' / 'binary_imap.html'
 
 # High Priority
 # todo: update & optimize filling dict when water
@@ -46,9 +54,14 @@ from intermap.managers.indices import IndexManager
 
 
 def run():
+
     """
     Entry point to run the InterMap workflow.
     """
+
+    #Print the intermap logo
+    print_colored_ascii(ascii_logo)
+
     # %%=======================================================================
     # 1. Parse the configuration file
     # =========================================================================
