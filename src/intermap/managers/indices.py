@@ -260,7 +260,7 @@ class IndexManager:
 
         # Ensure all elements are present
         try:
-            universe.atoms.elements
+            elements = universe.atoms.elements
         except Exception:
             logger.warning("Element information not found in the topology."
                            " Using the atoms name to guess it.")
@@ -275,7 +275,7 @@ class IndexManager:
                         f" Please check the topology.")
                 elements.append(element)
             elements = np.asarray(elements)
-            universe.add_TopologyAttr('elements', elements)
+
 
         # Guess bonds if not present
         try:
@@ -292,6 +292,7 @@ class IndexManager:
                 "No bonds found in topology and MDAnalysis could not guess them.")
 
         # Remove the hydrogen-hydrogen bonds if any
+        universe.add_TopologyAttr('elements', elements)
         stamp1 = time.time()
         are_hh = any_hh_bonds(universe)
         universe.delete_bonds(get_hh_bonds(universe))
