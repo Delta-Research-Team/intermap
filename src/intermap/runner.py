@@ -24,8 +24,8 @@ from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
-
 from intermap.print_ascii_imap import print_colored_ascii
+
 base_dir = Path(__file__).parents[3]
 ascii_logo = base_dir / 'intermap' / 'scripts' / 'binary_imap.html'
 
@@ -67,8 +67,8 @@ def run():
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    # config = ConfigManager(mode='debug')
-    config = ConfigManager()
+    config = ConfigManager(mode='debug')
+    # config = ConfigManager()
     args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
 

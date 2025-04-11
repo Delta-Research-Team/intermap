@@ -1,139 +1,185 @@
 # Created by gonzalezroy at 4/9/25
+from os.path import basename
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from rgpack import generals as gnl
 
 systems = {
-    'ACE2-RBD': {
-        "# Atoms (Sel-1)": 30884,
-        "# Atoms (Sel-2)": 113379,
-        # '# Total Atoms': 144263,
-        '# Frames': 30000,
-    },
-    'Spike-Open': {
-        "# Atoms (Sel-1)": 14236,
-        "# Atoms (Sel-2)": 58523,
-        # '# Total Atoms': 72759,
-        '# Frames': 45000,
-    },
-    'p53': {
-        "# Atoms (Sel-1)": 3177,
-        "# Atoms (Sel-2)": 24148,
-        # '# Total Atoms': 27329,
-        '# Frames': 99000,
-    },
-    'IgG3-M1': {
-        "# Atoms (Sel-1)": 21784,
-        "# Atoms (Sel-2)": 4718,
-        # '# Total Atoms': 26502,
-        '# Frames': 30000,
-    },
-    'PAO1': {
-        "# Atoms (Sel-1)": 46376,
-        "# Atoms (Sel-2)": 46376,
-        # '# Total Atoms': 46376,
-        '# Frames': 20000,
-    },
-    'Nucleosome': {
-        "# Atoms (Sel-1)": 9346,
-        "# Atoms (Sel-2)": 15729,
-        # '# Total Atoms': 397776,
-        '# Frames': 20757,
-    },
     'MPRO': {
-        "# Atoms (Sel-1)": 4674,
-        "# Atoms (Sel-2)": 4674,
-        # '# Total Atoms': 4674,
-        '# Frames': 110000,
+        'Protein': 4674,
+        'DNA': 0,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 0,
+        'Total': 4674,
+        "Sel-1": 4674,
+        "Sel-2": 4674,
+        'Frames': 110000,
     },
+
+    'IgG3-M1': {
+        "Protein": 26502,
+        'DNA': 0,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 0,
+        'Total': 26502,
+        "Sel-1": 4718,
+        "Sel-2": 21784,
+        'Frames': 30000,
+    },
+
+    'p53': {
+        "Protein": 24178,
+        'DNA': 3177,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 4,
+        'Total': 27329,
+        "Sel-1": 3177,
+        "Sel-2": 24148,
+        'Frames': 99000,
+    },
+
+    'NSP13': {
+        "Protein": 40027,
+        'DNA': 2863,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 8,
+        'Total': 42898,
+        "Sel-1": 2871,
+        "Sel-2": 40027,
+        'Frames': 1000,
+    },
+
+    'PAO1': {
+        "Protein": 46376,
+        'DNA': 0,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 0,
+        'Total': 46376,
+        "Sel-1": 46376,
+        "Sel-2": 46376,
+        'Frames': 20000,
+    },
+
+    'Spike': {
+        "Protein": 58523,
+        'DNA': 0,
+        'Glycan': 14236,
+        'Lipid': 0,
+        'Water': 0,
+        'Metal': 0,
+        'Total': 72759,
+        "Sel-1": 14236,
+        "Sel-2": 58523,
+        'Frames': 45000,
+    },
+
+    'ACE2-RBD': {
+        'Protein': 30884,
+        'DNA': 0,
+        'Glycan': 4068,
+        'Lipid': 109311,
+        'Water': 0,
+        'Metal': 0,
+        'Total': 144263,
+        "Sel-1": 30884,
+        "Sel-2": 113379,
+        'Frames': 30000,
+    },
+
+    # 'Nucleosome': {
+    #     'Protein': 15729,
+    #     'DNA': 9346,
+    #     'Glycan': 0,
+    #     'Lipid': 0,
+    #     'Water': 372543,
+    #     'Metal': 0,
+    #     'Total': 397776,
+    #     "Sel-1": 9346,
+    #     "Sel-2": 388272,
+    #     'Frames': 20757,
+    # }
 }
 
 # =============================================================================
 #
 # =============================================================================
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib as mpl
-import matplotlib.ticker
+img_dir = '/media/rglez/Expansion/RoyData/intermap/01_frames_to_Roy/systems'
+images = {basename(x): x for x in gnl.recursive_finder('*.png', img_dir)}
 
-# Set the layout
-n_cases = len(systems)
-n_info = 4
-n_spacing = 4
-x_len = (n_cases * n_info) + n_spacing * (n_cases - 1)
-color_info = {'# Atoms (Sel-1)': 'blue',
-              '# Atoms (Sel-2)': 'orange',
-              '# Total Atoms': 'green',
-              '# Frames': 'purple'}
+# =============================================================================
+#
+# =============================================================================
+import matplotlib.colors as colors
 
-# Create a list of x_labels, x_values, and x_names
-x_labels = []
-x_values = []
-x_names = []
-for x in systems.keys():
-    for y in systems[x].keys():
-        x_labels.append(y)
-        x_values.append(systems[x][y])
-        x_names.append(x)
-    for z in range(n_spacing):
-        x_labels.append('')
-        x_values.append(0)
-        x_names.append('')
-x_labels = np.asarray(x_labels)
-x_values = np.asarray(x_values)
+df = pd.DataFrame.from_dict(systems)
+bounds = np.arange(4, df.max().max(), 10000)
+norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256)
 
-# Create a color array based on the x_labels
-colors = [color_info[x] if x in color_info.keys() else 'white'
-          for x in x_labels]
-colors = np.asarray(colors)
+# >>>> Layout
+fig = plt.figure(constrained_layout=True, figsize=(12, 8), dpi=600)
+gs = fig.add_gridspec(2, 4, hspace=0., wspace=0, width_ratios=[1, 1, 1, 1],
+                      height_ratios=[1, 1])
 
-# Separate the indices for the twin axis
-whole_idx = range(len(colors))
-subset_idx = np.where(x_labels != '# Total Atoms')[0]
-twin_idx = np.where(x_labels == '# Total Atoms')[0]
 
-# Create a figure and axis
-fig, ax = plt.subplots(figsize=(3, 9), dpi=300)
-ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+def plot_img(ax, img_path, title):
+    ax.imshow(plt.imread(img_path))
+    ax.set_title(title, fontweight='bold', fontsize=12, fontname='Ubuntu mono')
+    ax.axis('off')
+    pass
 
-ax.barh(subset_idx, x_values[subset_idx], color=colors[subset_idx],
-        alpha=0.7, height=1)
-# ax2 = ax.twinx()
-ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 1))
-ax.barh(twin_idx, x_values[twin_idx], color=colors[twin_idx],
-        alpha=0.7, height=1)
 
-# set the y-axis equivalent
-# l = ax.get_ylim()
-# l2 = ax2.get_ylim()
-# f = lambda x: l2[0] + (x - l[0]) / (l[1] - l[0]) * (l2[1] - l2[0])
-# ticks = f(ax.get_yticks())
-# ax2.yaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
+plot_img(fig.add_subplot(gs[0, 0]), images['mpro1.png'], 'MPRO')
+plot_img(fig.add_subplot(gs[0, 1]), images['M1_IgG3.png'], 'IgG3-M1')
+plot_img(fig.add_subplot(gs[0, 2]), images['p53.png'], 'p53')
+plot_img(fig.add_subplot(gs[0, 3]), images['nsp13.png'], 'NSP13')
+plot_img(fig.add_subplot(gs[1, 0]), images['PAO1_prot.png'], 'PAO1')
+plot_img(fig.add_subplot(gs[1, 1]), images['spike.png'], 'Spike')
+plot_img(fig.add_subplot(gs[1, 2]), images['ACE2.png'], 'ACE2-RBD')
+plot_img(fig.add_subplot(gs[1, 3]), images['nucleosome.png'], 'Nucleosome')
 
-# find unique xticks
-x_names = np.asarray(x_names)
-x_ticks = []
-x_labels = []
-for name in set(x_names):
-    if name == '':
-        continue
-    idx = np.where(x_names == name)[0].mean()
-    x_ticks.append(idx)
-    x_labels.append(name)
+# inv = fig.add_subplot(gs[2, :])
+# inv.axis('off')
 
-x_ticks = np.asarray(x_ticks)
-x_labels = np.asarray(x_labels)
-ax.set_xticks(x_ticks)
-ax.set_xticklabels(x_labels, rotation=0, ha='center')
+# ax = fig.add_subplot(gs[3, :])
+# ax2 = fig.add_subplot(gs[4, :])
+# ax.invert_yaxis()
+# ax.xaxis.tick_top()
 
-ax.set_ylabel('# Atoms  |  # Frames', fontweight='bold')
-# ax2.set_ylabel('# Total Atoms', color='green', fontweight='bold')
-# ax2.tick_params(axis='y', labelcolor='green')
+# im = ax.imshow(df.T, cmap='cividis', aspect='auto', alpha=0.95, norm=norm)
+#
+# ax.set_yticks(range(len(df.columns)), labels=df.columns,
+#               fontname='Ubuntu mono', fontsize=12)
+# ax.set_yticks(np.arange(-.5, len(df.columns), 1), minor=True)
+# ax.set_xticks(range(len(df.index)), labels=df.index, rotation=0, ha='center',
+#               fontname='Ubuntu mono', fontsize=12)
+# ax.set_xticks(np.arange(-.5, len(df.index), 1), minor=True)
+# ax.tick_params(axis='both', which='minor', length=0)
+# ax.grid(color='k', lw=0.5, alpha=0.5, which='minor', axis='both', ls='-')
+#
+# ax.axvline(x=6.5, color='k', lw=1)
+# cb = fig.colorbar(im, cax=ax2, orientation='horizontal')
+# cb.ax.xaxis.set_ticks_position('bottom')
+#
+# cb.ax.set_xlabel('[Atoms | Frames]', font="Ubuntu mono", fontsize=12,
+#                  labelpad=5, color='k', fontweight='bold')
+#
+# for l in cb.ax.yaxis.get_ticklabels():
+#     l.set_family("Ubuntu mono")
+#     l.set_fontsize(8)
+#     l.set_color('k')
 
-ax.grid(axis='y', linestyle='--', alpha=0.7)
-legend_labels = list(color_info.keys())
-legend_colors = list(color_info.values())
-handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in legend_colors]
-ax.legend(handles, legend_labels, loc='upper center', ncol=2)
-plt.tight_layout()
-
-# Save the figure
-fig.savefig('systems_atoms.png', dpi=300, bbox_inches='tight')
+plt.subplots_adjust(left=0, right=1, top=1, bottom=0, hspace=0, wspace=0)
+fig.savefig('systems.png', dpi=300, bbox_inches='tight')
 plt.close()
