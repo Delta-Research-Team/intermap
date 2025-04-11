@@ -1,8 +1,4 @@
 # Created by rglez at 12/29/24
-
-
-
-
 """
 Runner for InterMap
 """

@@ -36,7 +36,7 @@ def detect_config_path(mode='debug'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/home/rglez/RoyHub/intermap/tests/imaps/imap1.cfg'
+        config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap3.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -152,6 +152,7 @@ class Config:
             'selection_2': {'dtype': str, 'values': None},
             'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
             'interactions': {'dtype': str, 'values': None},
+            'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
             'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 

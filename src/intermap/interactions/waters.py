@@ -4,7 +4,7 @@ import itertools as it
 import numpy as np
 import numpy_indexed as npi
 
-from intermap.interactions import geometry as aot
+from intermap.interactions import geometry as geom
 
 
 def wb1(ijf_chunk, inters_chunk, waters, idxs, resconv, atomic=True):
@@ -13,8 +13,8 @@ def wb1(ijf_chunk, inters_chunk, waters, idxs, resconv, atomic=True):
         waters = resconv[waters]
 
     # Detect waters in i and j rows
-    i_is_wat = aot.isin(ijf_chunk[:, 0], waters)
-    j_is_wat = aot.isin(ijf_chunk[:, 1], waters)
+    i_is_wat = geom.isin(ijf_chunk[:, 0], waters)
+    j_is_wat = geom.isin(ijf_chunk[:, 1], waters)
 
     # Select the rows that have at least one water, that is connected by a hb
 

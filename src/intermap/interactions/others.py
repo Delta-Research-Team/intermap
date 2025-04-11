@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 from numba_kdtree import KDTree as nckd
 
-from intermap.interactions import geometry as aot
+from intermap.interactions import geometry as geom
 
 
 def get_ball(xyz, s1_indices, s2_indices, dist_cut):
@@ -96,7 +96,7 @@ def containers(xyz, k, s1_idx, s2_idx, ball_1, selected_others,
     # Compute distances
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
-    dists = aot.calc_dist(xyz[row1], xyz[row2])
+    dists = geom.calc_dist(xyz[row1], xyz[row2])
 
     # Create the container for interaction types
     N = row1.size
@@ -139,8 +139,8 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
     if inter_name == 'CloseContact':
         return inter_idx, passing_dists
     else:
-        s1_is_type = aot.isin(row1, type1)
-        s2_is_type = aot.isin(row2, type2)
+        s1_is_type = geom.isin(row1, type1)
+        s2_is_type = geom.isin(row2, type2)
         are_type = s1_is_type & s2_is_type
         return inter_idx, passing_dists & are_type
 
@@ -167,8 +167,8 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     """
     # Detect donors and acceptors under cutoff
     idx_name = list(selected_others).index(inter_name)
-    r1_t1 = aot.isin(row1, type1)
-    r2_t2 = aot.isin(row2, type2)
+    r1_t1 = geom.isin(row1, type1)
+    r2_t2 = geom.isin(row2, type2)
     passing_HA = r1_t1 & r2_t2 & (dists <= ha_cut)
     t1 = row1[passing_HA]
     t2 = row2[passing_HA]
@@ -178,17 +178,17 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     # Compute DHA angles
     t3 = np.full(passing_HA.size, fill_value=-1, dtype=np.float32)
     if "HBDonor" in inter_name:
-        idx_hydros = aot.indices(type1, t1)
+        idx_hydros = geom.indices(type1, t1)
         D = hb_donors[idx_hydros]
-        DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
-        DA_dists = aot.calc_dist(xyz[D], xyz[t2])
+        DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
+        DA_dists = geom.calc_dist(xyz[D], xyz[t2])
         DHA_angles[DA_dists > da_cut] = -1
 
     elif "HBAcceptor" in inter_name:
-        idx_hydros = aot.indices(type2, t2)
+        idx_hydros = geom.indices(type2, t2)
         D = hb_donors[idx_hydros]
-        DHA_angles = aot.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
-        DA_dists = aot.calc_dist(xyz[D], xyz[t1])
+        DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
+        DA_dists = geom.calc_dist(xyz[D], xyz[t1])
         DHA_angles[DA_dists > da_cut] = -1
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
@@ -303,5 +303,5 @@ def others(
                                          max_ang_xb, selected_others)
             inters[:, xbd_idx] = xbd
 
-    mask = aot.get_compress_mask(inters)
+    mask = geom.get_compress_mask(inters)
     return ijf[mask], inters[mask]

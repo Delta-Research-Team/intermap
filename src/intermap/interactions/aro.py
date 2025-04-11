@@ -5,7 +5,7 @@ from numba.typed import List
 from numba_kdtree import KDTree as nckd
 from numpy import concatenate as concat
 
-import intermap.interactions.geometry as aot
+import intermap.interactions.geometry as geom
 
 
 # todo: remove concatenation of arrays and use slicing of preallocated arrays instead
@@ -30,8 +30,8 @@ def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
 
     for i in prange(d1):
         xyz = xyzs[i]
-        s1_centr = aot.calc_centroids(s1_rings, xyz)
-        s2_centr = aot.calc_centroids(s2_rings, xyz)
+        s1_centr = geom.calc_centroids(s1_rings, xyz)
+        s2_centr = geom.calc_centroids(s2_rings, xyz)
         xyzs_aro[i] = concat(
             (xyz[s1_cat], xyz[s2_cat], s1_centr, s2_centr), axis=0)
         s1_centrs[i] = s1_centr
@@ -44,10 +44,10 @@ def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
 def get_normals_and_centroids(xyz, s1_rings, s2_rings):
     s1_at1, s1_at2 = s1_rings[:, 0], s1_rings[:, 1]
     s2_at1, s2_at2 = s2_rings[:, 0], s2_rings[:, 1]
-    s1_ctrs = aot.calc_centroids(s1_rings, xyz)
-    s2_ctrs = aot.calc_centroids(s2_rings, xyz)
-    s1_norm = aot.calc_normal_vector(s1_ctrs, xyz[s1_at1], xyz[s1_at2])
-    s2_norm = aot.calc_normal_vector(s2_ctrs, xyz[s2_at1], xyz[s2_at2])
+    s1_ctrs = geom.calc_centroids(s1_rings, xyz)
+    s2_ctrs = geom.calc_centroids(s2_rings, xyz)
+    s1_norm = geom.calc_normal_vector(s1_ctrs, xyz[s1_at1], xyz[s1_at2])
+    s2_norm = geom.calc_normal_vector(s2_ctrs, xyz[s2_at1], xyz[s2_at2])
     return s1_norm, s2_norm, s1_ctrs, s2_ctrs
 
 
@@ -105,11 +105,11 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
     # Select the pairs
     if inter_name == 'PiCation':
-        s1_is_type = aot.isin(row1, s1_rings_idx)
-        s2_is_type = aot.isin(row2, s2_cat_idx)
+        s1_is_type = geom.isin(row1, s1_rings_idx)
+        s2_is_type = geom.isin(row2, s2_cat_idx)
     elif inter_name == 'CationPi':
-        s1_is_type = aot.isin(row1, s1_cat_idx)
-        s2_is_type = aot.isin(row2, s2_rings_idx)
+        s1_is_type = geom.isin(row1, s1_cat_idx)
+        s2_is_type = geom.isin(row2, s2_rings_idx)
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
 
@@ -125,11 +125,11 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     vector_ctr_cat = xyz_aro[row1_pairs] - xyz_aro[row2_pairs]
 
     if inter_name == 'PiCation':
-        normals = s1_norm[aot.indices(s1_rings_idx, row1_pairs)]
+        normals = s1_norm[geom.indices(s1_rings_idx, row1_pairs)]
     else:
-        normals = s2_norm[aot.indices(s2_rings_idx, row2_pairs)]
+        normals = s2_norm[geom.indices(s2_rings_idx, row2_pairs)]
 
-    angles = aot.calc_angles_2v(normals, vector_ctr_cat)
+    angles = geom.calc_angles_2v(normals, vector_ctr_cat)
 
     # Apply restraints
     passing_angles1 = (angles >= min_ang) & (angles <= max_ang)
@@ -221,22 +221,22 @@ def aro(
 
     if 'PiStacking' in selected_aro or 'EdgeToFace' in selected_aro or 'FaceToFace' in selected_aro:
         # Get the ring pairs
-        s1_is_ctr = aot.isin(row1, s1_rings_idx)
-        s2_is_ctr = aot.isin(row2, s2_rings_idx)
+        s1_is_ctr = geom.isin(row1, s1_rings_idx)
+        s2_is_ctr = geom.isin(row2, s2_rings_idx)
         pairs = s1_is_ctr & s2_is_ctr
         ring_pairs = ijf_aro[:, :][pairs]
 
-        s1_idx = aot.indices(s1_rings_idx, ring_pairs[:, 0])
-        s2_idx = aot.indices(s2_rings_idx, ring_pairs[:, 1])
+        s1_idx = geom.indices(s1_rings_idx, ring_pairs[:, 0])
+        s2_idx = geom.indices(s2_rings_idx, ring_pairs[:, 1])
         ring_dists = dists_aro[pairs]
         s1_normals, s2_normals = s1_norm[s1_idx], s2_norm[s2_idx]
         s1_centroids, s2_centroids = s1_ctrs[s1_idx], s2_ctrs[s2_idx]
 
         c1c2 = s1_centroids - s2_centroids
         c2c1 = s2_centroids - s1_centroids
-        n1n2 = aot.calc_angles_2v(s1_normals, s2_normals)
-        n1c1c2 = aot.calc_angles_2v(c1c2, s1_normals)
-        n2c2c1 = aot.calc_angles_2v(c2c1, s2_normals)
+        n1n2 = geom.calc_angles_2v(s1_normals, s2_normals)
+        n1c1c2 = geom.calc_angles_2v(c1c2, s1_normals)
+        n2c2c1 = geom.calc_angles_2v(c2c1, s2_normals)
 
         N = s1_normals.shape[0]
         ipoints = np.empty((N, 3), dtype=np.float32)
@@ -248,8 +248,8 @@ def aro(
             ipoints[i] = get_intersect_point(s1_normal, s1_centroid,
                                              s2_normal, s2_centroid)
 
-        idists = np.minimum(aot.calc_dist(ipoints, s1_centroids),
-                            aot.calc_dist(ipoints, s2_centroids))
+        idists = np.minimum(geom.calc_dist(ipoints, s1_centroids),
+                            geom.calc_dist(ipoints, s2_centroids))
 
         if 'EdgeToFace' in selected_aro:
             idx_etf, etf_stacking = stackings(
@@ -271,7 +271,7 @@ def aro(
             inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
 
     frame_id = ijf_aro[0][-1]
-    mask = aot.get_compress_mask(inters_aro)
+    mask = geom.get_compress_mask(inters_aro)
     ijf_aro = ijf_aro[mask]
     inters_aro = inters_aro[mask]
 

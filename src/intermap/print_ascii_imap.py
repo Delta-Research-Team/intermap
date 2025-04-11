@@ -38,7 +38,7 @@ def print_colored_ascii(html_path):
                 print('\033[0m')
 
     except Exception as e:
-        print(f"Error al leer el archivo HTML: {e}")
+        print(f"Error when reading HTML: {e}")
 
 
 
