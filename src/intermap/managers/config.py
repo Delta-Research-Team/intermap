@@ -162,6 +162,9 @@ class Config:
 
     def __init__(self, mode='production'):
 
+        # Print the header
+        cmn.print_colored_ascii()
+
         # Detect config
         self.config_path = cmn.check_path(detect_config_path(mode=mode))
         self.legal_params = self.allowed_parameters

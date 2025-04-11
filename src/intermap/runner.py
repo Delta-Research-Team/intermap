@@ -20,53 +20,29 @@ from intermap.managers.config import ConfigManager
 from intermap.managers.container import ContainerManager
 from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
-from intermap.print_ascii_imap import print_colored_ascii
 
-base_dir = Path(__file__).parents[3]
-ascii_logo = base_dir / 'intermap' / 'scripts' / 'binary_imap.html'
 
 # High Priority
-# todo: update & optimize filling dict when water
-# todo: accept mutiple repliques with the same topology
-
-# Low Priority
 # todo: Reorganize the code
 # todo: start writing tests
 # todo: assert identity against  prolif, again
 # todo: check docstrings
 
-# done: Guess elements for HH detection
-# done: check logging
-# done: put n_samples / n_factor in config
-# done: implement granularity as a way to condense information
-# done: join into the same function: aro.get_trees, cmn.get_trees
-# done: check hard-coded cutoffs
-# done: implement selecting interactions from config
-# done: assert changing cfg does not interfere with cache=True
-# done: investigate recompilation issues
-# done: check the interactions naming / parsing
-# done: do not gather balls and trees outside runpar / estimate functions
-# done: rename  to CloseContact in all files
 
-
-def run():
-
+def workflow(args):
     """
     Entry point to run the InterMap workflow.
     """
-
-    #Print the intermap logo
-    print_colored_ascii(ascii_logo)
-
     # %%=======================================================================
-    # 1. Parse the configuration file
+    # 1. Start (logging, print logo, set number of threads)
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    config = ConfigManager(mode='debug')
-    # config = ConfigManager()
-    args = Namespace(**config.config_args)
     set_num_threads(args.n_procs)
+
+    if isinstance(args, dict):
+        args = Namespace(**args)
+        cmn.print_colored_ascii()
 
     # %%=======================================================================
     # 2. Load the indices & interactions to compute
@@ -192,4 +168,25 @@ def run():
 
     return packed
 
-# run()
+
+def run(mode='debug'):
+    """
+    Run the InterMap workflow.
+
+    Args:
+        mode (str): Mode of operation. Can be 'debug' or 'production'.
+    """
+    # >>>> Detect args
+    config = ConfigManager(mode=mode)
+    arguments = Namespace(**config.config_args)
+
+    # >>>> Run the InterMap workflow
+    return workflow(arguments)
+
+
+# =============================================================================
+# Running from .cfg file
+# =============================================================================
+
+if __name__ == '__main__':
+    run()

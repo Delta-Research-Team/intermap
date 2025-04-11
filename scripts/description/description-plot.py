@@ -115,7 +115,7 @@ systems = {
 # =============================================================================
 #
 # =============================================================================
-img_dir = '/media/gonzalezroy/Expansion/RoyData/intermap/01_frames_to_Roy/systems'
+img_dir = '/home/gonzalezroy/RoyHub/intermap/data/figures/systems/'
 images = {basename(x): x for x in gnl.recursive_finder('*.png', img_dir)}
 
 # =============================================================================
