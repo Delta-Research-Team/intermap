@@ -98,24 +98,24 @@ systems = {
         'Frames': 30000,
     },
 
-    # 'Nucleosome': {
-    #     'Protein': 15729,
-    #     'DNA': 9346,
-    #     'Glycan': 0,
-    #     'Lipid': 0,
-    #     'Water': 372543,
-    #     'Metal': 0,
-    #     'Total': 397776,
-    #     "Sel-1": 9346,
-    #     "Sel-2": 388272,
-    #     'Frames': 20757,
-    # }
+    'Nucleosome': {
+        'Protein': 15729,
+        'DNA': 9346,
+        'Glycan': 0,
+        'Lipid': 0,
+        'Water': 372543,
+        'Metal': 0,
+        'Total': 397776,
+        "Sel-1": 9346,
+        "Sel-2": 388272,
+        'Frames': 20757,
+    }
 }
 
 # =============================================================================
 #
 # =============================================================================
-img_dir = '/media/rglez/Expansion/RoyData/intermap/01_frames_to_Roy/systems'
+img_dir = '/media/gonzalezroy/Expansion/RoyData/intermap/01_frames_to_Roy/systems'
 images = {basename(x): x for x in gnl.recursive_finder('*.png', img_dir)}
 
 # =============================================================================
@@ -135,7 +135,7 @@ gs = fig.add_gridspec(2, 4, hspace=0., wspace=0, width_ratios=[1, 1, 1, 1],
 
 def plot_img(ax, img_path, title):
     ax.imshow(plt.imread(img_path))
-    ax.set_title(title, fontweight='bold', fontsize=12, fontname='Ubuntu mono')
+    ax.set_title(title, fontweight='bold', fontsize=20, fontname='Ubuntu mono')
     ax.axis('off')
     pass
 
