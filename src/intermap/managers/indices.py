@@ -260,7 +260,7 @@ class IndexManager:
 
         # Ensure all elements are present
         try:
-            elements = universe.atoms.elements
+            elements = universe.atoms.elements.lolita
         except Exception:
             logger.warning("Element information not found in the topology."
                            " Using the atoms name to guess it.")
@@ -276,16 +276,20 @@ class IndexManager:
                 elements.append(element)
             elements = np.asarray(elements)
 
-
         # Guess bonds if not present
+        pt = rdkit.Chem.GetPeriodicTable()
+        radii = {e: pt.GetRvdw(e) for e in elements}
+
         try:
             any_bond = universe.bonds[0]
         except:
             logger.warning(f'The passed topology does not contain bonds. '
                            f'MDAnalysis will guess them automatically.')
             guessing = time.time()
-            universe = mda.Universe(self.topo, self.traj, guess_bonds=True)
-            logger.info(f"Bonds guessed in {time.time() - guessing:.2f} s")
+            universe = mda.Universe(self.topo, self.traj, guess_bonds=True,
+                                    vdwradii=radii)
+            n_bonds = len(universe.bonds)
+            logger.info(f" {n_bonds} bonds guessed in {time.time() - guessing:.2f} s")
             any_bond = universe.bonds[0]
         if any_bond is None:
             raise ValueError(
@@ -300,6 +304,33 @@ class IndexManager:
         if are_hh:
             logger.warning(
                 f"This universe contained H-H bonds. Removed in {del_time:.2f} s")
+
+
+        # # Remove hydrogen bonds with valence > 1
+        # hbonding = defaultdict(list)
+        # bonds = universe.bonds
+        # for bond in bonds:
+        #     atom1, atom2 = bond
+        #     if atom1.element == 'H':
+        #         hbonding[atom1.index].append(atom2.index)
+        #     elif atom2.element == 'H':
+        #         hbonding[atom2.index].append(atom1.index)
+        #     else:
+        #         continue
+        # marked = []
+        # for atom, bonded in hbonding.items():
+        #     if len(bonded) > 1:
+        #         marked.append((atom, bonded))
+        #
+        # delete = []
+        # for atom, bonded in marked:
+        #     x = np.tile(universe.atoms.positions[atom], (len(bonded), 1))
+        #     dists = geom.calc_dist(x, universe.atoms.positions[bonded])
+        #     minim = dists.argmin()
+        #     for i, b in enumerate(bonded):
+        #         if i != minim:
+        #             delete.append((atom, b))
+        # universe.delete_bonds(delete)
 
         # Output load time
         loading = time.time() - stamp0
@@ -406,13 +437,11 @@ class IndexManager:
             match_dh = [x for x in tri_mol.GetSubstructMatches(query_dh)]
             if match_dh:
                 where_dh = tri_res.atoms.resindices[match_dh] == case
-                selected_dh = tri_res.atoms.indices[match_dh][where_dh]
+                selected_dh = tri_res.atoms.indices[match_dh][where_dh.all(axis=1)]
 
                 for i, x in enumerate(selected_dh):
-                    if i % 2 == 0:
-                        hx_D.append(x)
-                    else:
-                        hx_H.append(x)
+                    hx_D.append(x[0])
+                    hx_H.append(x[1])
 
             match_a = [x for x in tri_mol.GetSubstructMatches(query_a)]
             if match_a:
@@ -447,7 +476,7 @@ class IndexManager:
         hx_D = hx_D_raw[hx_D_raw != -1].astype(np.int32)
         hx_H = hx_H_raw[hx_H_raw != -1].astype(np.int32)
         hx_A = np.unique(hx_A_raw[hx_A_raw != -1]).astype(np.int32)
-        assert len(hx_D) == len(hx_H), "Donors and Hydrogens do not match"
+        assert len(hx_D) == len(hx_H), f"Donors ({hx_D.size}) and Hydrogens ({hx_H.size}) do not match"
         return hx_D, hx_H, hx_A
 
     def get_rings(self):
@@ -678,7 +707,8 @@ class IndexManager:
         atnames = self.universe.atoms.names[self.sel_idx]
         resnames = self.universe.atoms.resnames[self.sel_idx]
         resids = self.universe.atoms.resids[self.sel_idx]
-        resindex = self.universe.atoms.resindices[self.sel_idx].astype(np.int32)
+        resindex = self.universe.atoms.resindices[self.sel_idx].astype(
+            np.int32)
 
         atom_names = {i: f"{resnames[i]}_{resids[i]}_{atnames[i]}"
                       for i, x in enumerate(self.sel_idx)}

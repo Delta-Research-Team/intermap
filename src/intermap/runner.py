@@ -6,7 +6,6 @@ import logging
 import time
 from argparse import Namespace
 from os.path import basename, join
-from pathlib import Path
 
 import numpy as np
 from numba import set_num_threads
@@ -178,10 +177,10 @@ def run(mode='debug'):
     """
     # >>>> Detect args
     config = ConfigManager(mode=mode)
-    arguments = Namespace(**config.config_args)
+    args = Namespace(**config.config_args)
 
     # >>>> Run the InterMap workflow
-    return workflow(arguments)
+    return workflow(args)
 
 
 # =============================================================================
