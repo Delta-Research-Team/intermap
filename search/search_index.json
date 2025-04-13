@@ -1,1 +1,0 @@
-{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"","title":"Welcome to InterMap's documentation","text":"<p>InterMap is a tool for computing interaction fingerprints.</p>"}]}
