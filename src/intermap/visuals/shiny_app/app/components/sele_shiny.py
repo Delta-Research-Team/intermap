@@ -4,23 +4,23 @@ import MDAnalysis as mda
 import pandas as pd
 
 
-class TSVFilter:
+class CSVFilter:
     """
-    A class to filter the InterMap TSV file before loading it with Shiny
+    A class to filter the InterMap CSV file before loading it with Shiny
     """
 
-    def __init__(self, topo, sele, tsv):
+    def __init__(self, topo, sele, csv):
         """
-        Initialize the TSVFilter class
+        Initialize the CSVFilter class
 
         Args:
             topo (str): path to the topology file
             sele (str): selection string compliant with MDAnalysis syntax
-            tsv (str): path to the InterMap TSV file
+            csv (str): path to the InterMap CSV file
         """
         self.sele = sele
         self.topo = topo
-        self.tsv = tsv
+        self.csv = csv
 
         self.sel_idx = self.get_sel_idx()
         self.df = self.get_df()
@@ -40,10 +40,10 @@ class TSVFilter:
 
     def filter(self):
         """
-        Filter the InterMap TSV file based on the selected indices
+        Filter the InterMap CSV file based on the selected indices
         """
 
-        with open(self.tsv, 'rt') as f:
+        with open(self.csv, 'rt') as f:
             next(f)
             for i, line in enumerate(f):
                 s1, s2, s3, itype, prev, time = line.split(',')
@@ -55,7 +55,7 @@ class TSVFilter:
 
     def get_df(self):
         """
-        Get the filtered TSV file as a pandas DataFrame
+        Get the filtered CSV file as a pandas DataFrame
         """
         generator = self.filter()
         df = pd.DataFrame(generator,
@@ -63,14 +63,3 @@ class TSVFilter:
                                    'interaction_name', 'prevalence',
                                    ' timeseries'])
         return df
-
-
-# =============================================================================
-#
-# =============================================================================
-#topo = '/home/gonzalezroy/RoyHub/intermap/tests/trajs/trj1/top.pdb'
-#tsv = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/outputs/lig-prot/lig-prot_InterMap.tsv'
-#sele = 'resname LIG'
-
-#tsv_obj = TSVFilter(topo, sele, tsv)
-#df = tsv_obj.df

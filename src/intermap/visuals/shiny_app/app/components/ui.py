@@ -16,8 +16,8 @@ def create_file_input_section():
             {"class": "file-browse-container"},
             ui.input_file(
                 "file",
-                "Upload TSV file:",
-                accept=[".tsv"],
+                "Upload CSV file:",
+                accept=[".csv"],
                 button_label="Browse",
                 placeholder="No file selected"
             ),

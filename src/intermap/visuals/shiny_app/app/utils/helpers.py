@@ -84,20 +84,6 @@ def calculate_prevalence(row):
         frames_with_interaction = sum(int(x) for x in frames)
         return round((frames_with_interaction / total_frames) * 100, 1)
 
-    """
-    frame_columns = [col for col in row.index if str(col).isdigit()]
-    if not frame_columns:
-        return 0
-
-    frame_data = row[frame_columns]
-    total_frames = len(frame_data)
-    if total_frames == 0:
-        return 0
-
-    frames_with_interaction = (frame_data == 1).sum()
-    return round((frames_with_interaction / total_frames) * 100, 1)
-    """
-
 def generate_interaction_choices(df):
     """
     Generate choices for interaction type checkboxes.

@@ -171,7 +171,7 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     if show_prevalence:
         text_values = text_values.mask(pivot_prevalence == 0, '')
     else:
-        text_values = pivot_interaction.applymap(lambda x: '')
+        text_values = pivot_interaction.map(lambda x: '')
 
     fig.add_trace(go.Heatmap(
         z=pivot_numerical,
