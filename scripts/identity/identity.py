@@ -9,10 +9,9 @@ from rgpack import generals as gnl
 # User-defined variables
 # =============================================================================
 prolif_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/prolif/lig-prot.pkl'
-imap_pickle = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
-
+imap_csv = '/media/gonzalezroy/Expansion/RoyData/intermap/correctness/intermap/imap_lig-prot_InterMap.csv'
 df = gnl.unpickle_from_file(prolif_pickle)
-imap = pd.read_csv(imap_pickle)
+imap = pd.read_csv(imap_csv)
 
 # =============================================================================
 # Transforming Prolif data
@@ -110,143 +109,6 @@ print(
 #             print(f'InterMap time values {diff2} not in Prolif for {inter}')
 #             print(plf_time)
 #             print(imap_time)
-# =============================================================================
-# plotting
-# =============================================================================
-import matplotlib.pyplot as plt
-import matplotlib
 
-font = {'family': 'sans-serif',
-        'size': 12}
-
-matplotlib.rc('font', **font)
-inters_imap = list(imap_dict.keys())
-inters_prolif = list(prolif_dict.keys())
-inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
-
-data = defaultdict(lambda: defaultdict(list))
-for inter in inters:
-    if inter[-1] == 'CloseContact':
-        continue
-    try:
-        plif_time = (prolif_dict[inter] > 0).astype(int)
-    except KeyError:
-        plif_time = np.zeros_like(imap_dict[inter])
-
-    try:
-        imap_time = imap_dict[inter]
-    except KeyError:
-        imap_time = np.zeros_like(plif_time)
-
-    in_both = np.bitwise_and(plif_time, imap_time)
-    in_plif = (plif_time - in_both).sum()
-    in_imap = (imap_time - in_both).sum()
-
-    data[inter[2]]['plif'].append(in_plif)
-    data[inter[2]]['imap'].append(in_imap)
-    data[inter[2]]['both'].append(in_both.sum())
-
-condensed = defaultdict(lambda: defaultdict(list))
-for inter in data:
-    plif = np.array(data[inter]['plif']).sum()
-    imap = np.array(data[inter]['imap']).sum()
-    both = np.array(data[inter]['both']).sum()
-    condensed[inter]['plif'].append(plif)
-    condensed[inter]['imap'].append(imap)
-    condensed[inter]['both'].append(both)
-
-percentage = defaultdict(lambda: defaultdict(list))
-for inter in condensed:
-    plif = condensed[inter]['plif'][0]
-    imap = condensed[inter]['imap'][0]
-    both = condensed[inter]['both'][0]
-    total = plif + imap + both
-    percentage[inter]['plif'].append(plif / total * 100)
-    percentage[inter]['imap'].append(imap / total * 100)
-    percentage[inter]['both'].append(both / total * 100)
-
-order = sorted([(x, percentage[x]['both']) for x in condensed],
-               key=lambda x: x[1])
-
-# fig, ax = plt.subplots(dpi=600)
-# ax.set_xlabel('Interaction type', fontweight='bold')
-# ax.set_ylabel('Interactions detected (%)', fontweight='bold')
-# ax.set_ylim(0, 105)
-# for i, inter in enumerate(percentage):
-#     both = percentage[order[i][0]]['both'][0]
-#     plif = percentage[order[i][0]]['plif'][0]
-#     imap = percentage[order[i][0]]['imap'][0]
-#     ax.bar(i, both, color=c3, zorder=1, lw=0.5)
-#     ax.bar(i, imap, color=c2, bottom=both + plif, zorder=1)
-#     ax.bar(i, plif, color=c1, bottom=both, zorder=1)
-#
-# ax.grid(axis='y', lw=1, ls='--', color=c1, zorder=5, alpha=0.25)
-# ax.bar(i, both, color=c3, label='Both')
-# ax.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif)
-# ax.bar(i, plif, color=c1, label='ProLIF only', bottom=both)
-#
-# ax.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
-#           framealpha=0.95)
-# ax.set_xticks(range(len(order)))
-# ax.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
-# plt.tight_layout()
-# plt.savefig('/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-global.png')
-# plt.close()
-
-# %%
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-# fig.subplots_adjust()
-
-c1, c2, c3 = 'slateblue', 'green', 'skyblue'
-c4 = 'k'
-ax2.set_xlabel('Interaction type', fontweight='bold')
-fig.text(0.0, 0.6, 'No. of detected interactions', va='center',
-         rotation='vertical', fontweight='bold')
-for i, inter in enumerate(condensed):
-    both = condensed[order[i][0]]['both'][0]
-    plif = condensed[order[i][0]]['plif'][0]
-    imap = condensed[order[i][0]]['imap'][0]
-    ax1.bar(i, both, color=c3, zorder=1, lw=0.5, alpha=0.7)
-    ax2.bar(i, both, color=c3, zorder=1, lw=0.5, alpha=0.7)
-    ax1.bar(i, imap, color=c2, bottom=both + plif, zorder=1, alpha=0.7)
-    ax2.bar(i, imap, color=c2, bottom=both + plif, zorder=1, alpha=0.7)
-    ax1.bar(i, plif, color=c1, bottom=both, zorder=1, alpha=0.7)
-    ax2.bar(i, plif, color=c1, bottom=both, zorder=1, alpha=0.7)
-
-ax1.set_ylim(0, 5500)  # outliers only
-ax2.set_ylim(0, 10)  # most of the data
-
-ax1.spines.bottom.set_visible(False)
-ax2.spines.top.set_visible(False)
-# ax1.xaxis.tick_top()
-ax1.tick_params(axis='both', bottom=False)  # don't put tick labels at the top
-ax2.xaxis.tick_bottom()
-
-ax1.grid(axis='y', lw=1, ls='--', color=c4, zorder=5, alpha=0.25)
-ax2.grid(axis='y', lw=1, ls='--', color=c4, zorder=5, alpha=0.25)
-
-ax1.bar(i, both, color=c3, label='Both', alpha=0.7)
-ax2.bar(i, both, color=c3, label='Both', alpha=0.7)
-ax1.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif,
-        alpha=0.7)
-ax2.bar(i, imap, color=c2, label='InterMap only', bottom=both + plif,
-        alpha=0.7)
-ax1.bar(i, plif, color=c1, label='ProLIF only', bottom=both, alpha=0.7)
-ax2.bar(i, plif, color=c1, label='ProLIF only', bottom=both, alpha=0.7)
-
-ax1.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
-           framealpha=0.85)
-
-ax2.set_xticks(range(len(order)))
-ax2.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
-
-d = 0  # proportion of vertical to horizontal extent of the slanted line
-kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
-              linestyle="none", color=c1, mec='k', mew=1.5, clip_on=False)
-ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs, alpha=0.7)
-ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs, alpha=0.7)
-
-plt.tight_layout()
-plt.savefig(
-    '/home/gonzalezroy/RoyHub/intermap/scripts/identity-per-type-detailed.png')
-plt.close()
+gnl.pickle_to_file(imap_dict, '/home/gonzalezroy/RoyHub/intermap/scripts/identity/imap_dict.pkl')
+gnl.pickle_to_file(prolif_dict, '/home/gonzalezroy/RoyHub/intermap/scripts/identity/prolif_dict.pkl')

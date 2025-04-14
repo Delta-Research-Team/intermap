@@ -168,7 +168,7 @@ def workflow(args):
     return packed
 
 
-def run(mode='debug'):
+def run(mode='production'):
     """
     Run the InterMap workflow.
 

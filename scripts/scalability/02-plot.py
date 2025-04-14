@@ -1,8 +1,15 @@
 # Created by rglez at 4/6/25
+import os
 import re
+from os.path import join
 
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from rgpack import generals as gnl
+
+import commonplots as cmp
 
 
 def parse_performance(txt):
@@ -34,8 +41,10 @@ def parse_performance(txt):
 
 
 def plot_block(matrix, axis, cmap, vmin=None, vmax=None):
-    im1 = axis.imshow(matrix, cmap=cmap, aspect='auto', vmin=vmin, vmax=vmax,
-                      alpha=0.7)
+    im1 = axis.imshow(matrix, cmap=cmap, aspect='auto',
+                      vmin=vmin, vmax=vmax,
+                      alpha=cmp.alpha1)
+
     axis.set_yticks(range(len(matrix.index)))
     axis.set_yticklabels(matrix.index)
     axis.set_yticks(np.arange(-.5, matrix.shape[0], 1), minor=True)
@@ -45,8 +54,8 @@ def plot_block(matrix, axis, cmap, vmin=None, vmax=None):
     axis.tick_params(axis='y', which='minor', length=0)
     axis.tick_params(axis='x', which='minor', length=0)
     axis.tick_params(axis='x', which='major', length=0)
-    axis.grid(True, axis='both', color='k', linestyle='--', linewidth=0.5,
-              which='minor')
+    axis.grid(True, axis='both', color='k', linestyle='-',
+              linewidth=cmp.lw1, which='minor')
     return im1
 
 
@@ -54,17 +63,18 @@ def plot_colorbar(ax1, ax2, im1, title=None):
     cax, kw = matplotlib.colorbar.make_axes([ax1, ax2])
     cb = plt.colorbar(im1, cax=cax, **kw)
     for l in cb.ax.yaxis.get_ticklabels():
-        l.set_family(font_name)
-        l.set_fontsize(fs1)
+        l.set_fontsize(cmp.fs1)
         l.set_color('k')
-    cb.ax.set_ylabel(title, fontsize=fs1, labelpad=2, fontweight='regular')
+    cb.ax.set_ylabel(title, fontsize=cmp.fs1, labelpad=2, fontweight='regular')
     cb.ax.minorticks_on()
 
 
 # =============================================================================
 # User-defined variables
 # =============================================================================
-root_dir = '/home/gonzalezroy/RoyHub/intermap/data/scalability_by_RGA'
+user = os.getlogin()
+root_dir = f'/home/{user}/RoyHub/intermap/data/scalability_by_RGA'
+out_dir = f'/home/{user}/RoyHub/intermap/scripts/scalability'
 # =============================================================================
 
 # Find all .txt files in the root directory
@@ -90,23 +100,13 @@ residic = to_plot[to_plot['resolution'] == 'residue']
 # %% ==========================================================================
 # Plotting
 # =============================================================================
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
 
-# >>>> Plot constants
-font_name = 'Ubuntu mono'
-fs1 = 20
-cmap = 'tab20c'
-font = {'family': font_name,
-        'size': 16}
-matplotlib.rc('font', **font)
 
 # >>>> Grid layout
 gridspec = dict(hspace=0., wspace=0., height_ratios=[1, 0.1, 1])
-fig, axs = plt.subplots(nrows=3, ncols=2, gridspec_kw=gridspec, sharex=True,
-                        sharey=True, constrained_layout=True, figsize=(8, 8),
-                        dpi=300)
+fig, axs = plt.subplots(
+    nrows=3, ncols=2, gridspec_kw=gridspec, sharex=True, sharey=True,
+    constrained_layout=True, figsize=(8, 8), dpi=300)
 
 ax_atom_time = axs[0, 1]
 ax_resid_time = axs[0, 0]
@@ -115,14 +115,10 @@ axs[1, 1].set_visible(False)
 ax_atom_ram = axs[2, 1]
 ax_resid_ram = axs[2, 0]
 
-ax_atom_time.set_title('Atom resolution', font=font_name, fontsize=fs1,
-                       fontweight='bold')
-ax_atom_ram.set_title('Atom resolution', font=font_name, fontsize=fs1,
-                      fontweight='bold')
-ax_resid_ram.set_title('Residue resolution', font=font_name, fontsize=fs1,
-                       fontweight='bold')
-ax_resid_time.set_title('Residue resolution', font=font_name, fontsize=fs1,
-                        fontweight='bold')
+ax_atom_time.set_title('Resolution: "atom"', fontweight='bold')
+ax_atom_ram.set_title('Resolution: "atom"', fontweight='bold')
+ax_resid_ram.set_title('Resolution: "residue"', fontweight='bold')
+ax_resid_time.set_title('Resolution: "residue"', fontweight='bold')
 
 # >>>> Prepare data
 atom_time = atomic.pivot(index='chunk_size', columns='n_procs',
@@ -137,23 +133,27 @@ resid_ram = residic.pivot(index='chunk_size', columns='n_procs',
 # Plot time
 minim = min(atom_time.min().min(), resid_time.min().min())
 maxim = max(atom_time.max().max(), resid_time.max().max())
-im1 = plot_block(atom_time, ax_atom_time, cmap=cmap, vmin=minim, vmax=maxim)
-im2 = plot_block(resid_time, ax_resid_time, cmap=cmap, vmin=minim, vmax=maxim)
+im1 = plot_block(atom_time, ax_atom_time, cmap=cmp.cmap1, vmin=minim,
+                 vmax=maxim)
+im2 = plot_block(resid_time, ax_resid_time, cmap=cmp.cmap1, vmin=minim,
+                 vmax=maxim)
 plot_colorbar(ax_atom_time, ax_resid_time, im1, title='Time (min)')
 
 # Plot ram
 minim = min(atom_ram.min().min(), resid_ram.min().min())
 maxim = max(atom_ram.max().max(), resid_ram.max().max())
-im1 = plot_block(atom_ram, ax_atom_ram, cmap=cmap, vmin=minim, vmax=maxim)
-im2 = plot_block(resid_ram, ax_resid_ram, cmap=cmap, vmin=minim, vmax=maxim)
+im1 = plot_block(atom_ram, ax_atom_ram, cmap=cmp.cmap1, vmin=minim, vmax=maxim)
+im2 = plot_block(resid_ram, ax_resid_ram, cmap=cmp.cmap1, vmin=minim,
+                 vmax=maxim)
+
 plot_colorbar(ax_atom_ram, ax_resid_ram, im1, title='RAM (GB)')
 
 # Set labels
-ax_atom_ram.set_xlabel('# Processors', fontsize=fs1, fontweight='roman')
-ax_resid_ram.set_xlabel('# Processors', fontsize=fs1, fontweight='roman')
+ax_atom_ram.set_xlabel('# Processors', fontweight='roman')
+ax_resid_ram.set_xlabel('# Processors', fontweight='roman')
 
-ax_resid_ram.set_ylabel('Chunk size', fontsize=fs1, fontweight='roman')
-ax_resid_time.set_ylabel('Chunk size', fontsize=fs1, fontweight='roman')
+ax_resid_ram.set_ylabel('Chunk size', fontweight='roman')
+ax_resid_time.set_ylabel('Chunk size', fontweight='roman')
 
-plt.savefig('scalability.png')
+plt.savefig(join(out_dir, 'scalability.png'))
 plt.close()
