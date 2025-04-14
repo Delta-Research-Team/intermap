@@ -4,10 +4,11 @@ User interface components for the InterMap Visualizations app.
 """
 
 from shiny import ui
-from pathlib import Path
-from ..config import CSS_STYLES, all_interactions_colors
-from ..utils.helpers import get_image_base64, generate_interaction_choices
 
+from ..css import CSS_STYLES
+from ..utils.helpers import get_image_base64
+
+# todo: Change absolute path @l142
 def create_file_input_section():
     """Create the file input section with topology indicator."""
     return ui.div(
@@ -38,6 +39,7 @@ def create_file_input_section():
             )
         )
     )
+
 
 def create_filters_section():
     """Create the filters section of the app."""
@@ -122,29 +124,35 @@ def create_filters_section():
         )
     )
 
+
 def create_welcome_section():
     """Create the welcome section of the app."""
     return ui.div(
         {"class": "welcome-section"},
         ui.div(
             {"class": "welcome-text"},
-            ui.h1("Welcome to InterMap Visualizations!", {"class": "welcome-title"}),
-            ui.p("Revolutionizing Molecular Interaction Analysis with High-Speed Computation",
+            ui.h1("Welcome to InterMap Visualizations!",
+                  {"class": "welcome-title"}),
+            ui.p(
+                "Revolutionizing Molecular Interaction Analysis with High-Speed Computation",
                 {"class": "welcome-subtitle", "style": "font-style: italic;"})
         ),
         ui.img(
-            {"src": get_image_base64("/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/statics/image/Untitled.png"),
-             "class": "welcome-image",
-             "alt": "InterMap Logo"}
+            {"src": get_image_base64(
+                "/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/statics/image/Untitled.png"),
+                "class": "welcome-image",
+                "alt": "InterMap Logo"}
         )
     )
+
 
 def create_plots_section():
     """Create the plots section of the app."""
     return ui.column(
         9,
         ui.div(
-            {"style": "display: flex; flex-direction: column; align-items: center; width: 100%;"},
+            {
+                "style": "display: flex; flex-direction: column; align-items: center; width: 100%;"},
             # Interaction Heatmap
             ui.div(
                 {"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
@@ -184,6 +192,7 @@ def create_plots_section():
         )
     )
 
+
 def create_app_ui():
     """Create the main UI of the app."""
     return ui.page_fluid(
@@ -219,6 +228,7 @@ def create_app_ui():
             create_plots_section()
         )
     )
+
 
 # Create the UI instance
 app_ui = create_app_ui()

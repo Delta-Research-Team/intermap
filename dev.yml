@@ -17,6 +17,9 @@ dependencies:
   - pip
   - pip:
       - -e .
+      - uvicorn
+      - shiny
+      - plotly
       - mkdocs
       - mkdocs-material
       - prolif[tutorials]

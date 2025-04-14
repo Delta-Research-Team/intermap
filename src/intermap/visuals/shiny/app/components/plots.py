@@ -6,7 +6,7 @@ Plotting components for the InterMap Visualizations app.
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-from ..config import all_interactions_colors
+from ..css import all_interactions_colors
 from ..utils.helpers import calculate_prevalence
 
 # Variable global para el estado de búsqueda

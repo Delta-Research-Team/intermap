@@ -2,27 +2,23 @@
 Main application file for InterMap Visualizations.
 Integrates UI components with server-side logic.
 """
-
-import pandas as pd
-import numpy as np
-from shiny import App, render, reactive, ui, experimental
+# todo: Refactor imports block
 import os
 
-from .components.ui import app_ui
-from .components.plots import (
-    create_plot,
-    create_ligand_interactions_plot,
-    create_receptor_interactions_plot,
-    create_interactions_over_time_plot,
-    initialize_search_state,
-)
-from .utils.helpers import (
-    generate_interaction_choices,
-    find_topology_file,
-    validate_mda_selection,
-)
+import numpy as np
+import pandas as pd
+from shiny import App, reactive, render, ui
+
+from .components.plots import (create_interactions_over_time_plot,
+                               create_ligand_interactions_plot, create_plot,
+                               create_receptor_interactions_plot,
+                               initialize_search_state)
 from .components.sele_shiny import CSVFilter
-from .config import all_interactions_colors, ERROR_MESSAGES
+from .components.ui import app_ui
+from .css import all_interactions_colors, ERROR_MESSAGES
+from .utils.helpers import (find_topology_file, generate_interaction_choices,
+                            validate_mda_selection)
+
 
 # =============================================================================
 # Data Frame Processing
@@ -46,12 +42,12 @@ def filter_dataframe(df, search_term):
     search_term = search_term.upper()
 
     mask = (
-        df["sel1_atom"].str.contains(search_term,
-                                     case=False, na=False)
-        | df["sel2_atom"].str.contains(search_term,
-                                       case=False, na=False)
-        | df["interaction_name"].str.contains(search_term,
-                                              case=False, na=False)
+            df["sel1_atom"].str.contains(search_term,
+                                         case=False, na=False)
+            | df["sel2_atom"].str.contains(search_term,
+                                           case=False, na=False)
+            | df["interaction_name"].str.contains(search_term,
+                                                  case=False, na=False)
     )
 
     return df[mask]
@@ -161,7 +157,7 @@ def server(input, output, session):
                 ui.notification_show(
                     ERROR_MESSAGES["invalid_file"],
                     type="error",
-                    style="font-family: Ubuntu Mono; font-style: italic;",)
+                    style="font-family: Ubuntu Mono; font-style: italic;", )
                 ui.update_action_button("show_plots", disabled=True)
                 return
             ui.update_action_button("show_plots", disabled=False)
@@ -269,7 +265,7 @@ def server(input, output, session):
                     if not is_valid:
                         ui.notification_show(
                             ERROR_MESSAGES["invalid_sele"].format(error_msg),
-                            type="error",)
+                            type="error", )
                         return ui.p(
                             ERROR_MESSAGES["invalid_sele"].format(error_msg))
 
@@ -308,7 +304,7 @@ def server(input, output, session):
                 ]
                 if missing_columns:
                     raise ValueError(
-                        f"Missing required columns: " 
+                        f"Missing required columns: "
                         f"{', '.join(missing_columns)}"
                     )
 
@@ -349,7 +345,7 @@ def server(input, output, session):
             return ui.tags.div(
                 ui.HTML(plot_html),
                 style="width:100%; height:800px; border:1px solid #ddd; "
-                "margin: 10px 0;",)
+                      "margin: 10px 0;", )
 
         except Exception as e:
             import traceback
@@ -363,8 +359,8 @@ def server(input, output, session):
                 ui.pre(
                     traceback.format_exc(),
                     style="font-family: Ubuntu Mono; font-size: 12px; "
-                    "background-color: #f8f9fa; padding: 10px; "
-                    "border-radius: 4px;",),)
+                          "background-color: #f8f9fa; padding: 10px; "
+                          "border-radius: 4px;", ), )
 
     # =========================================================================
     # Render the Ligand Interaction Plot (second plot)
@@ -418,7 +414,7 @@ def server(input, output, session):
                 config={"responsive": True})
             return ui.tags.div(
                 ui.HTML(plot_html),
-                style=f"width:100%; height:{input.plot_height() // 2}px;",)
+                style=f"width:100%; height:{input.plot_height() // 2}px;", )
 
         except Exception as e:
             import traceback
@@ -430,7 +426,7 @@ def server(input, output, session):
                                           "font-family: Ubuntu Mono;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px;",),)
+                    style="font-family: Ubuntu Mono; font-size: 12px;", ), )
 
     # =========================================================================
     # Render the Receptor Interaction Plot (third plot)
@@ -486,7 +482,7 @@ def server(input, output, session):
             # Return the container of the graph.
             return ui.tags.div(
                 ui.HTML(plot_html),
-                style=f"width:100%; height:{input.plot_height() // 2}px;",)
+                style=f"width:100%; height:{input.plot_height() // 2}px;", )
 
         except Exception as e:
             import traceback
@@ -551,7 +547,7 @@ def server(input, output, session):
                 config={"responsive": True})
             return ui.tags.div(
                 ui.HTML(plot_html),
-                style=f"width:100%; height:{input.plot_height() // 2}px;",)
+                style=f"width:100%; height:{input.plot_height() // 2}px;", )
 
         except Exception as e:
             import traceback
@@ -563,7 +559,7 @@ def server(input, output, session):
                                           "font-family: Ubuntu Mono;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px;",),)
+                    style="font-family: Ubuntu Mono; font-size: 12px;", ), )
 
     # =========================================================================
     # Render the Interaction Checkboxes
@@ -578,7 +574,7 @@ def server(input, output, session):
             "selected_interactions",
             "",
             choices=choices,
-            selected=list(all_interactions_colors.keys()),)
+            selected=list(all_interactions_colors.keys()), )
 
 
 # Create the Shiny app instance
