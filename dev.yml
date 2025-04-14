@@ -17,6 +17,8 @@ dependencies:
   - pip
   - pip:
       - -e .
+      - mkdocs
+      - mkdocs-material
       - prolif[tutorials]
       - memory_profiler
       - numpy_indexed
