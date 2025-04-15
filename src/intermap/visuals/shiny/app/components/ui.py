@@ -8,6 +8,7 @@ from shiny import ui
 from ..css import CSS_STYLES
 from ..utils.helpers import get_image_base64
 
+
 # todo: Change absolute path @l142
 def create_file_input_section():
     """Create the file input section with topology indicator."""

@@ -1,6 +1,7 @@
 # Created by rglez at 12/29/24
 
 from collections import defaultdict
+from os.path import basename
 
 import bitarray.util as bu
 import numpy as np
@@ -192,6 +193,7 @@ class ContainerManager:
         """
 
         with open(path, 'w') as file:
+            file.write(f'# {basename(self.args.topology)}\n')
             file.write(
                 'sel1_atom,sel2_atom,water_atom,interaction_name,prevalence, timeseries\n')
             for line in self.generate_lines():

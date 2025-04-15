@@ -65,11 +65,11 @@ def guess_elements(universe):
 # =============================================================================
 #
 # =============================================================================
-topo = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/01_MPRO_TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/wt_mpro_chainA_rep123.pr5.aligned_CA.not_waters_or_ions.psf'
-traj = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/01_MPRO_TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/mpro.dcd'
+topo = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/07_ace2_TRAJECTORIES_ace2_rbd_prot_glyc_memb_amarolab/ace2_rbd_prot_glyc_memb_amarolab.psf'
+traj = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/07_ace2_TRAJECTORIES_ace2_rbd_prot_glyc_memb_amarolab/ace2.dcd'
 
 sel1 = 'protein'
-sel2 = 'protein'
+sel2 = 'not protein'
 
 u = mda.Universe(topo, traj)
 elements = guess_elements(u)

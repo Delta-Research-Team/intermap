@@ -1,6 +1,7 @@
 # Created by rglez at 12/8/24
 import itertools as it
 import logging
+import shutil
 import time
 from collections import defaultdict
 from pprint import pformat
@@ -320,6 +321,9 @@ class IndexManager:
 
         n_atoms = universe.atoms.n_atoms
         n_frames = len(universe.trajectory)
+
+        # Copy the topology to the output dir
+        shutil.copy(self.topo, self.args.output_dir)
         return universe, traj_frames, n_atoms, n_frames
 
     def get_selections_indices(self):
@@ -683,13 +687,15 @@ class IndexManager:
         atnames = self.universe.atoms.names[self.sel_idx]
         resnames = self.universe.atoms.resnames[self.sel_idx]
         resids = self.universe.atoms.resids[self.sel_idx]
+        atindex = self.universe.atoms.indices[self.sel_idx]
         resindex = self.universe.atoms.resindices[self.sel_idx].astype(
             np.int32)
 
-        atom_names = {i: f"{resnames[i]}_{resids[i]}_{atnames[i]}"
-                      for i, x in enumerate(self.sel_idx)}
+        atom_names = {
+            i: f"{resnames[i]}_{resids[i]}_{resindex[i]}_{atnames[i]}_{atindex[i]}"
+            for i, x in enumerate(self.sel_idx)}
 
-        resid_names = {resindex[i]: f"{resnames[i]}_{resids[i]}" for i, x in
+        resid_names = {resindex[i]: f"{resnames[i]}_{resids[i]}_{resindex[i]}" for i, x in
                        enumerate(self.sel_idx)}
 
         return resindex, resid_names, atom_names
