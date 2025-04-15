@@ -57,7 +57,6 @@ class TopoDF:
         """
         Get the residue indices from the universe
 
-
         Returns:
             list: List of residue indices
         """
@@ -74,7 +73,7 @@ class TopoDF:
         Returns:
             dict: Dictionary mapping topology indices to DataFrame indices
         """
-        # Automatically determine the resolution of the csv
+        # Automatically determine the number of separators
         N = 4 if self.resolution == 'atom' else 2
 
         # Extract the indices from the DataFrame
@@ -130,7 +129,12 @@ class TopoDF:
         selected_indices = self.universe.select_atoms(selection).indices
 
         # Get the DataFrame indices corresponding to the selected atoms
-        df_lines = set.union(*(self.top2df[x] for x in selected_indices))
+        try:
+            df_lines = set.union(*(self.top2df[x] for x in selected_indices))
+        except TypeError:
+            raise TypeError(
+                f"Selection '{selection}' returned no atoms. Please check the selection string."
+            )
 
         # Filter the DataFrame based on the selected indices
         filtered_df = self.df_master.iloc[list(df_lines), :].copy()
@@ -145,4 +149,4 @@ csv = '/home/gonzalezroy/RoyHub/intermap/scripts/identity/runs/mpro/imap/mpro_pr
 topo = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/a173v_mpro_chainA_rep123.pr5.aligned_CA.not_waters_or_ions.psf'
 
 self = TopoDF(csv)
-mini_df = self.reselect('resname LEU')
+mini_df = self.reselect('resid 0')
