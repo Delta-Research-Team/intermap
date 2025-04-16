@@ -221,8 +221,8 @@ class Config:
             for key in current_params[section]:
                 if key not in config_file_keys:
                     raise KeyError(
-                        f'Key "{key}" is missing from the config'
-                        f' file. Please specify its value.')
+                        f'Key "{key}" is missing from the "{section}" section'
+                        f' of the configuration file. Please set its value.')
 
     def check_params(self):
         """
