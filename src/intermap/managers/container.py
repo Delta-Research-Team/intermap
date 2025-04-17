@@ -146,6 +146,9 @@ class ContainerManager:
         self.names = (
             self.iman.resid_names if self.args.resolution == 'residue'
             else self.iman.atom_names)
+        self.anotations = (
+            self.iman.resid_notes if self.args.resolution == 'residue'
+            else self.iman.atom_notes)
         self.waters = self.iman.waters
         self.n_frames = self.iman.traj_frames.size
 
@@ -178,25 +181,36 @@ class ContainerManager:
                 raise ValueError('The key must have 3 or 4 elements')
 
             s1_name = self.names[s1]
+            s1_note = self.anotations.get(s1, '')
             s2_name = self.names[s2]
+            s2_note = self.anotations.get(s2, '')
             s3_name = self.names[wat] if wat else ''
             time = self.dict[key]
             prevalence = round(time.count() / self.n_frames * 100, 2)
 
             # Yield each line as a generator
-            yield f'{s1_name},{s2_name},{s3_name},{inter_name},{prevalence},{time.to01()}\n'
+            full_line = (
+                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
+                f'{inter_name},{prevalence},{time.to01()}\n')
+            short_line = (
+                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
+                f'{inter_name},{prevalence}\n')
+            yield full_line, short_line
 
-    def save(self, path):
+    def save(self, path1, path2):
         """
         Save the dictionary to a csv file
         """
-
-        with open(path, 'w') as file:
-            file.write(f'# {basename(self.args.topology)}\n')
-            file.write(
-                'sel1_atom,sel2_atom,water_atom,interaction_name,prevalence, timeseries\n')
-            for line in self.generate_lines():
-                file.write(line)
+        with open(path1, 'w') as file1, open(path2, 'w') as file2:
+            file1.write(f'# {basename(self.args.topology)}\n')
+            file2.write(f'# {basename(self.args.topology)}\n')
+            file1.write(
+                'sel1,note1,sel2,note2,water,interaction_name,prevalence,timeseries\n')
+            file2.write(
+                'sel1,note1,sel2,note2,water,interaction_name,prevalence\n')
+            for full_line, short_line in self.generate_lines():
+                file1.write(full_line)
+                file2.write(short_line)
 
     def get_inter_names(self):
         selected_others = self.cuts.selected_others

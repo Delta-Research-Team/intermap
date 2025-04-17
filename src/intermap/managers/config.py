@@ -2,6 +2,7 @@
 import configparser
 import logging
 import os
+import re
 import sys
 from os.path import abspath, basename, dirname, isabs, join, normpath
 
@@ -12,12 +13,53 @@ import intermap.managers.cutoffs as cf
 
 inf_int = sys.maxsize
 inf_float = float(inf_int)
+
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
 
 
 # =============================================================================
 # Allowed sections & parameters
 # =============================================================================
+def print_colored_ascii():
+    """
+    Print the InterMap logo in colored ASCII art.
+    """
+    html_path = join(proj_dir, 'intermap', 'binary_imap.html')
+
+    try:
+        with open(html_path, encoding='utf-8') as file:
+            content = file.read()
+            pattern = r'<div style="margin: 20px 0;">(.*?)</div>'
+            match = re.search(pattern, content, re.DOTALL)
+
+            if match:
+                art_content = match.group(1)
+                art_content = art_content.replace('<br/>', '\n').replace(
+                    '<br>', '\n')
+                art_content = re.sub(
+                    r'<span style="color: rgb\((\d+),\s*(\d+),\s*(\d+)\)">(.*?)</span>',
+                    lambda
+                        m: f"\033[38;2;{m.group(1)};{m.group(2)};{m.group(3)}m{m.group(4)}\033[0m",
+                    art_content
+                )
+
+                art_content = re.sub(r'<[^>]+>', '', art_content)
+                art_content = art_content.replace('&nbsp;', ' ')
+                lines = art_content.split('\n')
+                formatted_lines = []
+                for line in lines:
+                    if line.strip():
+                        if not line.endswith('\033[0m'):
+                            line += '\033[0m'
+                        formatted_lines.append(line)
+
+                print('\n\n')
+                print('\n'.join(formatted_lines))
+                print('\033[0m')
+
+    except Exception as e:
+        print(f"Error when reading HTML: {e}")
+
 
 def detect_config_path(mode='debug'):
     """
@@ -154,6 +196,7 @@ class Config:
             'interactions': {'dtype': str, 'values': None},
             'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
+            'annotations': {'dtype': str, 'values': None},
             'format': {'dtype': str, 'values': {'simple', 'extended'}}},
 
         # ____ cutoffs
@@ -163,7 +206,7 @@ class Config:
     def __init__(self, mode='production'):
 
         # Print the header
-        cmn.print_colored_ascii()
+        print_colored_ascii()
 
         # Detect config
         self.config_path = cmn.check_path(detect_config_path(mode=mode))
@@ -289,7 +332,10 @@ class ConfigManager(Config):
         # 3. Parse the interactions
         self.parse_interactions()
 
-        # 4. Start logging
+        # 4. Parse the annotations
+        self.read_annotations()
+
+        # 5. Start logging
         args = self.config_args
         base_name = basename(args['job_name'])
         log_path = join(args['output_dir'], f"{base_name}_InterMap.log")
@@ -359,6 +405,9 @@ class ConfigManager(Config):
         self.config_args.update({'cutoffs': config_cutoffs})
 
     def parse_interactions(self):
+        """
+        Parse the interactions from the config file
+        """
         raw_inters = self.config_obj['interactions']['interactions']
         if raw_inters == 'all':
             parsed_inters = np.asarray(cf.interactions + ['WaterBridge'])
@@ -376,8 +425,36 @@ class ConfigManager(Config):
 
         self.config_args.update({'interactions': parsed_inters})
 
+    def read_annotations(self):
+        """
+        Parse the annotations from the config file
+        """
+        # Get the absolute path for the annotations file
+        raw_value = self.config_obj['interactions']['annotations'].strip()
+        cfg_path = self.config_path
+
+        if raw_value == 'False':
+            self.config_args.update({'annotations': False})
+
+        else:
+            try:
+                abs_path = cmn.check_path(raw_value)
+                self.config_args.update({'annotations': abs_path})
+            except ValueError:
+                abs_path = normpath(join(dirname(cfg_path), raw_value))
+
+                try:
+                    abs_path = cmn.check_path(abs_path)
+                    self.config_args.update({'annotations': abs_path})
+                except ValueError:
+                    raise ValueError(
+                        f'Error parsing the key "annotations" in the '
+                        f'"interactions" section of the config file. The value'
+                        f' must be set either to False or to a valid path. The'
+                        f' provided value was: {raw_value}.\n')
+
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/imap1.cfg'
+# config_path = '/home/gonzalezroy/RoyHub/NUC-STRESS-RGA/data/0A-prelude/DrHU-repliques/second_step/imap.cfg'
 # self = ConfigManager(mode='debug')

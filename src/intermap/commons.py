@@ -10,7 +10,6 @@ from os.path import join
 import numpy as np
 from numba.typed import List
 from numba_kdtree import KDTree as nckd
-from intermap.managers.config import proj_dir
 
 logger = logging.getLogger('InterMapLogger')
 
@@ -131,43 +130,3 @@ def get_trees(xyz_chunk, s2_indices):
     for x in xyz_chunk:
         trees.append(nckd(x[s2_indices]))
     return trees
-
-
-def print_colored_ascii():
-    html_path = join(proj_dir, 'intermap', 'binary_imap.html')
-
-    try:
-        with open(html_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-
-            pattern = r'<div style="margin: 20px 0;">(.*?)</div>'
-            match = re.search(pattern, content, re.DOTALL)
-
-            if match:
-                art_content = match.group(1)
-                art_content = art_content.replace('<br/>', '\n').replace(
-                    '<br>', '\n')
-
-                art_content = re.sub(
-                    r'<span style="color: rgb\((\d+),\s*(\d+),\s*(\d+)\)">(.*?)</span>',
-                    lambda
-                        m: f"\033[38;2;{m.group(1)};{m.group(2)};{m.group(3)}m{m.group(4)}\033[0m",
-                    art_content
-                )
-
-                art_content = re.sub(r'<[^>]+>', '', art_content)
-                art_content = art_content.replace('&nbsp;', ' ')
-                lines = art_content.split('\n')
-                formatted_lines = []
-                for line in lines:
-                    if line.strip():
-                        if not line.endswith('\033[0m'):
-                            line += '\033[0m'
-                        formatted_lines.append(line)
-
-                print('\n\n')
-                print('\n'.join(formatted_lines))
-                print('\033[0m')
-
-    except Exception as e:
-        print(f"Error when reading HTML: {e}")

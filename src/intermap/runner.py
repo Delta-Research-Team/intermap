@@ -27,6 +27,20 @@ from intermap.managers.indices import IndexManager
 # todo: assert identity against  prolif, again
 # todo: check docstrings
 
+def run(mode='production'):
+    """
+    Run the InterMap workflow.
+
+    Args:
+        mode (str): Mode of operation. Can be 'debug' or 'production'.
+    """
+    # >>>> Detect args
+    config = ConfigManager(mode=mode)
+    args = Namespace(**config.config_args)
+
+    # >>>> Run the InterMap workflow
+    return workflow(args)
+
 
 def workflow(args):
     """
@@ -41,7 +55,6 @@ def workflow(args):
 
     if isinstance(args, dict):
         args = Namespace(**args)
-        cmn.print_colored_ascii()
 
     # %%=======================================================================
     # 2. Load the indices & interactions to compute
@@ -146,9 +159,11 @@ def workflow(args):
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    out_name = f"{basename(args.job_name)}_InterMap"
-    csv_path = join(args.output_dir, f'{out_name}.csv')
-    container.save(csv_path)
+    out_name1 = f"{basename(args.job_name)}_InterMap_full"
+    out_name2 = f"{basename(args.job_name)}_InterMap_short"
+    csv_path1 = join(args.output_dir, f'{out_name1}.csv')
+    csv_path2 = join(args.output_dir, f'{out_name2}.csv')
+    container.save(csv_path1, csv_path2)
     packed = container.pack()
 
     # %%=======================================================================
@@ -160,27 +175,12 @@ def workflow(args):
     print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        f" Interactions saved in {csv_path}\n"
+        f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
         f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
 
     return packed
-
-
-def run(mode='production'):
-    """
-    Run the InterMap workflow.
-
-    Args:
-        mode (str): Mode of operation. Can be 'debug' or 'production'.
-    """
-    # >>>> Detect args
-    config = ConfigManager(mode=mode)
-    args = Namespace(**config.config_args)
-
-    # >>>> Run the InterMap workflow
-    return workflow(args)
 
 
 # =============================================================================
