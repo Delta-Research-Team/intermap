@@ -143,6 +143,9 @@ class ContainerManager:
 
         # Parse arguments from iman
         self.iman = iman
+        self.names = (
+            self.iman.resid_names if self.args.resolution == 'residue'
+            else self.iman.atom_names)
         self.waters = self.iman.waters
         self.n_frames = self.iman.traj_frames.size
 
@@ -163,10 +166,6 @@ class ContainerManager:
                 self.dict[key][value.tolist()] = True
 
     def generate_lines(self):
-        if self.args.resolution == 'residue':
-            names = self.iman.resid_names
-        else:
-            names = self.iman.atom_names
 
         for key in self.dict:
             if len(key) == 3:
@@ -178,9 +177,9 @@ class ContainerManager:
             else:
                 raise ValueError('The key must have 3 or 4 elements')
 
-            s1_name = names[s1]
-            s2_name = names[s2]
-            s3_name = names[wat] if wat else ''
+            s1_name = self.names[s1]
+            s2_name = self.names[s2]
+            s3_name = self.names[wat] if wat else ''
             time = self.dict[key]
             prevalence = round(time.count() / self.n_frames * 100, 2)
 
@@ -209,8 +208,56 @@ class ContainerManager:
         hb_idx = np.concatenate((hba, hbd))
         return inter_names, hb_idx
 
+    # def to_graph(self):
+    #     """
+    #     Convert the dictionary to a graph
+    #     """
+    #     # Create a dictionary with the average prevalence
+    #     shrinked = defaultdict(lambda: bu.zeros(self.n_frames))
+    #     for key in self.dict:
+    #         r1, r2 = key[0], key[1]
+    #         time = self.dict[key]
+    #         shrinked[(r1, r2)] |= time
+    #
+    #     shrinked = {key: round(value.count() / len(value), 2) * 100
+    #                 for key, value in shrinked.items()}
+    #
+    #     # Count nodes
+    #     nodes = []
+    #     for r1, r2 in shrinked.keys():
+    #         nodes.append(r1)
+    #         nodes.append(r2)
+    #     nodes_count = Counter(nodes)
+    #
+    #     # Create a graph from the dictionary
+    #     G = nx.Graph()
+    #     for key, value in shrinked.items():
+    #         r1, r2 = key
+    #         if value >= self.min_prevalence:
+    #             # Add nodes with their degree
+    #             if not G.has_node(r1):
+    #                 G.add_node(r1, name=self.names[r1], degree=nodes_count[r1])
+    #             if not G.has_node(r2):
+    #                 G.add_node(r2, name=self.names[r2], degree=nodes_count[r2])
+    #             # Add edges with their weight
+    #             G.add_edge(r1, r2, weight=value)
+    #
+    #     # Convert to cytoscape
+    #     s1_resids = self.iman.universe.select_atoms(self.iman.sel1).resindices
+    #     out_name = join(self.args.output_dir, "InterGraph.csv")
+    #     with open(out_name, 'w') as file:
+    #         file.write('source, target, r1_sel, r2_sel, source_count, target_count, weight\n')
+    #         for u, v, data in G.edges(data=True):
+    #             source_count = nodes_count[u]
+    #             target_count = nodes_count[v]
+    #             r1_sel = 's1' if u in s1_resids else 's2'
+    #             r2_sel = 's1' if v in s1_resids else 's2'
+    #             file.write(f'{u},{v},{r1_sel},{r2_sel},{source_count},{target_count},{data["weight"]}\n')
+    #
+    #     return G
+
     def pack(self):
         """
         Destructive packing of the dictionary
         """
-        self.dict = {key:  bu.sc_encode(self.dict[key]) for key in self.dict}
+        self.dict = {key: bu.sc_encode(self.dict[key]) for key in self.dict}
