@@ -13,13 +13,6 @@ from ..utils.helpers import calculate_prevalence
 search_state = None
 
 
-# Al inicio del archivo, después de las importaciones, agregar:
-COLUMN_MAPPING = {
-    'sel1_atom': 'ligand',
-    'sel2_atom': 'protein',
-    'interaction_name': 'interaction'
-}
-
 
 def get_search_state():
     """
@@ -48,12 +41,6 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
                 show_prevalence=False):
     if df is None or df.empty:
         return None
-
-    # Clonar el DataFrame y renombrar columnas
-    df = df.copy()
-    if 'ligand' not in df.columns:  # Si aún no están renombradas
-        df = df.rename(columns=COLUMN_MAPPING)
-
 
     interaction_priority = {
         # Strong interactions
@@ -84,14 +71,14 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     }
 
     # Filtrado de interacciones seleccionadas
-    df_filtered = df[df['interaction'].isin(selected_interactions)]
-    df_filtered['prevalence'] = df_filtered.apply(calculate_prevalence, axis=1)
+    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
 
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = (df_filtered['ligand'].str.contains(search_term, case=False) |
-                df_filtered['protein'].str.contains(search_term, case=False))
+        mask = (df_filtered['sel1_atom'].str.contains(search_term,
+                                                      case=False) |
+                df_filtered['sel2_atom'].str.contains(search_term, case=False))
         df_filtered = df_filtered[mask]
 
     if df_filtered.empty:
@@ -102,17 +89,18 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
 
     priority_interactions = []
 
-    for (lig, prot), group in df_filtered.groupby(['ligand', 'protein']):
+    for (lig, prot), group in df_filtered.groupby(['sel1_atom', 'sel2_atom']):
         if not group.empty:
-            group['priority'] = group['interaction'].map(interaction_priority)
+            group['priority'] = group['interaction_name'].map(
+                interaction_priority)
             group = group.sort_values(['priority', 'prevalence'],
                                       ascending=[True, False])
 
             priority_int = group.iloc[0]
             priority_interactions.append({
-                'ligand': lig,
-                'protein': prot,
-                'interaction': priority_int['interaction'],
+                'sel1_atom': lig,
+                'sel2_atom': prot,
+                'interaction_name': priority_int['interaction_name'],
                 'prevalence': priority_int['prevalence']
             })
 
@@ -120,16 +108,16 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
 
     # Pivot de interacciones y permanencias
     pivot_interaction = pd.pivot_table(priority_df,
-                                       values='interaction',
-                                       index='ligand',
-                                       columns='protein',
+                                       values='interaction_name',
+                                       index='sel1_atom',
+                                       columns='sel2_atom',
                                        aggfunc='first',
                                        fill_value='')
 
     pivot_prevalence = pd.pivot_table(priority_df,
                                       values='prevalence',
-                                      index='ligand',
-                                      columns='protein',
+                                      index='sel1_atom',
+                                      columns='sel2_atom',
                                       aggfunc='first',
                                       fill_value=0)
 
@@ -148,7 +136,7 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     ))
 
     # Generar la escala de colores para las interacciones activas
-    present_interactions = sorted(priority_df['interaction'].unique(),
+    present_interactions = sorted(priority_df['interaction_name'].unique(),
                                   key=lambda x: interaction_priority[x])
 
     color_scale = []
@@ -275,29 +263,14 @@ def create_ligand_interactions_plot(df, width, height,
     if df is None or df.empty:
         return None
 
-    # Clonar el DataFrame y renombrar columnas
-    df = df.copy()
-    if 'ligand' not in df.columns:  # Si aún no están renombradas
-        df = df.rename(columns=COLUMN_MAPPING)
-
-
     # Convertir a arrays de NumPy para operaciones más rápidas
-    df_filtered = df[df['interaction'].isin(selected_interactions)].copy()
-
-    # Vectorizar el cálculo de permanencia
-    if 'frames_present' in df_filtered.columns and 'total_frames' in df_filtered.columns:
-        df_filtered['prevalence'] = (df_filtered['frames_present'].to_numpy() /
-                                     df_filtered[
-                                         'total_frames'].to_numpy()) * 100
-    else:
-        df_filtered['prevalence'] = df_filtered.apply(calculate_prevalence,
-                                                      axis=1)
+    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
 
     # Optimizar búsqueda
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = df_filtered['ligand'].str.contains(search_term, case=False)
+        mask = df_filtered['sel1_atom'].str.contains(search_term, case=False)
         if mask.any():
             df_filtered = df_filtered[mask]
         else:
@@ -313,7 +286,7 @@ def create_ligand_interactions_plot(df, width, height,
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
         -df_filtered['prevalence'].to_numpy(),
-        df_filtered['ligand'].to_numpy()
+        df_filtered['sel1_atom'].to_numpy()
     ))
     receptor_interactions = df_filtered.iloc[sort_idx]
 
@@ -322,26 +295,26 @@ def create_ligand_interactions_plot(df, width, height,
     legend_entries = set()
 
     # Procesar datos en lotes
-    batch_size = 50
-    unique_proteins = receptor_interactions['ligand'].unique()
+    batch_size = 250
+    unique_proteins = receptor_interactions['sel1_atom'].unique()
 
     for i in range(0, len(unique_proteins), batch_size):
         batch_proteins = unique_proteins[i:i + batch_size]
         batch_data = receptor_interactions[
-            receptor_interactions['ligand'].isin(batch_proteins)]
+            receptor_interactions['sel1_atom'].isin(batch_proteins)]
 
         # Procesar cada proteína en el lote
         for _, row in batch_data.iterrows():
-            show_legend = row['interaction'] not in legend_entries
+            show_legend = row['interaction_name'] not in legend_entries
             if show_legend:
-                legend_entries.add(row['interaction'])
+                legend_entries.add(row['interaction_name'])
 
-            solid_color = all_interactions_colors[row['interaction']]
+            solid_color = all_interactions_colors[row['interaction_name']]
 
             # Añadir barra
             fig.add_trace(go.Bar(
-                name=row['interaction'],
-                x=[row['ligand']],
+                name=row['interaction_name'],
+                x=[row['sel1_atom']],
                 y=[row['prevalence']],
                 marker=dict(
                     color=solid_color,
@@ -350,11 +323,12 @@ def create_ligand_interactions_plot(df, width, height,
                         width=1),
                 ),
                 showlegend=show_legend,
-                legendgroup=row['interaction'],
+                legendgroup=row['interaction_name'],
                 hovertemplate=(
                         "<b>Selection_1:</b> %{x}<br>"
-                        "<b>Interaction:</b> " + row['interaction'] + "<br>" +
-                        "<b>Selection_2:</b> " + row['protein'] + "<br>" +
+                        "<b>Interaction:</b> " + row[
+                            'interaction_name'] + "<br>" +
+                        "<b>Selection_2:</b> " + row['sel2_atom'] + "<br>" +
                         "<b>Prevalence:</b> " + f"{row['prevalence']:.1f}%" +
                         "<extra></extra>"
                 )
@@ -364,7 +338,7 @@ def create_ligand_interactions_plot(df, width, height,
         width=width,
         height=height,
         barmode='overlay',
-        xaxis_title="Ligand Atoms",
+        xaxis_title="Selection 1 Atoms",
         yaxis_title="Interaction Prevalence (%)",
         showlegend=True,
         legend=dict(
@@ -429,28 +403,14 @@ def create_receptor_interactions_plot(df, width, height,
     if df is None or df.empty:
         return None
 
-    # Clonar el DataFrame y renombrar columnas
-    df = df.copy()
-    if 'ligand' not in df.columns:  # Si aún no están renombradas
-        df = df.rename(columns=COLUMN_MAPPING)
-
     # Convertir a arrays de NumPy para operaciones más rápidas
-    df_filtered = df[df['interaction'].isin(selected_interactions)].copy()
-
-    # Vectorizar el cálculo de permanencia
-    if 'frames_present' in df_filtered.columns and 'total_frames' in df_filtered.columns:
-        df_filtered['prevalence'] = (df_filtered['frames_present'].to_numpy() /
-                                     df_filtered[
-                                         'total_frames'].to_numpy()) * 100
-    else:
-        df_filtered['prevalence'] = df_filtered.apply(calculate_prevalence,
-                                                      axis=1)
+    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
 
     # Optimizar búsqueda
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = df_filtered['protein'].str.contains(search_term, case=False)
+        mask = df_filtered['sel2_atom'].str.contains(search_term, case=False)
         if mask.any():
             df_filtered = df_filtered[mask]
         else:
@@ -466,7 +426,7 @@ def create_receptor_interactions_plot(df, width, height,
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
         -df_filtered['prevalence'].to_numpy(),
-        df_filtered['protein'].to_numpy()
+        df_filtered['sel2_atom'].to_numpy()
     ))
     receptor_interactions = df_filtered.iloc[sort_idx]
 
@@ -475,26 +435,26 @@ def create_receptor_interactions_plot(df, width, height,
     legend_entries = set()
 
     # Procesar datos en lotes
-    batch_size = 50
-    unique_proteins = receptor_interactions['protein'].unique()
+    batch_size = 250
+    unique_proteins = receptor_interactions['sel2_atom'].unique()
 
     for i in range(0, len(unique_proteins), batch_size):
         batch_proteins = unique_proteins[i:i + batch_size]
         batch_data = receptor_interactions[
-            receptor_interactions['protein'].isin(batch_proteins)]
+            receptor_interactions['sel2_atom'].isin(batch_proteins)]
 
         # Procesar cada proteína en el lote
         for _, row in batch_data.iterrows():
-            show_legend = row['interaction'] not in legend_entries
+            show_legend = row['interaction_name'] not in legend_entries
             if show_legend:
-                legend_entries.add(row['interaction'])
+                legend_entries.add(row['interaction_name'])
 
-            solid_color = all_interactions_colors[row['interaction']]
+            solid_color = all_interactions_colors[row['interaction_name']]
 
             # Añadir barra
             fig.add_trace(go.Bar(
-                name=row['interaction'],
-                x=[row['protein']],
+                name=row['interaction_name'],
+                x=[row['sel2_atom']],
                 y=[row['prevalence']],
                 marker=dict(
                     color=solid_color,
@@ -503,11 +463,12 @@ def create_receptor_interactions_plot(df, width, height,
                         width=1),
                 ),
                 showlegend=show_legend,
-                legendgroup=row['interaction'],
+                legendgroup=row['interaction_name'],
                 hovertemplate=(
                         "<b>Selection_2:</b> %{x}<br>" +
-                        "<b>Interaction:</b> " + row['interaction'] + "<br>" +
-                        "<b>Selection_1:</b> " + row['ligand'] + "<br>" +
+                        "<b>Interaction:</b> " + row[
+                            'interaction_name'] + "<br>" +
+                        "<b>Selection_1:</b> " + row['sel1_atom'] + "<br>" +
                         "<b>Prevalence:</b> " + f"{row['prevalence']:.1f}%" +
                         "<extra></extra>"
                 )
@@ -576,67 +537,73 @@ def create_receptor_interactions_plot(df, width, height,
     return fig
 
 
-def create_interactions_over_time_plot(df, width, height, selected_interactions,
-                                     prevalence_threshold):
+def create_interactions_over_time_plot(df, width, height,
+                                       selected_interactions,
+                                       prevalence_threshold):
     """
     Create a plot showing interactions over time frames.
     Shows all interactions present in each frame with a unified hover display.
+    Updated by fajardo01 at 2025-04-16 21:54:11
     """
     if df is None or df.empty:
         return None
 
-    # Filtrar por interacciones seleccionadas usando el nombre correcto de la columna
-    df_filtered = df[df['interaction_name'].isin(selected_interactions)].copy()
-
-    # Aplicar filtro de prevalencia
-    df_filtered['prevalence'] = df_filtered.apply(calculate_prevalence, axis=1)
-    df_filtered = df_filtered[df_filtered['prevalence'] >= prevalence_threshold]
+    # Filtrado vectorizado usando una sola máscara
+    mask = (df['interaction_name'].isin(selected_interactions) &
+            (df['prevalence'] >= prevalence_threshold))
+    df_filtered = df[mask]
 
     if df_filtered.empty:
         return None
 
-    # Aplicar filtro de búsqueda si está activo
+    # Filtrado de búsqueda vectorizado
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = (df_filtered['sel1_atom'].str.contains(search_term, case=False) |
-                df_filtered['sel2_atom'].str.contains(search_term, case=False))
-        df_filtered = df_filtered[mask]
+        search_mask = (df_filtered['sel1_atom'].str.contains(search_term,
+                                                             case=False) |
+                       df_filtered['sel2_atom'].str.contains(search_term,
+                                                             case=False))
+        df_filtered = df_filtered[search_mask]
 
     if df_filtered.empty:
         return None
 
-    # Obtener columnas de frames (todas las columnas numéricas)
-    frame_columns = [col for col in df_filtered.columns if str(col).isdigit()]
+    # Convertir las series de tiempo de string a arrays numpy
+    timeseries_arrays = [np.array(list(ts), dtype=int) for ts in
+                         df_filtered['timeseries']]
+    n_frames = len(timeseries_arrays[0])  # Número de frames
 
-    if not frame_columns:
-        return None
-
-    # Crear diccionario para almacenar información por frame y por tipo
+    # Crear diccionario para almacenar información por frame
     frame_data = {}
-    all_interaction_types = set()
+    interactions_array = df_filtered['interaction_name'].values
 
-    # Analizar cada frame
-    for frame_idx, frame_col in enumerate(frame_columns):
-        # Obtener datos donde la interacción está presente (==1)
-        frame_interactions = df_filtered[df_filtered[frame_col] == 1]
+    # Procesar cada frame de manera vectorizada
+    for frame_idx in range(n_frames):
+        # Obtener máscara de interacciones activas en este frame
+        frame_mask = np.array([ts[frame_idx] == 1 for ts in timeseries_arrays])
 
-        # Contar interacciones por tipo
-        interaction_counts = frame_interactions['interaction_name'].value_counts()
+        if np.any(frame_mask):
+            # Obtener interacciones activas en este frame
+            frame_interactions = interactions_array[frame_mask]
 
-        # Solo almacenar frames donde hay interacciones
-        if not interaction_counts.empty:
-            frame_data[frame_idx] = {
-                'counts': interaction_counts,
-                'total': interaction_counts.sum()
-            }
-            all_interaction_types.update(interaction_counts.index)
+            # Contar interacciones de manera vectorizada
+            unique, counts = np.unique(frame_interactions, return_counts=True)
+            counts_dict = dict(zip(unique, counts))
+
+            if counts_dict:
+                frame_data[frame_idx] = {
+                    'counts': pd.Series(counts_dict),
+                    'total': len(frame_interactions)
+                }
 
     # Crear figura
     fig = go.Figure()
 
-    # Añadir un trace por cada tipo de interacción
-    for interaction_type in sorted(all_interaction_types):
+    # Procesar cada tipo de interacción
+    unique_interactions = df_filtered['interaction_name'].unique()
+
+    for interaction_type in sorted(unique_interactions):
         x_values = []
         y_values = []
         hover_texts = []
@@ -647,21 +614,20 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
                 x_values.append(frame_idx)
                 y_values.append(count)
 
-                # Construir texto del hover para este punto
-                other_interactions = "<br>".join([
-                    f"• <span style='color: {all_interactions_colors[int_type]}'>{int_type}</span>: {count}"
-                    for int_type, count in data['counts'].items()
-                ])
+                # Construir texto del hover
+                interactions_text = "<br>".join(
+                    f"• <span style='color: {all_interactions_colors[int_type]}'>{int_type}</span>: {data['counts'].get(int_type, 0)}"
+                    for int_type in sorted(data['counts'].index)
+                )
 
                 hover_text = (
                     f"<b>Frame {frame_idx}</b><br><br>"
                     f"<b>Interactions Present:</b><br>"
-                    f"{other_interactions}<br><br>"
+                    f"{interactions_text}<br><br>"
                     f"<b>Total Interactions:</b> {data['total']}"
                 )
                 hover_texts.append(hover_text)
 
-        # Añadir trace para este tipo de interacción
         if x_values:  # Solo añadir si hay datos para este tipo de interacción
             fig.add_trace(go.Scatter(
                 x=x_values,
@@ -672,25 +638,18 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
                     size=10,
                     color=all_interactions_colors[interaction_type],
                     symbol='circle',
-                    line=dict(
-                        color='white',
-                        width=1
-                    )
+                    line=dict(color='white', width=1)
                 ),
                 text=hover_texts,
                 hoverinfo='text',
                 hoverlabel=dict(
                     bgcolor='rgba(255,255,255,0.95)',
                     bordercolor=all_interactions_colors[interaction_type],
-                    font=dict(
-                        family='Arial',
-                        size=12,
-                        color='black'
-                    )
+                    font=dict(family='Arial', size=12, color='black')
                 )
             ))
 
-    # Actualizar el diseño
+    # El resto del código de actualización del diseño permanece igual
     fig.update_layout(
         width=width,
         height=height,
@@ -700,11 +659,8 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
         legend=dict(
             title=dict(
                 text="<b>Interaction Types</b>",
-                font=dict(
-                    family="Ubuntu Mono",
-                    size=12,
-                    color='rgb(26, 26, 26)'
-                )
+                font=dict(family="Ubuntu Mono", size=12,
+                          color='rgb(26, 26, 26)')
             ),
             yanchor="top",
             y=0.99,
@@ -713,11 +669,7 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='rgba(0,0,0,0.2)',
             borderwidth=1,
-            font=dict(
-                family="Ubuntu Mono",
-                size=12,
-                color='rgb(26, 26, 26)'
-            )
+            font=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)')
         ),
         margin=dict(l=50, r=150, t=50, b=50),
         paper_bgcolor='white',
@@ -735,11 +687,7 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
-            color='rgb(26, 26, 26)'
-        ),
+        tickfont=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)'),
         showgrid=True,
         nticks=10,
         tickmode='auto',
@@ -752,11 +700,7 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
-            color='rgb(26, 26, 26)'
-        ),
+        tickfont=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)'),
         showgrid=True,
         nticks=8,
         tickmode='auto',
@@ -766,3 +710,4 @@ def create_interactions_over_time_plot(df, width, height, selected_interactions,
     )
 
     return fig
+

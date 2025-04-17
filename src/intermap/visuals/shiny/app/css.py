@@ -64,11 +64,11 @@ ERROR_MESSAGES = {
     'no_file': "Please upload a CSV file.",
     'invalid_file': "Invalid file format. Please upload a CSV file.",
     'no_data': "No data available for plotting.",
-    'processing_error': "Error processing file: {}.",
+    'processing_error': "Error processing file: {}",
     'no_interactions': "No interactions found with current filters.",
-    'plot_error': "Error generating plot: {}.",
+    'plot_error': "Error generating plot: {}",
     'no_topology': "No topology file found in directory.",
-    'invalid_sele': "Invalid MDAnalysis selection: {}."
+    'invalid_sele': "Invalid MDAnalysis selection: {}"
 }
 
 # CSS styles for UI components
@@ -434,5 +434,112 @@ CSS_STYLES = {
         padding: 15px;
         margin-bottom: 20px;
     }
-    """
+    """,
+
+    'tabs': """
+        .nav-tabs {
+            border-bottom: none;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 0;
+            background-color: #ffffff;
+            margin-bottom: 20px;
+            }
+
+        .nav-tabs .nav-link {
+            position: relative;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            color: #333333;
+            padding: 12px 24px;
+            margin: 0;
+            transition: all 0.3s ease;
+            font-family: 'Ubuntu Mono';
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            min-width: 150px;
+            }
+
+        .nav-tabs .nav-link:hover {
+            background-color: #ff4444;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+        .nav-tabs .nav-link.active {
+            background-color: #e0e0e0;
+            color: #1a1a1a;
+            font-weight: bold;
+            border: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+        .nav-tabs .nav-link.active:hover {
+            background-color: #ff4444;
+            color: white;
+            }
+
+
+        .custom-tabs-container {
+            width: 100%;
+            margin-bottom: 20px;
+            }
+        """,
+
+    'footer': """
+        #footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #f8f9fa;
+            padding: 10px 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Ubuntu Mono';
+            z-index: 1000;
+        }
+    
+        #footer a {
+            text-decoration: none;
+        }
+    
+        #footer a div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #495057;
+            transition: color 0.3s ease;
+        }
+    
+        #footer a:hover div {
+            color: #1a1a1a;
+        }
+    
+        #footer a div::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #1a1a1a;
+            transition: width 0.3s ease;
+        }
+    
+        #footer a:hover div::after {
+            width: 100%;
+        }
+    
+        /* Add margin to main content to prevent footer overlap */
+        .container-fluid {
+            margin-bottom: 60px;
+        }
+        """
+
 }

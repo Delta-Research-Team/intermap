@@ -20,6 +20,7 @@ from .utils.helpers import (find_topology_file, generate_interaction_choices,
                             validate_mda_selection)
 
 
+
 # =============================================================================
 # Data Frame Processing
 # =============================================================================
@@ -121,8 +122,7 @@ def server(input, output, session):
         if not file_infos:
             topology_state.set({"has_topology": False, "path": None})
             await session.send_custom_message(
-                "updateTopologyIndicator", {"hasTopology": False}
-            )
+                "updateTopologyIndicator", {"hasTopology": False})
             return
 
         # Obtain file paths
@@ -579,3 +579,4 @@ def server(input, output, session):
 
 # Create the Shiny app instance
 app = App(app_ui, server)
+

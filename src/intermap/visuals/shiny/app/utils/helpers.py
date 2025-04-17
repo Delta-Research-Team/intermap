@@ -5,7 +5,6 @@ Helper functions for the InterMap Visualizations app.
 
 import base64
 import pandas as pd
-import os
 from pathlib import Path
 
 
@@ -76,14 +75,6 @@ def calculate_prevalence(row):
     if 'prevalence' in row.index:
         return float(row['prevalence'])
 
-    if 'timeseries' in row.index:
-        frames = str(row['timeseries'])
-        total_frames = len(frames)
-        if total_frames == 0:
-            return 0
-        frames_with_interaction = sum(int(x) for x in frames)
-        return round((frames_with_interaction / total_frames) * 100, 1)
-
 def generate_interaction_choices(df):
     """
     Generate choices for interaction type checkboxes.
@@ -124,3 +115,4 @@ def validate_mda_selection(selection):
         return False, "The selection does not contain valid MDAnalysis keywords."
 
     return True, ""
+

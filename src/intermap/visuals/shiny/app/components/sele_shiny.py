@@ -1,152 +1,65 @@
 # Created by gonzalezroy at 3/25/25
-from collections import defaultdict
-from os.path import dirname, join
 
 import MDAnalysis as mda
-import numpy as np
 import pandas as pd
-import rgpack.generals as gnl
 
 
-class TopoDF:
+class CSVFilter:
     """
-    Class to shrink the InterMap CSV file based on a topology selection
+    A class to filter the InterMap CSV file before loading it with Shiny
     """
 
-    def __init__(self, csv):
+    def __init__(self, topo, sele, csv):
         """
-        Initialize the TopoPandas class
+        Initialize the CSVFilter class
 
         Args:
+            topo (str): path to the topology file
+            sele (str): selection string compliant with MDAnalysis syntax
             csv (str): path to the InterMap CSV file
         """
-        self.csv_path = gnl.check_path(csv)
-        self.topo_path = self.read_topo_path()
-        self.df_master, self.resolution = self.load_csv()
-        self.universe = mda.Universe(self.topo_path)
-        self.top2df = self.map_topology_to_dataframe()
+        self.sele = sele
+        self.topo = topo
+        self.csv = csv
 
-    def read_topo_path(self):
+        self.sel_idx = self.get_sel_idx()
+        self.df = self.get_df()
+
+    def get_sel_idx(self):
         """
-        Read the topology path from the InterMap CSV file
+        Get the indices of the selected atoms in the topology file
 
         Returns:
-            str: Path to the topology file
+            indices (set): a set of indices of the selected atoms
         """
-        with open(self.csv_path) as f:
-            topo_line = f.readline()
-        csv_dirname = dirname(self.csv_path)
-        topo_path = join(csv_dirname, topo_line.split('#')[1].strip())
+        universe = mda.Universe(self.topo)
+        ag = universe.select_atoms(self.sele)
+        at_names = [f'{x[0]}_{x[1]}_{x[2]}'
+                    for x in zip(ag.resnames, ag.resids, ag.names)]
+        return set(at_names)
 
-        return gnl.check_path(topo_path)
-
-    def load_csv(self):
+    def filter(self):
         """
-        Load the InterMap CSV file into a pandas DataFrame
-
-        Returns:
-            pd.DataFrame: DataFrame containing the InterMap data
+        Filter the InterMap CSV file based on the selected indices
         """
 
-        df = pd.read_csv(self.csv_path, comment='#')
-        N = len(df.iloc[0, 0].split('_'))
-        resolution = 'atom' if N == 5 else 'residue'
-        return df, resolution
+        with open(self.csv, 'rt') as f:
+            next(f)
+            for i, line in enumerate(f):
+                s1, s2, s3, itype, prev, time = line.split(',')
+                s1_in_sel = s1 in self.sel_idx
+                s2_in_sel = s2 in self.sel_idx
+                s3_in_sel = s3 in self.sel_idx
+                if s1_in_sel or s2_in_sel or s3_in_sel:
+                    yield line.split(',')
 
-    def _get_res2atoms(self):
+    def get_df(self):
         """
-        Get the residue indices from the universe
-
-        Returns:
-            list: List of residue indices
+        Get the filtered CSV file as a pandas DataFrame
         """
-        resindices = self.universe.atoms.resindices
-        res2atoms = defaultdict(set)
-        for i, resindex in enumerate(resindices):
-            res2atoms[resindex].add(i)
-        return res2atoms
-
-    def map_topology_to_dataframe(self):
-        """
-        Map the topology indices to the DataFrame indices
-
-        Returns:
-            dict: Dictionary mapping topology indices to DataFrame indices
-        """
-        # Automatically determine the number of separators
-        N = 4 if self.resolution == 'atom' else 2
-
-        # Extract the indices from the DataFrame
-        s1 = self.df_master.iloc[:, 0].str.split('_', expand=True)[N]
-        s1 = s1.astype(np.int32).tolist()
-        s2 = self.df_master.iloc[:, 1].str.split('_', expand=True)[N]
-        s2 = s2.astype(np.int32).tolist()
-
-        if self.df_master.iloc[:, 2].any():
-            s3 = self.df_master.iloc[:, 2].str.split('_', expand=True)[N]
-            s3 = s3.astype(np.int32).tolist()
-        else:
-            s3 = None
-
-        # Map the topology indices to the DataFrame indices
-        top2df = defaultdict(set)
-        for df_index, s1_topindex in enumerate(s1):
-            s2_topindex = s2[df_index]
-
-            if self.resolution == 'atom':
-                top2df[s1_topindex].add(df_index)
-                top2df[s2_topindex].add(df_index)
-                if s3:
-                    s3_topindex = s3[df_index]
-                    top2df[s3_topindex].add(df_index)
-
-            else:
-                res2atoms = self._get_res2atoms()
-                s1_topindices = res2atoms[s1_topindex]
-                for topindex in s1_topindices:
-                    top2df[topindex].add(df_index)
-
-                s2_topindices = res2atoms[s2_topindex]
-                for topindex in s2_topindices:
-                    top2df[topindex].add(df_index)
-
-                if s3:
-                    s3_topindex = s3[df_index]
-                    top2df[s3_topindex].add(df_index)
-        return top2df
-
-    def reselect(self, selection):
-        """
-        Reselect the dataframe based on the given MDAnalysis selection
-
-        Args:
-            selection: MDAnalysis selection string
-
-        Returns:
-            filtered_df: DataFrame filtered based on the selection
-        """
-        # Select atoms based on the provided selection string
-        selected_indices = self.universe.select_atoms(selection).indices
-
-        # Get the DataFrame indices corresponding to the selected atoms
-        try:
-            df_lines = set.union(*(self.top2df[x] for x in selected_indices))
-        except TypeError:
-            raise TypeError(
-                f"Selection '{selection}' returned no atoms. Please check the selection string."
-            )
-
-        # Filter the DataFrame based on the selected indices
-        filtered_df = self.df_master.iloc[list(df_lines), :].copy()
-        return filtered_df
-
-
-# =============================================================================
-#
-# =============================================================================
-
-csv = '/home/gonzalezroy/RoyHub/intermap/scripts/identity/runs/mpro/imap/mpro_prot-prot_1000_InterMap.csv'
-topo = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/a173v_mpro_chainA_rep123.pr5.aligned_CA.not_waters_or_ions.psf'
-
-self = TopoDF(csv)
-mini_df = self.reselect('resid 0')
+        generator = self.filter()
+        df = pd.DataFrame(generator,
+                          columns=['sel1_atom', 'sel2_atom', 'water_atom',
+                                   'interaction_name', 'prevalence',
+                                   ' timeseries'])
+        return df
