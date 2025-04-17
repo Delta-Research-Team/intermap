@@ -697,9 +697,9 @@ class IndexManager:
         annotations = self.annotations
         if annotations:
             at_annots = {x: k for k, v in annotations.items() for x in v}
-            res_annots = {x: at_annots[i]
-                          for i, x in
-                          enumerate(self.universe.atoms.resindices)}
+            res_annots = {
+                x: at_annots.get(i, '') for i, x in
+                enumerate(self.universe.atoms.resindices)}
         else:
             at_annots = {}
             res_annots = {}
@@ -757,37 +757,41 @@ class IndexManager:
 
         annotations = defaultdict(set)
         cumulative = set()
+
         if annot_file:
             with open(annot_file) as f:
                 lines = f.readlines()
             lines = [x.strip() for x in lines if x not in ['', '\n', '#']]
+
             for line in lines:
                 if line.startswith('#'):
                     continue
+
                 try:
                     name, value = line.split('=')
-                    indices = universe.select_atoms(value).indices
-                    annotations[name.strip()].update(indices)
-
-                    intersect = set(indices).intersection(cumulative)
-                    if len(intersect) > 0:
-                        raise ValueError(
-                            f"Error parsing the annotations file. The selection "
-                            f"{value} for the key {name} overlaps with one or"
-                            f" more of the previously defined selections.")
-                    cumulative.update(indices)
-
-                    if len(indices) == 0:
-                        logger.warning(
-                            f"Selection {value} for the key {name} returned no"
-                            f" atoms in the topology {self.args.topology}. "
-                            f"Please check the selection.")
                 except ValueError:
                     raise ValueError(
                         f'Error parsing the annotations file. The line: {line}'
                         f' is not valid. The expected format is: name = value.'
                         f' While the name can be any string, the value must be'
                         f' a valid MDAnalysis selection string.')
+
+                indices = universe.select_atoms(value).indices
+                annotations[name.strip()].update(indices)
+                if len(indices) == 0:
+                    logger.warning(
+                        f"Selection {value} for the key {name} returned no"
+                        f" atoms in the topology {self.args.topology}. "
+                        f"Please check the selection.")
+
+                intersect = set(indices).intersection(cumulative)
+                cumulative.update(indices)
+                if len(intersect) > 0:
+                    raise ValueError(
+                        f"Error parsing the annotations file. The selection "
+                        f"{value} for the key {name} overlaps with one or"
+                        f" more of the previously defined selections.")
+
         return annotations
 
 # =============================================================================
