@@ -5,7 +5,6 @@ channels:
 dependencies:
   - python
   - mdanalysis
-  - mdtraj
   - rdkit
   - numpy
   - pandas
@@ -14,10 +13,6 @@ dependencies:
   - pip
   - pip:
       - -e .
-      - uvicorn
-      - shiny
-      - plotly
-      - screeninfo
       - numpy_indexed
       - numba_kdtree == 0.5.0
       - openpyxl
