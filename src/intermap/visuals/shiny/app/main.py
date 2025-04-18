@@ -157,7 +157,7 @@ def server(input, output, session):
                 ui.notification_show(
                     ERROR_MESSAGES["invalid_file"],
                     type="error",
-                    style="font-family: Ubuntu Mono; font-style: italic;", )
+                    style="font-family: Roboto; font-style: italic;", )
                 ui.update_action_button("show_plots", disabled=True)
                 return
             ui.update_action_button("show_plots", disabled=False)
@@ -180,7 +180,7 @@ def server(input, output, session):
                 ui.notification_show(
                     ERROR_MESSAGES["invalid_sele"].format(error_msg),
                     type="error",
-                    style="font-family: Ubuntu Mono; font-style: italic;",
+                    style="font-family: Roboto; font-style: italic;",
                 )
 
                 return
@@ -250,7 +250,7 @@ def server(input, output, session):
         if not file_infos:
             return ui.p(
                 ERROR_MESSAGES["no_file"],
-                style="font-family: Ubuntu Mono; font-style: italic;",
+                style="font-family: Roboto; font-style: italic;",
             )
 
         try:
@@ -321,7 +321,7 @@ def server(input, output, session):
                 if df.empty:
                     return ui.p(
                         "No matches found for the search term.",
-                        style="color: red; font-family: Ubuntu Mono;",
+                        style="color: red; font-family: Roboto;",
                     )
 
             fig = create_plot(
@@ -355,10 +355,10 @@ def server(input, output, session):
             error_message = ERROR_MESSAGES["plot_error"].format(str(e))
             return ui.div(
                 ui.p(error_message, style="color:red; "
-                                          "font-family: Ubuntu Mono;"),
+                                          "font-family: Roboto;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px; "
+                    style="font-family: Roboto; font-size: 12px; "
                           "background-color: #f8f9fa; padding: 10px; "
                           "border-radius: 4px;", ), )
 
@@ -423,10 +423,10 @@ def server(input, output, session):
             error_message = ERROR_MESSAGES["plot_error"].format(str(e))
             return ui.div(
                 ui.p(error_message, style="color:red; "
-                                          "font-family: Ubuntu Mono;"),
+                                          "font-family: Roboto;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px;", ), )
+                    style="font-family: Roboto; font-size: 12px;", ), )
 
     # =========================================================================
     # Render the Receptor Interaction Plot (third plot)
@@ -491,10 +491,10 @@ def server(input, output, session):
             error_message = ERROR_MESSAGES["plot_error"].format(str(e))
             return ui.div(
                 ui.p(error_message, style="color:red; "
-                                          "font-family: Ubuntu Mono;"),
+                                          "font-family: Roboto;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px;",
+                    style="font-family: Roboto; font-size: 12px;",
                 ),
             )
 
@@ -556,10 +556,10 @@ def server(input, output, session):
             error_message = ERROR_MESSAGES["plot_error"].format(str(e))
             return ui.div(
                 ui.p(error_message, style="color:red; "
-                                          "font-family: Ubuntu Mono;"),
+                                          "font-family: Roboto;"),
                 ui.pre(
                     traceback.format_exc(),
-                    style="font-family: Ubuntu Mono; font-size: 12px;", ), )
+                    style="font-family: Roboto; font-size: 12px;", ), )
 
     # =========================================================================
     # Render the Interaction Checkboxes

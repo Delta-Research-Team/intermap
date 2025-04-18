@@ -8,16 +8,14 @@ from screeninfo import get_monitors
 
 from ..css import CSS_STYLES
 from ..utils.helpers import get_image_base64
+from pathlib import Path
 
 
 # todo: Change absolute path @l142
 
-
-
 for m in get_monitors():
     personal_width = m.width
     personal_height = m.height
-
 
 def create_file_input_section():
     """Create the file input section with topology indicator."""
@@ -58,12 +56,12 @@ def create_filters_section():
         ui.div(
             {"class": "interaction-filter"},
             # File Input Section
-            ui.h4("Data Input"),
+            ui.h4("Data Input", style="font-family: Roboto;"),
             create_file_input_section(),
             ui.input_action_button(
                 "show_plots",
                 "Show",
-                style="margin-top: 10px; width: 100%; font-family: Ubuntu Mono;",
+                style="margin-top: 10px; width: 100%; font-family: Roboto;",
                 disabled=True
             ),
             ui.hr(),
@@ -118,18 +116,21 @@ def create_filters_section():
                 ui.input_numeric(
                     "plot_width",
                     "Plot Width:",
-                    value=personal_width*0.67
+                    value=personal_width * 0.67
                 ),
                 ui.input_numeric(
                     "plot_height",
                     "Plot Height:",
-                    value=personal_height*0.75
+                    value=personal_height * 0.75
                 )
             ),
             ui.hr(),
         )
     )
 
+def get_image_path():
+    """Get absolute path for static image regardless of OS."""
+    return str(Path(__file__).resolve().parent / 'static' / 'image' / 'Untitled.png')
 
 def create_welcome_section():
     """Create the welcome section of the app."""
@@ -137,17 +138,16 @@ def create_welcome_section():
         {"class": "welcome-section"},
         ui.div(
             {"class": "welcome-text"},
-            ui.h1("Welcome to InterMap Visualizations!",
+            ui.h1("Welcome to Intervis!",
                   {"class": "welcome-title"}),
             ui.p(
-                "Revolutionizing Molecular Interaction Analysis with High-Speed Computation",
+                "InterMap: Accelerated Detection of Interaction Fingerprints on Large-Scale Molecular Ensembles",
                 {"class": "welcome-subtitle", "style": "font-style: italic;"})
         ),
         ui.img(
-            {"src": get_image_base64(
-                "/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/statics/image/Untitled.png"),
-             "class": "welcome-image",
-             "alt": "InterMap Logo"}
+            {"src": get_image_base64(get_image_path()),
+                "class": "welcome-image",
+                "alt": "InterMap Logo"}
         )
     )
 
@@ -169,10 +169,6 @@ def create_plots_section():
                         ui.div(
                             {
                                 "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.h4(
-                                "Interaction Heatmap",
-                                style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; text-align: center; font-family: 'Ubuntu Mono';"
-                            ),
                             ui.output_ui("interaction_plot")
                         )
                     ),
@@ -183,10 +179,6 @@ def create_plots_section():
                         ui.div(
                             {
                                 "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.h4(
-                                "Ligand Atoms Interaction Analysis",
-                                style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; text-align: center; font-family: 'Ubuntu Mono';"
-                            ),
                             ui.output_ui("ligand_interactions_plot")
                         )
                     ),
@@ -197,10 +189,6 @@ def create_plots_section():
                         ui.div(
                             {
                                 "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.h4(
-                                "Receptor Atoms Interaction Analysis",
-                                style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; text-align: center; font-family: 'Ubuntu Mono';"
-                            ),
                             ui.output_ui("receptor_interactions_plot")
                         )
                     ),
@@ -211,10 +199,6 @@ def create_plots_section():
                         ui.div(
                             {
                                 "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.h4(
-                                "Interaction Types Over Time",
-                                style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; text-align: center; font-family: 'Ubuntu Mono';"
-                            ),
                             ui.output_ui("interactions_over_time_plot")
                         )
                     ),
@@ -234,7 +218,7 @@ def create_app_ui():
         ui.tags.head(
             ui.tags.link(
                 rel="stylesheet",
-                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+                href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
             ),
             ui.tags.script(src="https://cdn.plot.ly/plotly-latest.min.js"),
             ui.tags.style("\n".join(CSS_STYLES.values())),
@@ -265,6 +249,7 @@ def create_app_ui():
         create_footer()
     )
 
+
 def create_footer():
     """Create a footer with documentation and GitHub links."""
     return ui.div(
@@ -274,13 +259,13 @@ def create_footer():
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #f8f9fa;
+                background-color: #4051b5ff;
                 padding: 10px 20px;
                 border-top: 1px solid #dee2e6;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                font-family: 'Ubuntu Mono';
+                font-family: 'Roboto';
                 z-index: 1000;
             """
         },
@@ -292,7 +277,7 @@ def create_footer():
                         display: flex;
                         align-items: center;
                         gap: 8px;
-                        color: #495057;
+                        color: white;
                         text-decoration: none;
                         transition: color 0.3s ease;
                     """
@@ -313,7 +298,7 @@ def create_footer():
                         display: flex;
                         align-items: center;
                         gap: 8px;
-                        color: #495057;
+                        color: white;
                         text-decoration: none;
                         transition: color 0.3s ease;
                     """

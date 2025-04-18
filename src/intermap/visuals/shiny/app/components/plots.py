@@ -9,10 +9,11 @@ import numpy as np
 from ..css import all_interactions_colors
 from ..utils.helpers import calculate_prevalence
 
-# Variable global para el estado de búsqueda
+
+
+
+from ..config import all_interactions_colors
 search_state = None
-
-
 
 def get_search_state():
     """
@@ -35,6 +36,7 @@ def initialize_search_state(state):
     """
     global search_state
     search_state = state
+
 
 
 def create_plot(df, width, height, selected_interactions, prevalence_threshold,
@@ -70,8 +72,10 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
         'CloseContacts': 16
     }
 
-    # Filtrado de interacciones seleccionadas
+    # Optimizar el filtrado inicial usando NumPy
     df_filtered = df[df['interaction_name'].isin(selected_interactions)]
+    df_filtered = df_filtered[
+        df_filtered['prevalence'] >= prevalence_threshold]
 
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
@@ -84,29 +88,17 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     if df_filtered.empty:
         return None
 
-    df_filtered = df_filtered[
-        df_filtered['prevalence'] >= prevalence_threshold]
+    # Optimizar el procesamiento de grupos
+    df_filtered['priority'] = df_filtered['interaction_name'].map(
+        interaction_priority)
+    priority_df = (df_filtered.sort_values(
+        ['sel1_atom', 'sel2_atom', 'priority', 'prevalence'],
+        ascending=[True, True, True, False])
+                   .groupby(['sel1_atom', 'sel2_atom'])
+                   .first()
+                   .reset_index())
 
-    priority_interactions = []
-
-    for (lig, prot), group in df_filtered.groupby(['sel1_atom', 'sel2_atom']):
-        if not group.empty:
-            group['priority'] = group['interaction_name'].map(
-                interaction_priority)
-            group = group.sort_values(['priority', 'prevalence'],
-                                      ascending=[True, False])
-
-            priority_int = group.iloc[0]
-            priority_interactions.append({
-                'sel1_atom': lig,
-                'sel2_atom': prot,
-                'interaction_name': priority_int['interaction_name'],
-                'prevalence': priority_int['prevalence']
-            })
-
-    priority_df = pd.DataFrame(priority_interactions)
-
-    # Pivot de interacciones y permanencias
+    # Pivot de interacciones y permanencias - optimizado
     pivot_interaction = pd.pivot_table(priority_df,
                                        values='interaction_name',
                                        index='sel1_atom',
@@ -119,11 +111,22 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
                                       index='sel1_atom',
                                       columns='sel2_atom',
                                       aggfunc='first',
-                                      fill_value=0)
+                                      fill_value="")
 
+    # Pre-calcular valores redondeados
+    pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
+
+    # Generar la escala de colores para las interacciones activas
+    present_interactions = sorted(priority_df['interaction_name'].unique(),
+                                  key=lambda x: interaction_priority[x])
+
+    interaction_to_num = {inter: i for i, inter in
+                          enumerate(present_interactions)}
+
+    # Crear la figura
     fig = go.Figure()
 
-    # Añadir las interacciones de fondo, incluso las desactivadas
+    # Añadir las interacciones de fondo
     fig.add_trace(go.Heatmap(
         z=[[0] * len(pivot_interaction.columns)] * len(
             pivot_interaction.index),
@@ -133,57 +136,52 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
         colorscale=[[0, '#FEFBF6'], [1, '#FEFBF6']],
         hoverongaps=False,
         hoverinfo='skip',
+        showlegend=False
     ))
 
-    # Generar la escala de colores para las interacciones activas
-    present_interactions = sorted(priority_df['interaction_name'].unique(),
-                                  key=lambda x: interaction_priority[x])
-
-    color_scale = []
-    for i, interaction in enumerate(present_interactions):
-        pos = i / (len(present_interactions) - 1) if len(
-            present_interactions) > 1 else 0.5
-        color_scale.extend([[pos, all_interactions_colors[interaction]],
-                            [pos, all_interactions_colors[interaction]]])
-
-    if len(present_interactions) == 1:
-        color = all_interactions_colors[present_interactions[0]]
-        color_scale = [[0, color], [1, color]]
-
-    interaction_to_num = {inter: i for i, inter in
-                          enumerate(present_interactions)}
-    pivot_numerical = pivot_interaction.replace(interaction_to_num)
-
-    # Mostrar la permanencia si es necesario
-    text_values = pivot_prevalence.round(1).astype(str)
-    if show_prevalence:
-        text_values = text_values.mask(pivot_prevalence == 0, '')
-    else:
-        text_values = pivot_interaction.map(lambda x: '')
-
-    fig.add_trace(go.Heatmap(
-        z=pivot_numerical,
-        x=pivot_interaction.columns,
-        y=pivot_interaction.index,
-        text=text_values,
-        texttemplate="%{text}",
-        textfont={"size": 9, "family": "Arial", "color": "black"},
-        showscale=False,
-        colorscale=color_scale,
-        hoverongaps=False,
-        hovertemplate=(
-                "<b>Selection_1:</b> %{y}<br>" +
-                "<b>Selection_2:</b> %{x}<br>" +
-                "<b>Interaction:</b> %{customdata}<br>" +
-                "<b>Prevalence:</b> %{text}%<extra></extra>"
-        ),
-        customdata=pivot_interaction.values,
-        xgap=1,
-        ygap=1,
-    ))
-
-    # Añadir las leyendas para las interacciones
+    # Crear un heatmap por cada tipo de interacción
     for interaction in present_interactions:
+        # Crear máscara para esta interacción usando NumPy para mayor eficiencia
+        mask = pivot_interaction.values == interaction
+        z_values = np.where(mask, interaction_to_num[interaction], None)
+
+        # Crear matriz de texto eficientemente
+        text_matrix = np.where(mask, pivot_prevalence_rounded.values, '')
+
+        fig.add_trace(go.Heatmap(
+            z=z_values,
+            x=pivot_interaction.columns,
+            y=pivot_interaction.index,
+            text=text_matrix,
+            texttemplate="%{text}" if show_prevalence else "",
+            textfont={"size": 9, "family": "Roboto", "color": "black"},
+            showscale=False,
+            colorscale=[[0, all_interactions_colors[interaction]],
+                        [1, all_interactions_colors[interaction]]],
+            hoverongaps=False,
+            hoverlabel=dict(
+                bgcolor=all_interactions_colors[interaction],
+                bordercolor='#1a1a1a',
+                font=dict(
+                    family="Roboto",
+                    size=15,
+                    color='rgb(26, 26, 26)'
+                )
+            ),
+            hovertemplate=(
+                    "<b>Selection_1:</b> %{y}<br>" +
+                    f"<b>Interaction:</b> {interaction}<br>" +
+                    "<b>Selection_2:</b> %{x}<br>" +
+                    "<b>Prevalence:</b> %{text}%<extra></extra>"
+            ),
+            legendgroup=interaction,
+            showlegend=False,
+            visible=True,
+            xgap=1,
+            ygap=1,
+        ))
+
+        # Añadir el elemento de leyenda personalizado
         fig.add_trace(go.Scatter(
             x=[None],
             y=[None],
@@ -192,26 +190,27 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
                 size=10,
                 color=all_interactions_colors[interaction],
                 symbol='square',
-                line=dict(  # Añadir borde a los marcadores de la leyenda
+                line=dict(
                     color='rgba(128, 128, 128, 0.5)',
                     width=1
                 )
             ),
             name=f"{interaction} ({interaction_priority[interaction]})",
-            showlegend=True
+            showlegend=True,
+            legendgroup=interaction
         ))
 
     fig.update_layout(
         width=width,
         height=height,
-        margin=dict(l=50, r=50, t=50, b=50),
+        margin=dict(l=50, r=150, t=50, b=50),
         showlegend=True,
         legend=dict(
             title=dict(
                 text="<b>Interaction Types (Priority)</b>",
                 font=dict(
-                    family="Ubuntu Mono",
-                    size=12,
+                    family="Roboto",
+                    size=14,
                     color='rgb(26, 26, 26)'
                 )
             ),
@@ -223,20 +222,23 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
             bordercolor='rgba(0,0,0,0.2)',
             borderwidth=1,
             font=dict(
-                family="Ubuntu Mono",
-                size=12,
+                family="Roboto",
+                size=14,
                 color='rgb(26, 26, 26)'
             )
         ),
+        paper_bgcolor='white',
+        plot_bgcolor='white',
         xaxis=dict(
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(0, 0, 0, 0.15)',
             linewidth=1,
             linecolor='rgba(0, 0, 0, 0.25)',
+            tickangle=45,
             tickfont=dict(
-                family="Ubuntu Mono",
-                size=12,
+                family="Roboto",
+                size=14,
                 color='rgb(26, 26, 26)'
             )
         ),
@@ -247,10 +249,16 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
             linewidth=1,
             linecolor='rgba(0, 0, 0, 0.25)',
             tickfont=dict(
-                family="Ubuntu Mono",
-                size=12,
+                family="Roboto",
+                size=14,
                 color='rgb(26, 26, 26)'
             )
+        ),
+        hoverlabel=dict(
+            bgcolor='white',
+            font_size=14,
+            font_family="Roboto",
+            align='left'
         )
     )
 
@@ -345,8 +353,8 @@ def create_ligand_interactions_plot(df, width, height,
             title=dict(
                 text="<b>Interaction Types</b>",
                 font=dict(
-                    family="Ubuntu Mono",
-                    size=12,
+                    family="Roboto",
+                    size=15,
                     color='rgb(26, 26, 26)'
                 )
             ),
@@ -358,10 +366,11 @@ def create_ligand_interactions_plot(df, width, height,
             bordercolor='rgba(0,0,0,0.2)',
             borderwidth=1,
             font=dict(
-                family="Ubuntu Mono",
-                size=12,
+                family="Roboto",
+                size=15,
                 color='rgb(26, 26, 26)'
-            )
+            ),
+
         ),
         margin=dict(l=50, r=150, t=50, b=50),
         paper_bgcolor='white',
@@ -376,8 +385,8 @@ def create_ligand_interactions_plot(df, width, height,
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
         tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
+            family="Roboto",
+            size=14,
             color='rgb(26, 26, 26)'
         )
     )
@@ -388,8 +397,8 @@ def create_ligand_interactions_plot(df, width, height,
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
         tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
+            family="Roboto",
+            size=14,
             color='rgb(26, 26, 26)'
         )
     )
@@ -485,8 +494,8 @@ def create_receptor_interactions_plot(df, width, height,
             title=dict(
                 text="<b>Interaction Types</b>",
                 font=dict(
-                    family="Ubuntu Mono",
-                    size=12,
+                    family="Roboto",
+                    size=15,
                     color='rgb(26, 26, 26)'
                 )
             ),
@@ -498,8 +507,8 @@ def create_receptor_interactions_plot(df, width, height,
             bordercolor='rgba(0,0,0,0.2)',
             borderwidth=1,
             font=dict(
-                family="Ubuntu Mono",
-                size=12,
+                family="Roboto",
+                size=15,
                 color='rgb(26, 26, 26)'
             )
         ),
@@ -516,8 +525,8 @@ def create_receptor_interactions_plot(df, width, height,
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
         tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
+            family="Roboto",
+            size=14,
             color='rgb(26, 26, 26)'
         )
     )
@@ -528,8 +537,8 @@ def create_receptor_interactions_plot(df, width, height,
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
         tickfont=dict(
-            family="Ubuntu Mono",
-            size=12,
+            family="Roboto",
+            size=14,
             color='rgb(26, 26, 26)'
         )
     )
@@ -541,10 +550,145 @@ def create_interactions_over_time_plot(df, width, height,
                                        selected_interactions,
                                        prevalence_threshold):
     """
-    Create a plot showing interactions over time frames.
-    Shows all interactions present in each frame with a unified hover display.
-    Updated by fajardo01 at 2025-04-16 21:54:11
+    Create an interactive scatter plot with marginal histograms using plotly.
     """
+    if df is None or df.empty:
+        return None
+
+    # Filtrado inicial
+    mask = (df['interaction_name'].isin(selected_interactions) &
+            (df['prevalence'] >= prevalence_threshold))
+    df_filtered = df[mask]
+
+    if df_filtered.empty:
+        return None
+
+    # Procesamiento de búsqueda
+    search_status = get_search_state()
+    if search_status['active'] and search_status['search_term']:
+        search_term = search_status['search_term'].upper()
+        search_mask = (df_filtered['sel1_atom'].str.contains(search_term,
+                                                             case=False) |
+                       df_filtered['sel2_atom'].str.contains(search_term,
+                                                             case=False))
+        df_filtered = df_filtered[search_mask]
+
+    if df_filtered.empty:
+        return None
+
+    # Crear pares de selecciones
+    df_filtered['selection_pair'] = df_filtered['sel1_atom'] + ' - ' + \
+                                    df_filtered['sel2_atom']
+
+    # Procesar series de tiempo
+    frame_interactions = []
+    for idx, row in df_filtered.iterrows():
+        timeseries = np.array(list(row['timeseries']), dtype=int)
+        frames_with_interaction = np.where(timeseries == 1)[0]
+        for frame in frames_with_interaction:
+            frame_interactions.append({
+                'selection_pair': row['selection_pair'],
+                'frame': frame,
+                'prevalence': row['prevalence']
+            })
+
+    # Crear DataFrame para el scatter plot
+    scatter_df = pd.DataFrame(frame_interactions)
+
+    # Crear la figura con subplots
+    fig = make_subplots(
+        rows=2, cols=2,
+        column_widths=[0.8, 0.2],
+        row_heights=[0.2, 0.8],
+        vertical_spacing=0.02,
+        horizontal_spacing=0.02,
+        specs=[[{"type": "histogram"}, {"type": "histogram"}],
+               [{"type": "scatter"}, {"type": "histogram"}]]
+    )
+
+    # Scatter plot principal
+    fig.add_trace(
+        go.Scatter(
+            x=scatter_df['frame'],
+            y=scatter_df['selection_pair'],
+            mode='markers',
+            marker=dict(
+                symbol='square',
+                size=8,
+                color='black'
+            ),
+            name='Interactions'
+        ),
+        row=2, col=1
+    )
+
+    # Histograma superior (interacciones por frame)
+    fig.add_trace(
+        go.Histogram(
+            x=scatter_df['frame'],
+            nbinsx=50,
+            name='Interactions per Frame'
+        ),
+        row=1, col=1
+    )
+
+    # Histograma derecho (prevalencia por par)
+    prevalence_data = df_filtered.groupby('selection_pair')[
+        'prevalence'].mean()
+    fig.add_trace(
+        go.Bar(
+            y=prevalence_data.index,
+            x=prevalence_data.values * 100,  # Convertir a porcentaje
+            orientation='h',
+            name='Prevalence (%)'
+        ),
+        row=2, col=2
+    )
+
+    # Actualizar layout
+    fig.update_layout(
+        width=width,
+        height=height,
+        showlegend=False,
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        margin=dict(l=50, r=50, t=50, b=50)
+    )
+
+    # Actualizar ejes
+    fig.update_xaxes(
+        title_text="Frame Number",
+        gridcolor='rgba(0,0,0,0.15)',
+        zeroline=True,
+        zerolinecolor='rgba(0,0,0,0.25)',
+        row=2, col=1
+    )
+
+    fig.update_yaxes(
+        title_text="Selection Pairs",
+        gridcolor='rgba(0,0,0,0.15)',
+        zeroline=True,
+        zerolinecolor='rgba(0,0,0,0.25)',
+        row=2, col=1
+    )
+
+    # Actualizar histograma superior
+    fig.update_xaxes(showticklabels=False, row=1, col=1)
+    fig.update_yaxes(title_text="Count", row=1, col=1)
+
+    # Actualizar histograma derecho
+    fig.update_xaxes(title_text="Prevalence (%)", row=2, col=2)
+    fig.update_yaxes(showticklabels=False, row=2, col=2)
+
+    return fig
+
+
+"""
+
+def create_interactions_over_time_plot(df, width, height,
+                                       selected_interactions,
+                                       prevalence_threshold):
+
     if df is None or df.empty:
         return None
 
@@ -645,7 +789,7 @@ def create_interactions_over_time_plot(df, width, height,
                 hoverlabel=dict(
                     bgcolor='rgba(255,255,255,0.95)',
                     bordercolor=all_interactions_colors[interaction_type],
-                    font=dict(family='Arial', size=12, color='black')
+                    font=dict(family='Arial', size=14, color='black')
                 )
             ))
 
@@ -659,7 +803,7 @@ def create_interactions_over_time_plot(df, width, height,
         legend=dict(
             title=dict(
                 text="<b>Interaction Types</b>",
-                font=dict(family="Ubuntu Mono", size=12,
+                font=dict(family="RobotoRoboto", size=14,
                           color='rgb(26, 26, 26)')
             ),
             yanchor="top",
@@ -669,7 +813,7 @@ def create_interactions_over_time_plot(df, width, height,
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='rgba(0,0,0,0.2)',
             borderwidth=1,
-            font=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)')
+            font=dict(family="Roboto", size=14, color='rgb(26, 26, 26)')
         ),
         margin=dict(l=50, r=150, t=50, b=50),
         paper_bgcolor='white',
@@ -677,8 +821,8 @@ def create_interactions_over_time_plot(df, width, height,
         hovermode='closest',
         hoverdistance=100,
         hoverlabel=dict(
-            font_family="Ubuntu Mono",
-            font_size=12,
+            font_family="Roboto",
+            font_size=14,
             align='left'
         )
     )
@@ -687,7 +831,7 @@ def create_interactions_over_time_plot(df, width, height,
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)'),
+        tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)'),
         showgrid=True,
         nticks=10,
         tickmode='auto',
@@ -700,7 +844,7 @@ def create_interactions_over_time_plot(df, width, height,
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(family="Ubuntu Mono", size=12, color='rgb(26, 26, 26)'),
+        tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)'),
         showgrid=True,
         nticks=8,
         tickmode='auto',
@@ -711,3 +855,4 @@ def create_interactions_over_time_plot(df, width, height,
 
     return fig
 
+"""

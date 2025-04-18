@@ -4,6 +4,7 @@ Contains color schemes, plot settings, and UI styles.
 
 """
 
+
 # Color scheme for different interaction types
 """
 all_interactions_colors = {
@@ -137,7 +138,7 @@ CSS_STYLES = {
     }
     
     .mda-selection-container input {
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         padding: 8px;
         border: 1px solid #ddd;
         border-radius: 4px;
@@ -146,7 +147,7 @@ CSS_STYLES = {
     }
     
     .mda-selection-container input:focus {
-        border-color: #ff5555ff;
+        border-color: #4051b5ff;
         outline: none;
         box-shadow: 0 0 0 2px rgba(255,85,85,0.2);
     }
@@ -154,14 +155,14 @@ CSS_STYLES = {
     .mda-selection-container label {
         display: block;
         margin-bottom: 5px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         color: #383747ff;
     }
     """,
 
     'file_upload': """
     .progress-bar {
-        background-color: #ff5555ff !important;
+        background-color: #4051b5ff !important;
     }
 
     .btn-file {
@@ -175,7 +176,7 @@ CSS_STYLES = {
     }
 
     .btn-file:hover {
-        background-color: #ff3333ff !important;
+        background-color: #4051b5ff !important;
     }
 
     .progress {
@@ -187,31 +188,31 @@ CSS_STYLES = {
 
     'error_message': """
     .error-message {
-        color: #ff5555ff !important;
-        font-family: 'Ubuntu Mono', monospace !important;
+        color: #4051b5ff !important;
+        font-family: 'Roboto', sans-serif !important;
         padding: 10px !important;
         margin: 10px 0 !important;
         border-radius: 4px !important;
         background-color: rgba(255, 85, 85, 0.1) !important;
         display: block !important;
-        border-left: 4px solid #ff5555ff !important;
+        border-left: 4px solid #4051b5ff !important;
     }
     """,
 
     'font_import': """
-    @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
     """,
 
     'custom_controls': """
     .irs--shiny .irs-bar {
-        background: #ff5555ff !important;
-        border-top: 1px solid #ff5555ff !important;
-        border-bottom: 1px solid #ff5555ff !important;
+        background: #4051b5ff !important;
+        border-top: 1px solid #4051b5ff !important;
+        border-bottom: 1px solid #4051b5ff !important;
     }
 
     .irs--shiny .irs-single {
-        background: #ff5555ff !important;
-        border-color: #ff5555ff !important;
+        background: #4051b5ff !important;
+        border-color: #4051b5ff !important;
     }
 
     .irs--shiny .irs-handle {
@@ -234,7 +235,7 @@ CSS_STYLES = {
         appearance: none !important;
         width: 16px !important;
         height: 16px !important;
-        border: 2px solid #ff5555ff !important;
+        border: 2px solid #4051b5ff !important;
         border-radius: 3px !important;
         background-color: #FEFBF6 !important;
         cursor: pointer !important;
@@ -244,7 +245,7 @@ CSS_STYLES = {
     }
 
     .checkbox-group input[type="checkbox"]:checked {
-        background-color: #ff5555ff !important;
+        background-color: #4051b5ff !important;
     }
 
     .checkbox-group input[type="checkbox"]:checked::after {
@@ -258,19 +259,19 @@ CSS_STYLES = {
     }
 
     .form-switch .form-check-input:checked {
-        background-color: #ff5555ff !important;
-        border-color: #ff5555ff !important;
+        background-color: #4051b5ff !important;
+        border-color: #4051b5ff !important;
     }
 
     .search-button {
-        background-color: #ff5555ff !important;
+        background-color: #4051b5ff !important;
         color: white !important;
         border: none !important;
         padding: 6px 12px !important;
         border-radius: 4px !important;
         cursor: pointer !important;
         transition: background-color 0.3s ease !important;
-        font-family: 'Ubuntu Mono', monospace !important;
+        font-family: 'Roboto', sans-serif !important;
     }
 
     .search-button:hover {
@@ -278,34 +279,45 @@ CSS_STYLES = {
     }
 
     .form-control:focus {
-        border-color: #ff5555ff !important;
-        box-shadow: 0 0 0 0.2rem rgba(255, 85, 85, 0.25) !important;
+        border-color: #4051b5ff !important;
+        box-shadow: 0 0 0 0.2rem #4051b5ff !important;
     }
     """,
-
     'welcome_section': """
-    .welcome-section {
-        display: flex;
-        flex-direction: row-reverse;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 20px;
-        background: #F7F7F7;
-        width: 100%;
-        font-family: 'Ubuntu Mono', monospace;
-        color: #383747ff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    """,
+        .welcome-section {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0;
+            padding: 5px;
+            background: #4051b5ff;
+            width: 100vw;
+            font-family: 'Roboto', sans-serif;
+            color: #383747ff;
+            position: fixed;          /* Para fijar la barra */
+            top: 0;                  /* Fijar en la parte superior */
+            left: 0;                 /* Volver al posicionamiento original */
+            right: 0;                /* Volver al posicionamiento original */
+            margin-left: 0vw;
+            margin-right: 0vw;
+            z-index: 999;
+        }
+    
+        .row {
+            margin-top: 120px; 
+        }
+    """
+
+
+    ,
 
     'welcome_text': """
     .welcome-text {
         text-align: right;
         padding-right: 20px;
-        font-family: 'Ubuntu Mono', monospace;
-        color: #383747ff;
+        font-family: 'Roboto', sans-serif;
+        color: white;
     }
     """,
 
@@ -314,17 +326,17 @@ CSS_STYLES = {
         font-size: 36px;
         font-weight: bold;
         margin: 0;
-        color: #383747ff;
-        font-family: 'Ubuntu Mono', monospace;
+        color: white;
+        font-family: 'Roboto', sans-serif;  
     }
     """,
 
     'welcome_subtitle': """
     .welcome-subtitle {
-        font-size: 18px;
-        color: #383747ff;
+        font-size: 20px;
+        color: white;
         margin-top: 5px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         opacity: 0.8;
     }
     """,
@@ -333,9 +345,9 @@ CSS_STYLES = {
     .welcome-image {
         max-width: 250px;
         height: auto;
-        margin-left: 1px;
+        margin-left: 15px;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: none;
     }
     """,
 
@@ -345,7 +357,7 @@ CSS_STYLES = {
         padding: 15px;
         border-radius: 8px;
         margin-bottom: 15px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         color: #383747ff;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
@@ -358,9 +370,9 @@ CSS_STYLES = {
         padding: 10px;
         border: 1px solid #ddd;
         border-radius: 4px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         scrollbar-width: thin;
-        scrollbar-color: #ff5555ff #f0f0f0;
+        scrollbar-color: #4051b5ff #f0f0f0;
     }
 
     .checkbox-group::-webkit-scrollbar {
@@ -373,7 +385,7 @@ CSS_STYLES = {
     }
 
     .checkbox-group::-webkit-scrollbar-thumb {
-        background-color: #ff5555ff;
+        background-color: #4051b5ff;
         border-radius: 4px;
     }
     """,
@@ -383,7 +395,7 @@ CSS_STYLES = {
         color: #383747ff;
         font-size: 0.9em;
         margin-left: 4px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         opacity: 0.8;
     }
     """,
@@ -394,7 +406,7 @@ CSS_STYLES = {
         align-items: center;
         gap: 10px;
         margin-bottom: 10px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
     }
     """,
 
@@ -406,7 +418,7 @@ CSS_STYLES = {
         width: 100%;
         margin: 20px auto;
         padding: 0 15px;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
     }
     """,
 
@@ -417,7 +429,7 @@ CSS_STYLES = {
         align-items: center;
         width: 100%;
         max-width: 100%;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
     }
     """,
 
@@ -427,7 +439,7 @@ CSS_STYLES = {
         display: flex;
         justify-content: center;
         align-items: center;
-        font-family: 'Ubuntu Mono', monospace;
+        font-family: 'Roboto', sans-serif;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -445,7 +457,7 @@ CSS_STYLES = {
             padding: 10px 0;
             background-color: #ffffff;
             margin-bottom: 20px;
-            }
+        }
 
         .nav-tabs .nav-link {
             position: relative;
@@ -456,18 +468,18 @@ CSS_STYLES = {
             padding: 12px 24px;
             margin: 0;
             transition: all 0.3s ease;
-            font-family: 'Ubuntu Mono';
+            font-family: 'Roboto', sans-serif;
             font-size: 14px;
             font-weight: 500;
             text-align: center;
             min-width: 150px;
-            }
+        }
 
         .nav-tabs .nav-link:hover {
-            background-color: #ff4444;
+            background-color: #4051b5ff;  
             color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
+        }
 
         .nav-tabs .nav-link.active {
             background-color: #e0e0e0;
@@ -475,71 +487,18 @@ CSS_STYLES = {
             font-weight: bold;
             border: none;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-            }
+        }
 
         .nav-tabs .nav-link.active:hover {
-            background-color: #ff4444;
+            background-color: #4051b5ff;  
             color: white;
-            }
-
+        }
 
         .custom-tabs-container {
             width: 100%;
             margin-bottom: 20px;
-            }
-        """,
-
-    'footer': """
-        #footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: #f8f9fa;
-            padding: 10px 20px;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-family: 'Ubuntu Mono';
-            z-index: 1000;
-        }
-    
-        #footer a {
-            text-decoration: none;
-        }
-    
-        #footer a div {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #495057;
-            transition: color 0.3s ease;
-        }
-    
-        #footer a:hover div {
-            color: #1a1a1a;
-        }
-    
-        #footer a div::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -4px;
-            left: 0;
-            background-color: #1a1a1a;
-            transition: width 0.3s ease;
-        }
-    
-        #footer a:hover div::after {
-            width: 100%;
-        }
-    
-        /* Add margin to main content to prevent footer overlap */
-        .container-fluid {
-            margin-bottom: 60px;
         }
         """
 
 }
+
