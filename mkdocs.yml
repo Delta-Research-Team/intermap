@@ -1,0 +1,61 @@
+site_name: InterMap's Docs
+repo_url: https://github.com/rglez/intermap
+repo_name: rglez/intermap
+# Theme
+theme:
+  name: material
+  icon:
+    logo: material/fingerprint
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - toc.follow
+    - toc.integrate
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.top
+    - header.autohide
+
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+# Markdown extensions
+markdown_extensions:
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+plugins:
+  - offline
+
+extra:
+  generator: false
+
+nav:
+  - Home: index.md
+  - How it works: how-it-works.md
+  - Installation: installation.md
+  - Basic Usage: basic-usage.md
+  - Arguments Reference: arguments-reference.md
+  - Tutorials: tutorials.md
+  - Citing: citing.md
