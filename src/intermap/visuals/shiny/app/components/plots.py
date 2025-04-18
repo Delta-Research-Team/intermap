@@ -3,17 +3,14 @@ Plotting components for the InterMap Visualizations app.
 
 """
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import numpy as np
+
 from ..css import all_interactions_colors
-from ..utils.helpers import calculate_prevalence
 
-
-
-
-from ..config import all_interactions_colors
 search_state = None
+
 
 def get_search_state():
     """
@@ -36,7 +33,6 @@ def initialize_search_state(state):
     """
     global search_state
     search_state = state
-
 
 
 def create_plot(df, width, height, selected_interactions, prevalence_threshold,
