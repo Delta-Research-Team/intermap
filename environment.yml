@@ -15,6 +15,7 @@ dependencies:
       - -e .
       - uvicorn
       - shiny
+      - screeninfo
       - plotly
       - numpy_indexed
       - numba_kdtree == 0.5.0

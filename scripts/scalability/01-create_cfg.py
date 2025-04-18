@@ -6,10 +6,10 @@ from os.path import dirname, join
 # =============================================================================
 #
 # =============================================================================
-template = '/home/rglez/RoyHub/intermap/data/scalability_by_RGA/temp.cfg'
+template = '/home/rglez/RoyHub/intermap/scripts/scalability/temp.cfg'
 out_dir = dirname(template)
 n_procs = [1, 2, 4, 8, 12]
-chunk_sizes = [1, 100, 200, 400, 800]
+chunk_sizes = [1, 12, 24, 48, 96]
 resolution = ['atom', 'residue']
 # =============================================================================
 

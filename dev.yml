@@ -19,6 +19,7 @@ dependencies:
       - -e .
       - uvicorn
       - shiny
+      - screeninfo
       - plotly
       - mkdocs
       - mkdocs-material
