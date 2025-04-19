@@ -35,6 +35,8 @@ def guess_from_name(name, mass, pt_symbols, pt_masses, real_names):
     Guess the element from the name of the atom
     """
 
+    name = ''.join(it.filterfalse(lambda x: x.isdigit(), name))
+
     if len(name) > 1:
         name1 = name.strip().lower()[0]
         name2 = name.strip().lower()[0:2]
