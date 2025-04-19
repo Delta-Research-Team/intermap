@@ -1,5 +1,4 @@
 # Created by rglez at 4/6/25
-import os
 import re
 from os.path import join
 
@@ -9,7 +8,7 @@ import numpy as np
 import pandas as pd
 from rgpack import generals as gnl
 
-import commonplots as cmp
+import intermap.commonplots as cmp
 
 
 def parse_performance(txt):
@@ -72,9 +71,9 @@ def plot_colorbar(ax1, ax2, im1, title=None):
 # =============================================================================
 # User-defined variables
 # =============================================================================
-user = os.getlogin()
-root_dir = f'/home/{user}/RoyHub/intermap/data/scalability_by_RGA'
-out_dir = f'/home/{user}/RoyHub/intermap/scripts/scalability'
+user = 'gonzalezroy'
+root_dir = '/home/rglez/RoyHub/intermap/scripts/scalability'
+out_dir = root_dir
 # =============================================================================
 
 # Find all .txt files in the root directory

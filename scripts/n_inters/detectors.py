@@ -75,7 +75,7 @@ class GetContactsDetector(Detector):
         Args:
             line: string with the line to be processed
         """
-        pair_line = ''.join([x for x in line.split("\t")[-2:]]).strip()
+        pair_line = ''.join([x for x in line.split("\t")[2:4]]).strip()
         self.dejavu.add(pair_line)
         self.n_inters += 1
         self.n_pairs = len(self.dejavu)
@@ -139,27 +139,47 @@ ignores = {'plif': ('ligand',),
            'gc': ('#',),
            'mdlr': ('A', 'U', 'T', 'I', 'L', 'T', ' ', ',', '\n')}
 
-files = {'T1': {'plif': None,
-                'imap': None,
-                'gc': None},
-         'T2': {'plif': None,
-                'imap': None,
-                'gc': None},
-         'T3': {'plif': None,
-                'imap': None,
-                'gc': None},
-         'T4': {'plif': None,
-                'imap': None,
-                'gc': None}
-         }
+traj_results = {
+    'nucleosome': {
+        'plif': '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/prolif/ncp-OCS-nosalt/nucleic-protein/interacciones.csv',
+        'imap': '/home/rglez/RoyHub/intermap/tests/imaps/prot-nuc/8oxoGA2_1_InterMap_full.csv',
+        'gc': '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/getContacts/ncp-OCS-nosalt/nucleic-protein/results.tsv',
+        'mdlr': None},
 
+    'T2': {
+        'plif': None,
+        'imap': None,
+        'gc': None,
+        'mdlr': None},
+
+    'T3': {
+        'plif': None,
+        'imap': None,
+        'gc': None,
+        'mdlr': None},
+
+    'T4': {
+        'plif': None,
+        'imap': None,
+        'gc': None,
+        'mdlr': None},
+}
+
+# =============================================================================
+# Flow
+# =============================================================================
 counts = rd()
-for traj in files.keys():
-    for soft in files[traj].keys():
-        if files[traj][soft] is not None:
-            counts[traj][soft] = files[traj][soft]
-        else:
-            counts[traj][soft] = 0
+for traj_label in traj_results.keys():
+    for soft_case in traj_results[traj_label].keys():
+        if traj_results[traj_label][soft_case] is not None:
+            detector = detectors[soft_case]
+            ignores_ = ignores[soft_case]
+            inters_file = traj_results[traj_label][soft_case]
+
+            self = detector(inters_file, ignores_)
+            n_inters, n_pairs = self.detect()
+            counts[traj_label][soft_case]['n_inters'] = n_inters
+            counts[traj_label][soft_case]['n_pairs'] = n_pairs
 
 # =============================================================================
 # imap
@@ -171,7 +191,7 @@ for traj in files.keys():
 # =============================================================================
 # getContacts
 # =============================================================================
-# gc_tsv = '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/getContacts/1kx5sno_dry/protein-protein/results.tsv'
+# gc_tsv = '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/getContacts/ncp-OCS-nosalt/nucleic-protein/results.tsv'
 # self = GetContactsDetector(gc_tsv, ('#',))
 # n_inters, n_pairs = self.detect()
 
