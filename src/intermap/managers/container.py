@@ -153,7 +153,7 @@ class ContainerManager:
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
-        self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
+        self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
 
         # Detect water bridges ?
         self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
@@ -166,7 +166,9 @@ class ContainerManager:
             else:
                 to_assign = transform_wb(ijfs)
             for key, value in to_assign.items():
-                self.dict[key][value.tolist()] = True
+                decoded = bu.sc_decode(self.dict[key])
+                decoded[value.tolist()] = True
+                self.dict[key] = bu.sc_encode(decoded)
 
     def generate_lines(self):
 
