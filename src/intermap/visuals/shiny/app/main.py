@@ -2,7 +2,9 @@
 Main application file for InterMap Visualizations.
 Integrates UI components with server-side logic.
 """
-# todo: Refactor imports block
+# todo: refactor imports
+#
+
 import os
 
 import numpy as np
@@ -18,7 +20,6 @@ from .components.ui import app_ui
 from .css import all_interactions_colors, ERROR_MESSAGES
 from .utils.helpers import (find_topology_file, generate_interaction_choices,
                             validate_mda_selection)
-
 
 
 # =============================================================================
@@ -43,9 +44,9 @@ def filter_dataframe(df, search_term):
     search_term = search_term.upper()
 
     mask = (
-            df["sel1_atom"].str.contains(search_term,
+            df["sel1"].str.contains(search_term,
                                          case=False, na=False)
-            | df["sel2_atom"].str.contains(search_term,
+            | df["sel2"].str.contains(search_term,
                                            case=False, na=False)
             | df["interaction_name"].str.contains(search_term,
                                                   case=False, na=False)
@@ -280,12 +281,12 @@ def server(input, output, session):
                 else:
                     # Normal CSV reading
                     try:
-                        df = pd.read_csv(csv_path, sep=None, engine="python")
+                        df = pd.read_csv(csv_path, skiprows=1, sep=None, engine="python")
                     except:
                         try:
-                            df = pd.read_csv(csv_path, encoding="utf-8")
+                            df = pd.read_csv(csv_path, skiprows=1, encoding="utf-8")
                         except UnicodeDecodeError:
-                            df = pd.read_csv(csv_path, encoding="latin-1")
+                            df = pd.read_csv(csv_path, skiprows=1, encoding="latin-1")
                         except Exception as e:
                             print(f"Error reading file: {str(e)}")
                             raise
@@ -293,8 +294,8 @@ def server(input, output, session):
                 # Clean names and verify required column
                 df.columns = df.columns.str.strip()
                 required_columns = [
-                    "sel1_atom",
-                    "sel2_atom",
+                    "sel1",
+                    "sel2",
                     "interaction_name",
                     "prevalence",
                     "timeseries",
@@ -579,4 +580,3 @@ def server(input, output, session):
 
 # Create the Shiny app instance
 app = App(app_ui, server)
-

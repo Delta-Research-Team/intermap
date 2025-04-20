@@ -1,21 +1,25 @@
 """
 User interface components for the InterMap Visualizations app.
-
 """
-
-from shiny import ui
 from screeninfo import get_monitors
+from shiny import ui
 
 from ..css import CSS_STYLES
 from ..utils.helpers import get_image_base64
-from pathlib import Path
-
-
-# todo: Change absolute path @l142
 
 for m in get_monitors():
     personal_width = m.width
     personal_height = m.height
+from os.path import dirname, join, abspath
+
+
+current_dir = dirname(abspath(__file__))
+app_dir = dirname(current_dir)
+proj_dir = dirname(app_dir)
+
+logo_path = join(proj_dir, 'statics', 'image', 'Untitled.png')
+favicon_path = join(proj_dir, 'statics', 'image', 'favicon-32x32.png')
+
 
 def create_file_input_section():
     """Create the file input section with topology indicator."""
@@ -128,9 +132,6 @@ def create_filters_section():
         )
     )
 
-def get_image_path():
-    """Get absolute path for static image regardless of OS."""
-    return str(Path(__file__).resolve().parent / 'static' / 'image' / 'Untitled.png')
 
 def create_welcome_section():
     """Create the welcome section of the app."""
@@ -145,9 +146,9 @@ def create_welcome_section():
                 {"class": "welcome-subtitle", "style": "font-style: italic;"})
         ),
         ui.img(
-            {"src": get_image_base64(get_image_path()),
-                "class": "welcome-image",
-                "alt": "InterMap Logo"}
+            {"src": get_image_base64(logo_path),
+             "class": "welcome-image",
+             "alt": "InterMap Logo"}
         )
     )
 
@@ -216,13 +217,18 @@ def create_app_ui():
     return ui.page_fluid(
         # Head section with styles and scripts
         ui.tags.head(
+            ui.tags.title("InterMap Visualizations"),
+            ui.tags.link(
+                rel="icon",
+                type="image/png",
+                href=favicon_path
+            ),
             ui.tags.link(
                 rel="stylesheet",
                 href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
             ),
             ui.tags.script(src="https://cdn.plot.ly/plotly-latest.min.js"),
             ui.tags.style("\n".join(CSS_STYLES.values())),
-            # Add custom JavaScript
             ui.tags.script("""
                 window.Shiny.addCustomMessageHandler('updateTopologyIndicator', function(message) {
                     const indicator = document.getElementById('topology-indicator');

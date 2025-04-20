@@ -115,4 +115,3 @@ def validate_mda_selection(selection):
         return False, "The selection does not contain valid MDAnalysis keywords."
 
     return True, ""
-

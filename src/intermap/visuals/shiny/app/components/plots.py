@@ -6,11 +6,10 @@ Plotting components for the InterMap Visualizations app.
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from ..css import all_interactions_colors
-
 search_state = None
-
 
 def get_search_state():
     """
@@ -33,6 +32,7 @@ def initialize_search_state(state):
     """
     global search_state
     search_state = state
+
 
 
 def create_plot(df, width, height, selected_interactions, prevalence_threshold,
@@ -65,7 +65,7 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
         # Weak interactions
         'Hydrophobic': 14,
         'VdWContact': 15,
-        'CloseContacts': 16
+        'CloseContact': 16
     }
 
     # Optimizar el filtrado inicial usando NumPy
@@ -76,9 +76,9 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = (df_filtered['sel1_atom'].str.contains(search_term,
+        mask = (df_filtered['sel1'].str.contains(search_term,
                                                       case=False) |
-                df_filtered['sel2_atom'].str.contains(search_term, case=False))
+                df_filtered['sel2'].str.contains(search_term, case=False))
         df_filtered = df_filtered[mask]
 
     if df_filtered.empty:
@@ -88,24 +88,24 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     df_filtered['priority'] = df_filtered['interaction_name'].map(
         interaction_priority)
     priority_df = (df_filtered.sort_values(
-        ['sel1_atom', 'sel2_atom', 'priority', 'prevalence'],
+        ['sel1', 'sel2', 'priority', 'prevalence'],
         ascending=[True, True, True, False])
-                   .groupby(['sel1_atom', 'sel2_atom'])
+                   .groupby(['sel1', 'sel2'])
                    .first()
                    .reset_index())
 
     # Pivot de interacciones y permanencias - optimizado
     pivot_interaction = pd.pivot_table(priority_df,
                                        values='interaction_name',
-                                       index='sel1_atom',
-                                       columns='sel2_atom',
+                                       index='sel1',
+                                       columns='sel2',
                                        aggfunc='first',
                                        fill_value='')
 
     pivot_prevalence = pd.pivot_table(priority_df,
                                       values='prevalence',
-                                      index='sel1_atom',
-                                      columns='sel2_atom',
+                                      index='sel1',
+                                      columns='sel2',
                                       aggfunc='first',
                                       fill_value="")
 
@@ -274,7 +274,7 @@ def create_ligand_interactions_plot(df, width, height,
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = df_filtered['sel1_atom'].str.contains(search_term, case=False)
+        mask = df_filtered['sel1'].str.contains(search_term, case=False)
         if mask.any():
             df_filtered = df_filtered[mask]
         else:
@@ -290,7 +290,7 @@ def create_ligand_interactions_plot(df, width, height,
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
         -df_filtered['prevalence'].to_numpy(),
-        df_filtered['sel1_atom'].to_numpy()
+        df_filtered['sel1'].to_numpy()
     ))
     receptor_interactions = df_filtered.iloc[sort_idx]
 
@@ -300,12 +300,12 @@ def create_ligand_interactions_plot(df, width, height,
 
     # Procesar datos en lotes
     batch_size = 250
-    unique_proteins = receptor_interactions['sel1_atom'].unique()
+    unique_proteins = receptor_interactions['sel1'].unique()
 
     for i in range(0, len(unique_proteins), batch_size):
         batch_proteins = unique_proteins[i:i + batch_size]
         batch_data = receptor_interactions[
-            receptor_interactions['sel1_atom'].isin(batch_proteins)]
+            receptor_interactions['sel1'].isin(batch_proteins)]
 
         # Procesar cada proteína en el lote
         for _, row in batch_data.iterrows():
@@ -318,7 +318,7 @@ def create_ligand_interactions_plot(df, width, height,
             # Añadir barra
             fig.add_trace(go.Bar(
                 name=row['interaction_name'],
-                x=[row['sel1_atom']],
+                x=[row['sel1']],
                 y=[row['prevalence']],
                 marker=dict(
                     color=solid_color,
@@ -332,7 +332,7 @@ def create_ligand_interactions_plot(df, width, height,
                         "<b>Selection_1:</b> %{x}<br>"
                         "<b>Interaction:</b> " + row[
                             'interaction_name'] + "<br>" +
-                        "<b>Selection_2:</b> " + row['sel2_atom'] + "<br>" +
+                        "<b>Selection_2:</b> " + row['sel2'] + "<br>" +
                         "<b>Prevalence:</b> " + f"{row['prevalence']:.1f}%" +
                         "<extra></extra>"
                 )
@@ -415,7 +415,7 @@ def create_receptor_interactions_plot(df, width, height,
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        mask = df_filtered['sel2_atom'].str.contains(search_term, case=False)
+        mask = df_filtered['sel2'].str.contains(search_term, case=False)
         if mask.any():
             df_filtered = df_filtered[mask]
         else:
@@ -431,7 +431,7 @@ def create_receptor_interactions_plot(df, width, height,
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
         -df_filtered['prevalence'].to_numpy(),
-        df_filtered['sel2_atom'].to_numpy()
+        df_filtered['sel2'].to_numpy()
     ))
     receptor_interactions = df_filtered.iloc[sort_idx]
 
@@ -441,12 +441,12 @@ def create_receptor_interactions_plot(df, width, height,
 
     # Procesar datos en lotes
     batch_size = 250
-    unique_proteins = receptor_interactions['sel2_atom'].unique()
+    unique_proteins = receptor_interactions['sel2'].unique()
 
     for i in range(0, len(unique_proteins), batch_size):
         batch_proteins = unique_proteins[i:i + batch_size]
         batch_data = receptor_interactions[
-            receptor_interactions['sel2_atom'].isin(batch_proteins)]
+            receptor_interactions['sel2'].isin(batch_proteins)]
 
         # Procesar cada proteína en el lote
         for _, row in batch_data.iterrows():
@@ -459,7 +459,7 @@ def create_receptor_interactions_plot(df, width, height,
             # Añadir barra
             fig.add_trace(go.Bar(
                 name=row['interaction_name'],
-                x=[row['sel2_atom']],
+                x=[row['sel2']],
                 y=[row['prevalence']],
                 marker=dict(
                     color=solid_color,
@@ -473,7 +473,7 @@ def create_receptor_interactions_plot(df, width, height,
                         "<b>Selection_2:</b> %{x}<br>" +
                         "<b>Interaction:</b> " + row[
                             'interaction_name'] + "<br>" +
-                        "<b>Selection_1:</b> " + row['sel1_atom'] + "<br>" +
+                        "<b>Selection_1:</b> " + row['sel1'] + "<br>" +
                         "<b>Prevalence:</b> " + f"{row['prevalence']:.1f}%" +
                         "<extra></extra>"
                 )
@@ -563,9 +563,9 @@ def create_interactions_over_time_plot(df, width, height,
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        search_mask = (df_filtered['sel1_atom'].str.contains(search_term,
+        search_mask = (df_filtered['sel1'].str.contains(search_term,
                                                              case=False) |
-                       df_filtered['sel2_atom'].str.contains(search_term,
+                       df_filtered['sel2'].str.contains(search_term,
                                                              case=False))
         df_filtered = df_filtered[search_mask]
 
@@ -573,8 +573,8 @@ def create_interactions_over_time_plot(df, width, height,
         return None
 
     # Crear pares de selecciones
-    df_filtered['selection_pair'] = df_filtered['sel1_atom'] + ' - ' + \
-                                    df_filtered['sel2_atom']
+    df_filtered['selection_pair'] = df_filtered['sel1'] + ' - ' + \
+                                    df_filtered['sel2']
 
     # Procesar series de tiempo
     frame_interactions = []
@@ -700,9 +700,9 @@ def create_interactions_over_time_plot(df, width, height,
     search_status = get_search_state()
     if search_status['active'] and search_status['search_term']:
         search_term = search_status['search_term'].upper()
-        search_mask = (df_filtered['sel1_atom'].str.contains(search_term,
+        search_mask = (df_filtered['sel1'].str.contains(search_term,
                                                              case=False) |
-                       df_filtered['sel2_atom'].str.contains(search_term,
+                       df_filtered['sel2'].str.contains(search_term,
                                                              case=False))
         df_filtered = df_filtered[search_mask]
 

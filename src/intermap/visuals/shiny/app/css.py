@@ -4,7 +4,6 @@ Contains color schemes, plot settings, and UI styles.
 
 """
 
-
 # Color scheme for different interaction types
 """
 all_interactions_colors = {
@@ -12,7 +11,7 @@ all_interactions_colors = {
     'HBAcceptor': '#377EB8',
     'Hydrophobic': '#4DAF4A',
     'VdWContact': '#FF7F00',
-    'CloseContacts': '#984EA3',
+    'CloseContact': '#984EA3',
     'PiStacking': '#F781BF',
     'PiCation': '#A65628',
     'CationPi': '#999999',
@@ -52,7 +51,7 @@ all_interactions_colors = {
 
     # Interacciones débiles - Tonos suaves y grises
     'VdWContact': '#D3D3D3',  # Gris claro - fuerzas de Van der Waals
-    'CloseContacts': '#E6E6E6',  # Gris muy claro - contactos cercanos
+    'CloseContact': '#E6E6E6',  # Gris muy claro - contactos cercanos
     'Hydrophobic': '#90A4AE',  # Gris azulado - interacciones hidrofóbicas
 
     # Interacciones de halógeno - Verde azulados complementarios
@@ -501,4 +500,3 @@ CSS_STYLES = {
         """
 
 }
-
