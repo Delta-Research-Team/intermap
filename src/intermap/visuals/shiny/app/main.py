@@ -50,6 +50,10 @@ def filter_dataframe(df, search_term):
                                            case=False, na=False)
             | df["interaction_name"].str.contains(search_term,
                                                   case=False, na=False)
+            | df["note1"].str.contains(search_term,
+                                            case=False, na=False)
+            | df["note2"].str.contains(search_term,
+                                            case=False, na=False)
     )
 
     return df[mask]
@@ -79,6 +83,53 @@ def process_timeseries_numpy(df):
         matrix, columns=[str(i) for i in range(num_frames)], index=df.index
     )
     return pd.concat([df, time_df], axis=1)
+
+
+def generate_annotation_choices(df):
+    """
+    Generate choices for annotation checkboxes from note1 and note2 columns.
+    Excludes empty or NaN values.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing note1 and note2 columns
+
+    Returns:
+        list: Sorted list of unique annotations from both columns, excluding empty values
+    """
+    if df is None:
+        return []
+
+    # Filtrar valores vacíos y NaN de ambas columnas antes de obtener valores únicos
+    note1_values = set(
+        df['note1'][df['note1'].notna() & (df['note1'] != '')].unique())
+    note2_values = set(
+        df['note2'][df['note2'].notna() & (df['note2'] != '')].unique())
+
+    # Unir los conjuntos y ordenar
+    all_notes = sorted(note1_values.union(note2_values))
+
+    return all_notes
+
+
+def filter_by_annotations(df, selected_annotations):
+    """
+    Filter DataFrame based on selected annotations.
+
+    Args:
+        df (pd.DataFrame): DataFrame to filter
+        selected_annotations (list): List of selected annotation values
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame
+    """
+    if not selected_annotations:
+        return df
+
+    mask = (
+        df['note1'].isin(selected_annotations) |
+        df['note2'].isin(selected_annotations)
+    )
+    return df[mask]
 
 
 # =============================================================================
@@ -233,6 +284,7 @@ def server(input, output, session):
         input.plot_width,
         input.plot_height,
         input.selected_interactions,
+        input.selected_annotations,
         input.prevalence_threshold,
         input.show_prevalence,
         input.search_button,
@@ -291,24 +343,6 @@ def server(input, output, session):
                             print(f"Error reading file: {str(e)}")
                             raise
 
-                # Clean names and verify required column
-                df.columns = df.columns.str.strip()
-                required_columns = [
-                    "sel1",
-                    "sel2",
-                    "interaction_name",
-                    "prevalence",
-                    "timeseries",
-                ]
-                missing_columns = [
-                    col for col in required_columns if col not in df.columns
-                ]
-                if missing_columns:
-                    raise ValueError(
-                        f"Missing required columns: "
-                        f"{', '.join(missing_columns)}"
-                    )
-
                 # Process timeseries
                 df = process_timeseries_numpy(df)
                 data_store.set({"df": df})
@@ -324,6 +358,14 @@ def server(input, output, session):
                         "No matches found for the search term.",
                         style="color: red; font-family: Roboto;",
                     )
+
+            # Apply annotations filter
+            df = filter_by_annotations(df, input.selected_annotations())
+            if df.empty:
+                return ui.p(
+                    "No data available for selected annotations.",
+                    style="color: red; font-family: Roboto;",
+                )
 
             fig = create_plot(
                 df,
@@ -373,6 +415,7 @@ def server(input, output, session):
         input.plot_width,
         input.plot_height,
         input.selected_interactions,
+        input.selected_annotations,
         input.prevalence_threshold,
         input.search_button,
         input.show_plots,
@@ -396,6 +439,11 @@ def server(input, output, session):
                 df = filter_dataframe(df, search_term)
                 if df.empty:
                     return ui.p("No matches found for the search term.")
+
+            # Apply annotations filter
+            df = filter_by_annotations(df, input.selected_annotations())
+            if df.empty:
+                return ui.p("No data available for selected annotations.")
 
             # Create ligand interaction graph
             fig = create_ligand_interactions_plot(
@@ -439,6 +487,7 @@ def server(input, output, session):
         input.plot_width,
         input.plot_height,
         input.selected_interactions,
+        input.selected_annotations,
         input.prevalence_threshold,
         input.search_button,
         input.show_plots,
@@ -462,6 +511,11 @@ def server(input, output, session):
                 df = filter_dataframe(df, search_term)
                 if df.empty:
                     return ui.p("No matches found for the search term.")
+
+            # Apply annotations filter
+            df = filter_by_annotations(df, input.selected_annotations())
+            if df.empty:
+                return ui.p("No data available for selected annotations.")
 
             # Create receptor interaction graph
             fig = create_receptor_interactions_plot(
@@ -509,6 +563,7 @@ def server(input, output, session):
         input.plot_width,
         input.plot_height,
         input.selected_interactions,
+        input.selected_annotations,
         input.prevalence_threshold,
         input.search_button,
         input.show_plots,
@@ -531,6 +586,11 @@ def server(input, output, session):
                 df = filter_dataframe(df, search_term)
                 if df.empty:
                     return ui.p("No matches found for the search term.")
+
+            # Apply annotations filter
+            df = filter_by_annotations(df, input.selected_annotations())
+            if df.empty:
+                return ui.p("No data available for selected annotations.")
 
             fig = create_interactions_over_time_plot(
                 df,
@@ -576,6 +636,22 @@ def server(input, output, session):
             "",
             choices=choices,
             selected=list(all_interactions_colors.keys()), )
+
+    # =========================================================================
+    # Render the Annotation Checkboxes
+    # =========================================================================
+    @output
+    @render.ui
+    def annotation_checkboxes():
+        """Render the annotation checkboxes."""
+        df = data_store.get()["df"]
+        choices = generate_annotation_choices(df)
+        return ui.input_checkbox_group(
+            "selected_annotations",
+            "",
+            choices=choices,
+            selected=choices,  # Por defecto, todas las anotaciones seleccionadas
+        )
 
 
 # Create the Shiny app instance

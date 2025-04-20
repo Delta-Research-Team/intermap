@@ -59,9 +59,13 @@ def create_filters_section():
         3,
         ui.div(
             {"class": "interaction-filter"},
-            # File Input Section
+
+
+            # Panel 1
+
             ui.h4("Data Input", style="font-family: Roboto;"),
             create_file_input_section(),
+
             ui.input_action_button(
                 "show_plots",
                 "Show",
@@ -70,22 +74,63 @@ def create_filters_section():
             ),
             ui.hr(),
 
-            # Prevalence Filter
-            ui.h4("Prevalence Filter"),
-            ui.input_slider(
-                "prevalence_threshold",
-                "",
-                min=0,
-                max=100,
-                value=30,
-                step=1
+            # Panel 2 and 3
+            ui.layout_columns(
+                ui.h4("Interactions"),
+                ui.h4("Annotations"),
             ),
-            ui.input_switch(
-                "show_prevalence",
-                "Show Prevalence Values",
-                value=False
+            ui.layout_columns(
+                ui.div(
+                    {"class": "checkbox-group"},
+                    ui.output_ui("interaction_checkboxes")
+                ),
+                ui.div(
+                    {"class": "checkbox-group"},
+                    ui.output_ui("annotation_checkboxes")
+                ),
             ),
             ui.hr(),
+
+
+
+
+            # Panel 5
+            ui.h4("Prevalence"),
+            ui.layout_columns(
+                ui.input_slider(
+                    "prevalence_threshold",
+                    "",
+                    min=0,
+                    max=100,
+                    value=30,
+                    step=1
+                ),
+                ui.input_switch(
+                    "show_prevalence",
+                    "Show",
+                    value=False
+                ),
+                col_widths=[9, 3]
+            ),
+            ui.hr(),
+
+            # Panel 5
+            #ui.h4("Prevalence Filter"),
+            #ui.input_slider(
+            #    "prevalence_threshold",
+            #    "",
+            #    min=0,
+            #    max=100,
+            #    value=30,
+            #    step=1
+            #),
+            #ui.input_switch(
+            #    "show_prevalence",
+            #    "Show Prevalence Values",
+            #    value=False
+            #),
+            #ui.hr(),
+
 
             # Residue Filter
             ui.h4("Filter"),
@@ -106,15 +151,8 @@ def create_filters_section():
             ui.output_ui("residue_not_found"),
             ui.hr(),
 
-            # Interaction Filter
-            ui.h4("Interaction Type Filter"),
-            ui.div(
-                {"class": "checkbox-group"},
-                ui.output_ui("interaction_checkboxes")
-            ),
-            ui.hr(),
 
-            # Plot Settings
+            # Panel 6
             ui.h4("Plot Settings"),
             ui.layout_columns(
                 ui.input_numeric(
@@ -265,7 +303,7 @@ def create_footer():
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #4051b5ff;
+                background-color: black;
                 padding: 10px 20px;
                 border-top: 1px solid #dee2e6;
                 display: flex;
