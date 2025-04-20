@@ -160,6 +160,13 @@ class ContainerManager:
 
     # @profile
     def fill(self, ijfs, inters):
+        """
+        Fill the dictionary with the interactions
+
+        Args:
+            ijfs: np.ndarray of interacting pairs ij and their frames
+            inters: np.ndarray of the interactions
+        """
         if ijfs.size > 0:
             if not isinstance(inters, str):
                 to_assign = transform(ijfs, inters)
@@ -171,7 +178,15 @@ class ContainerManager:
                 self.dict[key] = bu.sc_encode(decoded)
 
     def generate_lines(self):
+        """
+        Generate the lines to be written in the csv file
 
+        Yields:
+            full_line: str
+                The full line to be written in the full csv file
+            short_line: str
+                The short line to be written in the short csv file
+        """
         for key in self.dict:
             if len(key) == 3:
                 s1, s2, inter = key
@@ -187,7 +202,7 @@ class ContainerManager:
             s2_name = self.names[s2]
             s2_note = self.anotations.get(s2, '')
             s3_name = self.names[wat] if wat else ''
-            time = self.dict[key]
+            time = bu.sc_decode(self.dict[key])
             prevalence = round(time.count() / self.n_frames * 100, 2)
 
             # Yield each line as a generator
@@ -215,6 +230,15 @@ class ContainerManager:
                 file2.write(short_line)
 
     def get_inter_names(self):
+        """
+        Get the interaction names and the indices of the hydrogen bonds
+
+        Returns:
+            inter_names: list
+                The list of interaction names
+            hb_idx: np.ndarray
+                The indices of the hydrogen bonds
+        """
         selected_others = self.cuts.selected_others
         selected_aro = self.cuts.selected_aro
         inter_names = np.asarray([x for x in selected_aro if x != 'None'] +
@@ -271,9 +295,3 @@ class ContainerManager:
     #             file.write(f'{u},{v},{r1_sel},{r2_sel},{source_count},{target_count},{data["weight"]}\n')
     #
     #     return G
-
-    def pack(self):
-        """
-        Destructive packing of the dictionary
-        """
-        self.dict = {key: bu.sc_encode(self.dict[key]) for key in self.dict}
