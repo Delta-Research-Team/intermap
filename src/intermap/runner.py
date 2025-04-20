@@ -39,7 +39,7 @@ def run(mode='production'):
     args = Namespace(**config.config_args)
 
     # >>>> Run the InterMap workflow
-    return workflow(args)
+    workflow(args)
 
 
 def workflow(args):
@@ -164,7 +164,6 @@ def workflow(args):
     csv_path1 = join(args.output_dir, f'{out_name1}.csv')
     csv_path2 = join(args.output_dir, f'{out_name2}.csv')
     container.save(csv_path1, csv_path2)
-    packed = container.pack()
 
     # %%=======================================================================
     # 8. Normal termination
@@ -172,7 +171,6 @@ def workflow(args):
     tot = round(time.time() - start_time, 2)
     ldict = len(container.dict)
     pair_type = 'atom' if atomic else 'residue'
-    print('\n\n')
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
         f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
@@ -180,7 +178,7 @@ def workflow(args):
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
 
-    return packed
+    return container.dict
 
 
 # =============================================================================
