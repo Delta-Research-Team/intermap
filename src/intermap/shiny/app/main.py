@@ -8,14 +8,14 @@ import numpy as np
 import pandas as pd
 from shiny import App, reactive, render, ui
 
-from .components.plots import (create_interactions_over_time_plot,
-                               create_ligand_interactions_plot, create_plot,
-                               create_receptor_interactions_plot)
-from .components.sele_shiny import CSVFilter
-from .components.ui import app_ui
+from intermap.shiny.app.plots import (create_interactions_over_time_plot,
+                                      create_ligand_interactions_plot, create_plot,
+                                      create_receptor_interactions_plot)
+from intermap.shiny.app.sele_shiny import CSVFilter
+from intermap.shiny.app.ui import app_ui
 from .css import all_interactions_colors, ERROR_MESSAGES
-from .utils.helpers import (find_topology_file, generate_interaction_choices,
-                            validate_mda_selection)
+from intermap.shiny.app.helpers import (find_topology_file, generate_interaction_choices,
+                                        validate_mda_selection)
 
 
 # =============================================================================

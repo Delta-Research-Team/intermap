@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ..css import all_interactions_colors
+from intermap.shiny.app.css import all_interactions_colors
 search_state = None
 
 def get_search_state():
