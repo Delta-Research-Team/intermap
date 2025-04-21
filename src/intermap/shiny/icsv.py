@@ -113,10 +113,12 @@ class CSVFilter:
         """
         notes2df = defaultdict(set)
         for x in ['note1', 'note2']:
-            notes = self.master[x].str.strip()
-            for i, y in enumerate(notes):
-                if not pd.isna(y):
-                    notes2df[y].add(i)
+            sub_df = self.master[x][self.master[x].isnull() == False]
+            if not sub_df.empty:
+                notes = sub_df.str.strip()
+                for i, y in enumerate(notes):
+                    if not pd.isna(y):
+                        notes2df[y].add(i)
         return notes2df
 
     def inters2df(self):
@@ -222,7 +224,7 @@ class CSVFilter:
 # =============================================================================
 #
 # =============================================================================
-full = '/home/rglez/Dropbox/Desktop/DrHU-Tails-8k/DrHU-Tails-8k-atoms/dna-prot_InterMap_full.csv'
+full = '/home/rglez/Dropbox/Desktop/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
 short = '/home/rglez/Dropbox/Desktop/DrHU-Tails-8k/DrHU-Tails-8k-atoms/dna-prot_InterMap_short.csv'
 
 self = CSVFilter(full)
