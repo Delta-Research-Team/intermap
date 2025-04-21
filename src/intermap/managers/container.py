@@ -198,9 +198,9 @@ class ContainerManager:
                 raise ValueError('The key must have 3 or 4 elements')
 
             s1_name = self.names[s1]
-            s1_note = self.anotations.get(s1, '')
+            s1_note = self.anotations.get(s1, 'Unknown')
             s2_name = self.names[s2]
-            s2_note = self.anotations.get(s2, '')
+            s2_note = self.anotations.get(s2, 'Unknown')
             s3_name = self.names[wat] if wat else ''
             time = bu.sc_decode(self.dict[key])
             prevalence = round(time.count() / self.n_frames * 100, 2)

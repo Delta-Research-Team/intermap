@@ -711,8 +711,7 @@ class IndexManager:
             for i, x in enumerate(self.sel_idx)}
 
         resid_names = {resindex[i]: f"{resnames[i]}_{resids[i]}_{resindex[i]}"
-                       for i, x in
-                       enumerate(self.sel_idx)}
+                       for i, x in enumerate(self.sel_idx)}
 
         return resindex, resid_names, atom_names, res_annots, at_annots
 
