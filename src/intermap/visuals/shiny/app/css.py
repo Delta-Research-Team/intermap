@@ -399,15 +399,15 @@ CSS_STYLES = {
     }
     """,
 
-    'search_container': """
-    .search-container {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-        font-family: 'Roboto', sans-serif;
-    }
-    """,
+    #'search_container': """
+    #.search-container {
+    #    display: flex;
+    #    align-items: center;
+    #    gap: 10px;
+    #    margin-bottom: 10px;
+    #    font-family: 'Roboto', sans-serif;
+    #}
+    #""",
 
     'plot_container': """
     .plot-container {

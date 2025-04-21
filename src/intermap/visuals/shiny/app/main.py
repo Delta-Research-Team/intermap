@@ -2,9 +2,6 @@
 Main application file for InterMap Visualizations.
 Integrates UI components with server-side logic.
 """
-# todo: refactor imports
-#
-
 import os
 
 import numpy as np
@@ -13,8 +10,7 @@ from shiny import App, reactive, render, ui
 
 from .components.plots import (create_interactions_over_time_plot,
                                create_ligand_interactions_plot, create_plot,
-                               create_receptor_interactions_plot,
-                               initialize_search_state)
+                               create_receptor_interactions_plot)
 from .components.sele_shiny import CSVFilter
 from .components.ui import app_ui
 from .css import all_interactions_colors, ERROR_MESSAGES
@@ -25,38 +21,6 @@ from .utils.helpers import (find_topology_file, generate_interaction_choices,
 # =============================================================================
 # Data Frame Processing
 # =============================================================================
-
-
-def filter_dataframe(df, search_term):
-    """
-    Filter DataFrame based on search term across specified columns.
-
-    Args:
-        df (pd.DataFrame): DataFrame to filter
-        search_term (str): Term to search for
-
-    Returns:
-        pd.DataFrame: Filtered DataFrame
-    """
-    if not search_term:
-        return df
-
-    search_term = search_term.upper()
-
-    mask = (
-            df["sel1"].str.contains(search_term,
-                                         case=False, na=False)
-            | df["sel2"].str.contains(search_term,
-                                           case=False, na=False)
-            | df["interaction_name"].str.contains(search_term,
-                                                  case=False, na=False)
-            | df["note1"].str.contains(search_term,
-                                            case=False, na=False)
-            | df["note2"].str.contains(search_term,
-                                            case=False, na=False)
-    )
-
-    return df[mask]
 
 
 def process_timeseries_numpy(df):
@@ -100,10 +64,8 @@ def generate_annotation_choices(df):
         return []
 
     # Filtrar valores vacíos y NaN de ambas columnas antes de obtener valores únicos
-    note1_values = set(
-        df['note1'][df['note1'].notna() & (df['note1'] != '')].unique())
-    note2_values = set(
-        df['note2'][df['note2'].notna() & (df['note2'] != '')].unique())
+    note1_values = set(df['note1'][df['note1'].notna() & (df['note1'] != '')].unique())
+    note2_values = set(df['note2'][df['note2'].notna() & (df['note2'] != '')].unique())
 
     # Unir los conjuntos y ordenar
     all_notes = sorted(note1_values.union(note2_values))
@@ -145,12 +107,7 @@ def server(input, output, session):
     # =========================================================================
 
     data_store = reactive.Value({"df": None})
-    search_state = reactive.Value({"search_term": "", "active": False})
-    show_state = reactive.Value(False)
     topology_state = reactive.Value({"has_topology": False, "path": None})
-
-    # Initialize search state
-    initialize_search_state(search_state)
 
     @reactive.Effect
     def _():
@@ -200,8 +157,7 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.file)
     def validate_file():
-        """Validate file and enable/disable show button."""
-
+        """Validate file format."""
         file_infos = input.file()
         if file_infos:
             file_name = file_infos[0]["name"]
@@ -209,70 +165,9 @@ def server(input, output, session):
                 ui.notification_show(
                     ERROR_MESSAGES["invalid_file"],
                     type="error",
-                    style="font-family: Roboto; font-style: italic;", )
-                ui.update_action_button("show_plots", disabled=True)
-                return
-            ui.update_action_button("show_plots", disabled=False)
-        else:
-            ui.update_action_button("show_plots", disabled=True)
-
-        # Reset the plot state
-        show_state.set(False)
-
-    @reactive.Effect
-    @reactive.event(input.show_plots)
-    def handle_show():
-        """Handle show button clicks and validate
-        MDAnalysis selection if present.
-        """
-        # Check for topology file and MDAnalysis selection
-        if topology_state.get()["has_topology"] and input.mda_selection():
-            is_valid, error_msg = validate_mda_selection(input.mda_selection())
-            if not is_valid:
-                ui.notification_show(
-                    ERROR_MESSAGES["invalid_sele"].format(error_msg),
-                    type="error",
                     style="font-family: Roboto; font-style: italic;",
                 )
-
                 return
-
-        # Reset the display state without MDAnalysis selection.
-        show_state.set(True)
-
-    @reactive.Effect
-    @reactive.event(input.search_button)
-    def handle_search():
-        """Update search state when search button is clicked."""
-        search_state.set({"search_term": input.residue_filter(),
-                          "active": True})
-
-    # =========================================================================
-    # UI Outputs
-    # =========================================================================
-
-    @output
-    @render.ui
-    def residue_not_found():
-        """Show error message when residue is not found."""
-
-        # Check if there is an active search and if data is available.
-        if not search_state.get()["active"] or data_store.get()["df"] is None:
-            return ui.div()
-
-        # Obtain DataFrame and search term.
-        df = data_store.get()["df"]
-        search_term = search_state.get()["search_term"].upper()
-        if not search_term:
-            return ui.div()
-
-        # Filter DataFrame based on the search term.
-        filtered_df = filter_dataframe(df, search_term)
-
-        # If there are no results, display an error message.
-        if filtered_df.empty:
-            return ui.p("Not Found", style="color: red; margin-top: 5px;")
-        return ui.div()
 
     # =========================================================================
     # Render the Interaction Plot (first plot)
@@ -287,18 +182,12 @@ def server(input, output, session):
         input.selected_annotations,
         input.prevalence_threshold,
         input.show_prevalence,
-        input.search_button,
-        input.show_plots,
         input.mda_selection,
     )
     def interaction_plot():
         """
         Render the main interaction heatmap plot.
         """
-
-        if not show_state():
-            return None
-
         file_infos = input.file()
         if not file_infos:
             return ui.p(
@@ -348,16 +237,6 @@ def server(input, output, session):
                 data_store.set({"df": df})
             else:
                 df = data_store.get()["df"]
-
-            # Apply search filter if active
-            if search_state.get()["active"]:
-                search_term = search_state.get()["search_term"]
-                df = filter_dataframe(df, search_term)
-                if df.empty:
-                    return ui.p(
-                        "No matches found for the search term.",
-                        style="color: red; font-family: Roboto;",
-                    )
 
             # Apply annotations filter
             df = filter_by_annotations(df, input.selected_annotations())
@@ -417,15 +296,10 @@ def server(input, output, session):
         input.selected_interactions,
         input.selected_annotations,
         input.prevalence_threshold,
-        input.search_button,
-        input.show_plots,
     )
     def ligand_interactions_plot():
         """Render the ligand interactions plot.
         """
-        if not show_state():
-            return None
-
         # Obtain stored data
         data = data_store.get()
         if data["df"] is None:
@@ -433,12 +307,6 @@ def server(input, output, session):
 
         try:
             df = data["df"]
-            # Apply search filter if active
-            if search_state.get()["active"]:
-                search_term = search_state.get()["search_term"]
-                df = filter_dataframe(df, search_term)
-                if df.empty:
-                    return ui.p("No matches found for the search term.")
 
             # Apply annotations filter
             df = filter_by_annotations(df, input.selected_annotations())
@@ -489,15 +357,10 @@ def server(input, output, session):
         input.selected_interactions,
         input.selected_annotations,
         input.prevalence_threshold,
-        input.search_button,
-        input.show_plots,
     )
     def receptor_interactions_plot():
         """Render the receptor interactions plot.
         """
-        if not show_state():
-            return None
-
         # Obtain stored data
         data = data_store.get()
         if data["df"] is None:
@@ -505,12 +368,6 @@ def server(input, output, session):
 
         try:
             df = data["df"]
-            # Apply search filter if active
-            if search_state.get()["active"]:
-                search_term = search_state.get()["search_term"]
-                df = filter_dataframe(df, search_term)
-                if df.empty:
-                    return ui.p("No matches found for the search term.")
 
             # Apply annotations filter
             df = filter_by_annotations(df, input.selected_annotations())
@@ -565,14 +422,9 @@ def server(input, output, session):
         input.selected_interactions,
         input.selected_annotations,
         input.prevalence_threshold,
-        input.search_button,
-        input.show_plots,
     )
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
-        if not show_state():
-            return None
-
         # Obtain stored data
         data = data_store.get()
         if data["df"] is None:
@@ -580,12 +432,6 @@ def server(input, output, session):
 
         try:
             df = data["df"]
-            # Apply search filter if active
-            if search_state.get()["active"]:
-                search_term = search_state.get()["search_term"]
-                df = filter_dataframe(df, search_term)
-                if df.empty:
-                    return ui.p("No matches found for the search term.")
 
             # Apply annotations filter
             df = filter_by_annotations(df, input.selected_annotations())

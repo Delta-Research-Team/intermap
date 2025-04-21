@@ -2,8 +2,6 @@
 Entry point for the InterMap Visualizations app.
 Launches the application with the appropriate configuration.
 
-Current Date and Time (UTC): 2025-04-19 15:30:04
-Current User: fajardo01
 """
 
 import webbrowser
@@ -52,7 +50,7 @@ def create_app():
 
 def main():
     """Main function to run the application."""
-    port = 8006
+    port = 8001
 
     # Start browser in a new thread after a short delay
     threading.Timer(1.5, open_browser, args=[port]).start()

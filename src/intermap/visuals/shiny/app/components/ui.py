@@ -65,13 +65,6 @@ def create_filters_section():
 
             ui.h4("Data Input", style="font-family: Roboto;"),
             create_file_input_section(),
-
-            ui.input_action_button(
-                "show_plots",
-                "Show",
-                style="margin-top: 10px; width: 100%; font-family: Roboto;",
-                disabled=True
-            ),
             ui.hr(),
 
             # Panel 2 and 3
@@ -113,44 +106,6 @@ def create_filters_section():
                 col_widths=[9, 3]
             ),
             ui.hr(),
-
-            # Panel 5
-            #ui.h4("Prevalence Filter"),
-            #ui.input_slider(
-            #    "prevalence_threshold",
-            #    "",
-            #    min=0,
-            #    max=100,
-            #    value=30,
-            #    step=1
-            #),
-            #ui.input_switch(
-            #    "show_prevalence",
-            #    "Show Prevalence Values",
-            #    value=False
-            #),
-            #ui.hr(),
-
-
-            # Residue Filter
-            ui.h4("Filter"),
-            ui.div(
-                {"class": "search-container"},
-                ui.input_text(
-                    "residue_filter",
-                    "",
-                    placeholder="Enter residue name ...",
-                    width="100%"
-                ),
-                ui.input_action_button(
-                    "search_button",
-                    "Find",
-                    class_="search-button"
-                )
-            ),
-            ui.output_ui("residue_not_found"),
-            ui.hr(),
-
 
             # Panel 6
             ui.h4("Plot Settings"),
