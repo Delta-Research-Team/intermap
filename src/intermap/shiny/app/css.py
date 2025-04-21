@@ -281,27 +281,26 @@ CSS_STYLES = {
         border-color: #4051b5ff !important;
         box-shadow: 0 0 0 0.2rem #4051b5ff !important;
     }
-    """,
-    'welcome_section': """
-        .welcome-section {
-            display: flex;
-            flex-direction: row-reverse;
-            justify-content: space-between;
-            align-items: center;
-            margin: 0;
-            padding: 5px;
-            background: #4051b5ff;
-            width: 100vw;
-            font-family: 'Roboto', sans-serif;
-            color: #383747ff;
-            position: fixed;          /* Para fijar la barra */
-            top: 0;                  /* Fijar en la parte superior */
-            left: 0;                 /* Volver al posicionamiento original */
-            right: 0;                /* Volver al posicionamiento original */
-            margin-left: 0vw;
-            margin-right: 0vw;
-            z-index: 999;
-        }
+    
+    .welcome-section {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0;
+        padding: 5px;
+        background: #4051b5ff;
+        width: 100vw;
+        font-family: 'Roboto', sans-serif;
+        color: #383747ff;
+        position: fixed;          
+        top: 0;                  
+        left: 0;                 
+        right: 0;                
+        margin-left: 0vw;
+        margin-right: 0vw;
+        z-index: 999;
+    }
     
         .row {
             margin-top: 120px; 

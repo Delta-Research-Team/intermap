@@ -52,6 +52,64 @@ def create_file_input_section():
         )
     )
 
+def create_plots_section():
+    """Create the plots section of the app with styled tabbed navigation."""
+    return ui.column(
+        9,
+        ui.div(
+            {
+                "style": "display: flex; flex-direction: column; align-items: center; width: 100%;"
+            },
+            ui.div(
+                {"class": "custom-tabs-container"},
+                ui.navset_tab(
+                    # Tab 1: Interaction Heatmap
+                    ui.nav_panel(
+                        "Interaction Matrix",
+                        ui.div(
+                            {
+                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("interaction_plot")
+                        )
+                    ),
+
+                    # Tab 2: Ligand Interactions
+                    ui.nav_panel(
+                        "Ligand Analysis",
+                        ui.div(
+                            {
+                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("ligand_interactions_plot")
+                        )
+                    ),
+
+                    # Tab 3: Receptor Interactions
+                    ui.nav_panel(
+                        "Receptor Analysis",
+                        ui.div(
+                            {
+                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("receptor_interactions_plot")
+                        )
+                    ),
+
+                    # Tab 4: Interactions Over Time
+                    ui.nav_panel(
+                        "Time Analysis",
+                        ui.div(
+                            {
+                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("interactions_over_time_plot")
+                        )
+                    ),
+
+                    id="plot_tabs",
+                    selected="Interaction Matrix"
+                )
+            )
+        )
+
+    )
 
 def create_filters_section():
     """Create the filters section of the app."""
@@ -146,63 +204,7 @@ def create_welcome_section():
     )
 
 
-def create_plots_section():
-    """Create the plots section of the app with styled tabbed navigation."""
-    return ui.column(
-        9,
-        ui.div(
-            {
-                "style": "display: flex; flex-direction: column; align-items: center; width: 100%;"
-            },
-            ui.div(
-                {"class": "custom-tabs-container"},
-                ui.navset_tab(
-                    # Tab 1: Interaction Heatmap
-                    ui.nav_panel(
-                        "Interaction Matrix",
-                        ui.div(
-                            {
-                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.output_ui("interaction_plot")
-                        )
-                    ),
 
-                    # Tab 2: Ligand Interactions
-                    ui.nav_panel(
-                        "Ligand Analysis",
-                        ui.div(
-                            {
-                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.output_ui("ligand_interactions_plot")
-                        )
-                    ),
-
-                    # Tab 3: Receptor Interactions
-                    ui.nav_panel(
-                        "Receptor Analysis",
-                        ui.div(
-                            {
-                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.output_ui("receptor_interactions_plot")
-                        )
-                    ),
-
-                    # Tab 4: Interactions Over Time
-                    ui.nav_panel(
-                        "Time Analysis",
-                        ui.div(
-                            {
-                                "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                            ui.output_ui("interactions_over_time_plot")
-                        )
-                    ),
-
-                    id="plot_tabs",
-                    selected="Interaction Matrix"
-                )
-            )
-        )
-    )
 
 
 def create_app_ui():
@@ -241,8 +243,9 @@ def create_app_ui():
         create_welcome_section(),
         # Main content row
         ui.row(
-            create_filters_section(),
-            create_plots_section()
+            create_plots_section(),
+            create_filters_section()
+
         ),
         # Footer section
         create_footer()
