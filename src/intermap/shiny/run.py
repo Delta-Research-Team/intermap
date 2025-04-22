@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 # Configure static directories and paths
 STATIC_DIR = ROOT_DIR / "statics"
-FAVICON_PATH = STATIC_DIR / "image" / "favicon-32x32.png"
+FAVICON_PATH = STATIC_DIR / "favicon-32x32.png"
 
 def open_browser(port):
     """Opens the default web browser to the application URL."""
@@ -50,7 +50,7 @@ def create_app():
 
 def main():
     """Main function to run the application."""
-    port = 8013
+    port = 8033
 
     # Start browser in a new thread after a short delay
     threading.Timer(1.5, open_browser, args=[port]).start()

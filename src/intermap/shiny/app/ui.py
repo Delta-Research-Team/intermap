@@ -17,8 +17,8 @@ current_dir = dirname(abspath(__file__))
 app_dir = dirname(current_dir)
 proj_dir = dirname(app_dir)
 
-logo_path = join(proj_dir, 'statics', 'image', 'Untitled.png')
-favicon_path = join(proj_dir, 'statics', 'image', 'favicon-32x32.png')
+logo_path = join(proj_dir, 'shiny', 'statics', 'Untitled.png')
+favicon_path = join(proj_dir, 'statics', 'favicon-32x32.png')
 
 
 def create_file_input_section():

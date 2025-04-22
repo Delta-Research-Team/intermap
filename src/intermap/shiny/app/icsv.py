@@ -45,19 +45,28 @@ class CSVFilter:
         self.notes2df = self.notes2df()
         self.inters2df = self.inters2df()
 
+    """
     def check_topology(self):
-        """
-        Parse the topology file from the InterMap CSV file
-
-        Returns:
-            topo_path (str): path to the topology file
-        """
         with open(self.csv_path, 'rt') as f:
             topo = next(f).split('#')[-1].strip()
             topo_path = join(self.root_dir, topo)
             if not os.path.isfile(topo_path):
                 raise FileNotFoundError(errors['noTopo'].format(self.csv_path))
             return topo_path
+    """
+
+
+    def check_topology(self):
+        TOPO_DIR = "/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/"
+
+        with open(self.csv_path, 'rt') as f:
+            topo = next(f).split('#')[-1].strip()
+            topo_path = os.path.join(TOPO_DIR, topo)
+            print(f"Looking for topology file at: {topo_path}")
+            if not os.path.isfile(topo_path):
+                raise FileNotFoundError(errors['noTopo'].format(self.csv_path))
+            return topo_path
+
 
     def parse_csv(self):
         """
@@ -224,16 +233,21 @@ class CSVFilter:
 # =============================================================================
 #
 # =============================================================================
-full = '/home/rglez/Dropbox/Desktop/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
-short = '/home/rglez/Dropbox/Desktop/DrHU-Tails-8k/DrHU-Tails-8k-atoms/dna-prot_InterMap_short.csv'
+full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
+short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
 
 self = CSVFilter(full)
 
-mda_sele, mda_status = self.by_mda('all')
-prevalence, preval_status = self.by_prevalence(60)
-interactions, inters_status = self.by_inters('all')
-annotations, notes_status = self.by_notes('all')
+#mda_sele, mda_status = self.by_mda('all')
+#prevalence, preval_status = self.by_prevalence(95)
+#interactions, inters_status = self.by_inters('all')
+#annotations, notes_status = self.by_notes('all')
 
-df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
-df_status = 0 if len(df_idx) > 0 else -1
-print(df_status)
+#df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
+#df_status = 0 if len(df_idx) > 0 else -1
+#print(df_status)
+#self.master.iloc[260]
+#self.master.iloc[list(mda_sele)].columns
+#self.master.iloc[list(mda_sele)]['sel1']
+#self.master.iloc[list(mda_sele)]['sel2']
+#self.master.iloc[prevalence]['prevalence']
