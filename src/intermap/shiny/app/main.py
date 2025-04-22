@@ -3,15 +3,14 @@ Main application file for InterMap Visualizations.
 Integrates UI components with server-side logic.
 """
 
-import os
 from shiny import App, reactive, render, ui
 
-from .plots import (create_interactions_over_time_plot,
-                   create_ligand_interactions_plot, create_plot,
-                   create_receptor_interactions_plot)
-from .ui import app_ui
-from .css import all_interactions_colors, ERROR_MESSAGES
+from .css import ERROR_MESSAGES
 from .icsv import CSVFilter
+from .plots import (create_interactions_over_time_plot,
+                    create_ligand_interactions_plot, create_plot,
+                    create_receptor_interactions_plot)
+from .ui import app_ui
 
 
 def server(input, output, session):
@@ -43,7 +42,7 @@ def server(input, output, session):
 
             csv.set(master_instance)
             ui.notification_show("File loaded successfully!", type="message",
-                               duration=5)
+                                 duration=5)
         except Exception as e:
             print(f"Error in initialize_filter: {str(e)}")
             csv.set(None)
@@ -51,10 +50,10 @@ def server(input, output, session):
             csv_filtered.set(None)
 
     @reactive.Effect
-    @reactive.event(input.selected_interactions,
-                   input.selected_annotations,
-                   input.prevalence_threshold,
-                   input.mda_selection)
+    @reactive.event(input.mda_selection_submit,
+                    input.selected_interactions,
+                    input.selected_annotations,
+                    input.prevalence_threshold)
     def update_filtered_idx():
         """Update filtered indices based on current UI selections."""
         if csv.get() is None:
@@ -83,53 +82,57 @@ def server(input, output, session):
             filtered_idx.set(None)
             csv_filtered.set(None)
 
+    # =========================================================================
+    # Rendering helper functions
+    # =========================================================================
     def check_data():
         """Helper function to check if filtered data is available."""
         if csv_filtered.get() is None:
             return ui.p(ERROR_MESSAGES["no_file"])
         return None
 
-    def render_plot(create_plot_func, plot_name, is_main=False):
+    def render_plot(create_plot_func, is_main=False):
         """Helper function to render plots with common logic."""
         error = check_data()
         if error is not None:
             return error
 
-        try:
-            plot_args = [
-                csv_filtered.get(),
-                input.plot_width(),
-                input.plot_height() if is_main else input.plot_height() // 1.5,
-                input.selected_interactions(),
-                input.prevalence_threshold(),
-            ]
+        plot_args = [
+            csv_filtered.get(),
+            input.plot_width(),
+            input.plot_height() if is_main else input.plot_height() // 1.5,
+            input.selected_interactions(),
+            input.prevalence_threshold(),
+        ]
 
-            if is_main:
-                plot_args.append(input.show_prevalence())
+        if is_main:
+            plot_args.append(input.show_prevalence())
 
+        fig = create_plot_func(*plot_args)
 
-            fig = create_plot_func(*plot_args)
+        if fig is None:
+            return ui.p(ERROR_MESSAGES["no_interactions"])
 
-            if fig is None:
-                return ui.p(ERROR_MESSAGES["no_interactions"])
+        plot_html = fig.to_html(
+            include_plotlyjs="cdn",
+            full_html=False,
+            config={"responsive": True}
+        )
 
-            plot_html = fig.to_html(
-                include_plotlyjs="cdn",
-                full_html=False,
-                config={"responsive": True}
-            )
+        style = (
+            "width:100%; height:800px; border:1px solid white; margin: 10px 0;"
+            if is_main else
+            f"width:100%; height:{input.plot_height() // 2}px;")
 
-            style = (
-                "width:100%; height:800px; border:1px solid white; margin: 10px 0;"
-                if is_main else
-                f"width:100%; height:{input.plot_height() // 2}px;")
+        return ui.tags.div(ui.HTML(plot_html), style=style)
 
-            return ui.tags.div(ui.HTML(plot_html), style=style)
+    def create_checkbox_group(input_id, data_keys_getter):
+        """Helper function to create checkbox groups."""
+        if csv.get() is None:
+            return ui.input_checkbox_group(input_id, "", [])
 
-        except Exception as e:
-            print(f"Error in {plot_name}: {str(e)}")
-            return ui.p(ERROR_MESSAGES["plot_error"].format(str(e)))
-
+        choices = list(data_keys_getter(csv.get()))
+        return ui.input_checkbox_group(input_id, "", choices, selected=choices)
 
     # =========================================================================
     # Plot Rendering Functions
@@ -138,25 +141,25 @@ def server(input, output, session):
     @render.ui
     def interaction_plot():
         """Render the main interaction heatmap plot."""
-        return render_plot(create_plot, "main plot", is_main=True)
+        return render_plot(create_plot, is_main=True)
 
     @output
     @render.ui
     def ligand_interactions_plot():
         """Render the ligand interactions plot."""
-        return render_plot(create_ligand_interactions_plot, "ligand plot")
+        return render_plot(create_ligand_interactions_plot)
 
     @output
     @render.ui
     def receptor_interactions_plot():
         """Render the receptor interactions plot."""
-        return render_plot(create_receptor_interactions_plot, "receptor plot")
+        return render_plot(create_receptor_interactions_plot)
 
     @output
     @render.ui
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
-        return render_plot(create_interactions_over_time_plot, "time plot")
+        return render_plot(create_interactions_over_time_plot)
 
     # =========================================================================
     # Checkbox Rendering
@@ -165,31 +168,14 @@ def server(input, output, session):
     @render.ui
     def interaction_checkboxes():
         """Render the interaction checkboxes."""
-        if csv.get() is None:
-            return ui.input_checkbox_group("selected_interactions", "", [])
-
-        choices = list(csv.get().inters2df.keys())
-        return ui.input_checkbox_group(
-            "selected_interactions",
-            "",
-            choices,
-            selected=choices
-        )
+        return create_checkbox_group("selected_interactions",
+                                     lambda x: x.inters2df.keys())
 
     @output
     @render.ui
     def annotation_checkboxes():
         """Render the annotation checkboxes."""
-        if csv.get() is None:
-            return ui.input_checkbox_group("selected_annotations", "", [])
-
-        choices = list(csv.get().notes2df.keys())
-        return ui.input_checkbox_group(
-            "selected_annotations",
-            "",
-            choices,
-            selected=choices
-        )
-
+        return create_checkbox_group("selected_annotations",
+                                     lambda x: x.notes2df.keys())
 
 app = App(app_ui, server)

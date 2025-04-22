@@ -45,10 +45,18 @@ def create_file_input_section():
             ui.input_text(
                 "mda_selection",
                 "MDAnalysis Selection:",
-                placeholder="e.g., resname ALA or protein",
+                placeholder="e.g., resname ALA or protein (press Enter to apply)",
                 value="",
-                width="100%"
-            )
+                width="100%",
+            ),
+            ui.tags.script("""
+                document.getElementById('mda_selection').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        Shiny.setInputValue('mda_selection_submit', Date.now());
+                    }
+                });
+            """)
         )
     )
 
@@ -196,10 +204,14 @@ def create_welcome_section():
                 "InterMap: Accelerated Detection of Interaction Fingerprints on Large-Scale Molecular Ensembles",
                 {"class": "welcome-subtitle", "style": "font-style: italic;"})
         ),
-        ui.img(
-            {"src": get_image_base64(logo_path),
-             "class": "welcome-image",
-             "alt": "InterMap Logo"}
+        ui.a(
+            ui.img(
+                src=get_image_base64(logo_path),
+                class_="welcome-image",
+                alt="InterMap Logo"
+            ),
+            href="https://rglez.github.io/intermap/",
+            target="_blank"
         )
     )
 
