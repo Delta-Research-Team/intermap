@@ -67,39 +67,76 @@ def guess_elements(universe):
 # =============================================================================
 # TopoTrajs
 # =============================================================================
-user = os.getlogin()
-
-topo_trajs = {
-    'MPRO':
-        {
-            'topo': f'/media/{user}/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/a173v_mpro_chainA_rep123.pr5.aligned_CA.not_waters_or_ions.psf',
-            'traj': f'/media/{user}/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/a173v_mpro_chainA_rep1.pr5.aligned_CA.not_waters.dcd'}}
+topo_traj_path = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/'
+out_dir = f'/home/gonzalezroy/RoyHub/intermap/scripts/identity/runs/prolif'
 
 # =============================================================================
-#
-# =============================================================================
-out_dir = f'/home/{user}/RoyHub/intermap/scripts/identity/runs/mpro/prolif'
-n_samples = 100
-sel1 = 'protein'
-sel2 = 'protein'
 
-topo = topo_trajs['MPRO']['topo']
-traj = topo_trajs['MPRO']['traj']
-u = mda.Universe(topo, traj)
-elements = guess_elements(u)
-u.add_TopologyAttr('elements', elements)
+# Find the topology and trajectory files
+topo_trajs = gnl.recursive_defaultdict()
+for case in os.listdir(topo_traj_path):
+    case_path = os.path.join(topo_traj_path, case)
+    for file in os.listdir(case_path):
+        file_path = os.path.join(case_path, file)
+        if file_path.endswith('.dcd'):
+            topo_trajs[case]['traj'] = file_path
+        else:
+            topo_trajs[case]['topo'] = file_path
 
-# create selections for the ligand and protein
-ligand_selection = u.select_atoms(sel1)
-protein_selection = u.select_atoms(sel2)
+# Define the selections
+selections = {
+    '01_MPRO_TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab': {
+        'sel1': 'protein',
+        'sel2': 'protein'},
+    '02_IgG3': {
+        'sel1': 'resid 291:1718',
+        'sel2': 'resid 1:290'},
+    '03_p53_fl_p53_Anton': {
+        'sel1': 'nucleic',
+        'sel2': 'protein'},
+    '04_NSP13_DESRES-Trajectory_sarscov2-13795965-no-water': {
+        'sel1': 'nucleic',
+        'sel2': 'protein'},
+    '05_PAO1': {
+        'sel1': 'protein',
+        'sel2': 'protein'},
+    '06_spike_TRAJECTORIES_spike_open_prot_glyc_amarolab': {
+        'sel1': 'protein',
+        'sel2': 'not protein'},
+    '07_ace2_TRAJECTORIES_ace2_rbd_prot_glyc_memb_amarolab': {
+        'sel1': 'protein',
+        'sel2': 'not protein'},
+    '08_Nucleosome': {
+        'sel1': 'nucleic',
+        'sel2': 'protein'},
+}
 
-# use default interactions
-fp = plf.Fingerprint(
-    ['Anionic', 'CationPi', 'Cationic', 'EdgeToFace', 'FaceToFace',
-     'HBAcceptor', 'HBDonor', 'Hydrophobic', 'MetalAcceptor', 'MetalDonor',
-     'PiCation', 'PiStacking', 'VdWContact', 'XBAcceptor', 'XBDonor'],
-    count=True, parameters={"VdWContact": {"preset": "rdkit"}})
-fp.run(u.trajectory[:n_samples], ligand_selection, protein_selection)
-# fp.to_pickle(join(out_dir, 'prolif.pkl'))
-df = fp.to_dataframe()
-gnl.pickle_to_file(df, join(out_dir, 'prolif.pkl'))
+for case in topo_trajs:
+    print(f'Processing {case}')
+    topo = topo_trajs[case]['topo']
+    traj = topo_trajs[case]['traj']
+    sel1 = selections[case]['sel1']
+    sel2 = selections[case]['sel2']
+
+    # create the output directory
+    out_dir_case = join(out_dir, case)
+    os.makedirs(out_dir_case, exist_ok=True)
+
+    # load the topology and trajectory
+    u = mda.Universe(topo, traj)
+    elements = guess_elements(u)
+    u.add_TopologyAttr('elements', elements)
+
+    # create selections for the ligand and protein
+    ligand_selection = u.select_atoms(sel1)
+    protein_selection = u.select_atoms(sel2)
+
+    # use default interactions
+    fp = plf.Fingerprint(
+        ['Anionic', 'CationPi', 'Cationic', 'EdgeToFace', 'FaceToFace',
+         'HBAcceptor', 'HBDonor', 'Hydrophobic', 'MetalAcceptor', 'MetalDonor',
+         'PiCation', 'PiStacking', 'VdWContact', 'XBAcceptor', 'XBDonor'],
+        count=True, parameters={"VdWContact": {"preset": "rdkit"}})
+    fp.run(u.trajectory, ligand_selection, protein_selection)
+    df = fp.to_dataframe()
+    gnl.pickle_to_file(df, join(out_dir, 'prolif.pkl'))
