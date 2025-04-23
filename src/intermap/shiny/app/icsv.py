@@ -19,17 +19,18 @@ class CSVFilter:
     A class to filter the InterMap CSV file before loading it with Shiny
     """
 
-    def __init__(self, csv):
+    def __init__(self, csv, topo):
         """
         Initialize the CSVFilter class
 
         Args:
             csv (str): path to the InterMap CSV file
+            topo (str): path to the topology file
         """
         # Parse arguments
         self.csv_path = gnl.check_path(csv)
         self.root_dir = dirname(self.csv_path)
-        self.topo_path = self.check_topology()
+        self.topo_path = gnl.check_path(topo)
 
         # Load the main objects
         self.universe = mda.Universe(self.topo_path)
