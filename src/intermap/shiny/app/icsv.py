@@ -1,7 +1,7 @@
 # Created by rglez at 4/20/25
 import os
 from collections import defaultdict
-from os.path import dirname, join
+from os.path import dirname
 
 import MDAnalysis as mda
 import numpy as np
@@ -18,6 +18,10 @@ class CSVFilter:
     """
     A class to filter the InterMap CSV file before loading it with Shiny
     """
+    mda_topols = (
+        'psf', 'pdb', 'ent', 'pqr', 'pdbqt', 'gro', 'top', 'prmtop', 'parm7',
+        'dms', 'tpr', 'itp', 'mol2', 'data', 'lammpsdump', 'xyz', 'txyz',
+        'arc', 'gms', 'log', 'config', 'history', 'xml', 'gsd', 'mmtf', 'in')
 
     def __init__(self, csv, topo):
         """
@@ -29,8 +33,16 @@ class CSVFilter:
         """
         # Parse arguments
         self.csv_path = gnl.check_path(csv)
-        self.root_dir = dirname(self.csv_path)
+        if self.csv_path.split('.')[-1] != 'csv':
+            raise ValueError('CSV file must have a .csv extension')
+
         self.topo_path = gnl.check_path(topo)
+        if self.topo_path.split('.')[-1] not in self.mda_topols:
+            raise ValueError(
+                'Topology file must be in a format compatible with MDAnalysis.'
+                ' The following are supported: {}')
+
+        self.root_dir = dirname(self.csv_path)
 
         # Load the main objects
         self.universe = mda.Universe(self.topo_path)
@@ -56,7 +68,6 @@ class CSVFilter:
             return topo_path
     """
 
-
     def check_topology(self):
         TOPO_DIR = "/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/"
 
@@ -67,7 +78,6 @@ class CSVFilter:
             if not os.path.isfile(topo_path):
                 raise FileNotFoundError(errors['noTopo'].format(self.csv_path))
             return topo_path
-
 
     def parse_csv(self):
         """
@@ -239,16 +249,16 @@ short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_ver
 
 self = CSVFilter(full)
 
-#mda_sele, mda_status = self.by_mda('all')
-#prevalence, preval_status = self.by_prevalence(95)
-#interactions, inters_status = self.by_inters('all')
-#annotations, notes_status = self.by_notes('all')
+# mda_sele, mda_status = self.by_mda('all')
+# prevalence, preval_status = self.by_prevalence(95)
+# interactions, inters_status = self.by_inters('all')
+# annotations, notes_status = self.by_notes('all')
 
-#df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
-#df_status = 0 if len(df_idx) > 0 else -1
-#print(df_status)
-#self.master.iloc[260]
-#self.master.iloc[list(mda_sele)].columns
-#self.master.iloc[list(mda_sele)]['sel1']
-#self.master.iloc[list(mda_sele)]['sel2']
-#self.master.iloc[prevalence]['prevalence']
+# df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
+# df_status = 0 if len(df_idx) > 0 else -1
+# print(df_status)
+# self.master.iloc[260]
+# self.master.iloc[list(mda_sele)].columns
+# self.master.iloc[list(mda_sele)]['sel1']
+# self.master.iloc[list(mda_sele)]['sel2']
+# self.master.iloc[prevalence]['prevalence']
