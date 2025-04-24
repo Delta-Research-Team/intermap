@@ -7,39 +7,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from plotly_resampler import FigureResampler
+from shiny import ui
 
 from intermap.shiny.app.css import all_interactions_colors
-search_state = None
-
-def get_search_state():
-    """
-    Safely get the current search state.
-
-    Returns:
-        dict: Current search state with 'active' and 'search_term' keys
-    """
-    if search_state is None:
-        return {'active': False, 'search_term': ''}
-    return search_state.get()
 
 
-def initialize_search_state(state):
-    """
-    Initialize the global search state for the plots.
-
-    Args:
-        state: A reactive value object to store search state
-    """
-    global search_state
-    search_state = state
-
-
-
-def create_plot(df, width, height, selected_interactions, prevalence_threshold,
+def create_plot(df, width, height,
                 show_prevalence=False):
-    if df is None or df.empty:
-        return None
-
     interaction_priority = {
         # Strong interactions
         'Anionic': 1,
@@ -68,26 +43,10 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
         'CloseContact': 16
     }
 
-    # Optimizar el filtrado inicial usando NumPy
-    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
-    df_filtered = df_filtered[
-        df_filtered['prevalence'] >= prevalence_threshold]
-
-    search_status = get_search_state()
-    if search_status['active'] and search_status['search_term']:
-        search_term = search_status['search_term'].upper()
-        mask = (df_filtered['sel1'].str.contains(search_term,
-                                                      case=False) |
-                df_filtered['sel2'].str.contains(search_term, case=False))
-        df_filtered = df_filtered[mask]
-
-    if df_filtered.empty:
-        return None
-
     # Optimizar el procesamiento de grupos
-    df_filtered['priority'] = df_filtered['interaction_name'].map(
+    df['priority'] = df['interaction_name'].map(
         interaction_priority)
-    priority_df = (df_filtered.sort_values(
+    priority_df = (df.sort_values(
         ['sel1', 'sel2', 'priority', 'prevalence'],
         ascending=[True, True, True, False])
                    .groupby(['sel1', 'sel2'])
@@ -226,6 +185,14 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
         paper_bgcolor='white',
         plot_bgcolor='white',
         xaxis=dict(
+            title=dict(
+                text="Selection 2",
+                font=dict(
+                    family="Roboto",
+                    size=16,
+                    color='rgb(26, 26, 26)'
+                )
+            ),
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(0, 0, 0, 0.15)',
@@ -239,6 +206,14 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
             )
         ),
         yaxis=dict(
+            title=dict(
+                text="Selection 1",
+                font=dict(
+                    family="Roboto",
+                    size=16,
+                    color='rgb(26, 26, 26)'
+                )
+            ),
             showgrid=True,
             gridwidth=1,
             gridcolor='rgba(0, 0, 0, 0.15)',
@@ -261,38 +236,15 @@ def create_plot(df, width, height, selected_interactions, prevalence_threshold,
     return fig
 
 
-def create_ligand_interactions_plot(df, width, height,
-                                    selected_interactions,
-                                    prevalence_threshold):
-    if df is None or df.empty:
-        return None
-
-    # Convertir a arrays de NumPy para operaciones más rápidas
-    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
-
-    # Optimizar búsqueda
-    search_status = get_search_state()
-    if search_status['active'] and search_status['search_term']:
-        search_term = search_status['search_term'].upper()
-        mask = df_filtered['sel1'].str.contains(search_term, case=False)
-        if mask.any():
-            df_filtered = df_filtered[mask]
-        else:
-            return None
-
-    # Filtrado por umbral usando NumPy
-    df_filtered = df_filtered[
-        df_filtered['prevalence'] >= prevalence_threshold]
-
-    if df_filtered.empty:
-        return None
+def create_ligand_interactions_plot(df, width, height):
+    # 773
 
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
-        -df_filtered['prevalence'].to_numpy(),
-        df_filtered['sel1'].to_numpy()
+        -df['prevalence'].to_numpy(),
+        df['sel1'].to_numpy()
     ))
-    receptor_interactions = df_filtered.iloc[sort_idx]
+    receptor_interactions = df.iloc[sort_idx]
 
     # Crear figura
     fig = go.Figure()
@@ -342,7 +294,7 @@ def create_ligand_interactions_plot(df, width, height,
         width=width,
         height=height,
         barmode='overlay',
-        xaxis_title="Selection 1 Atoms",
+        xaxis_title="Selection 1",
         yaxis_title="Interaction Prevalence (%)",
         showlegend=True,
         legend=dict(
@@ -402,38 +354,13 @@ def create_ligand_interactions_plot(df, width, height,
     return fig
 
 
-def create_receptor_interactions_plot(df, width, height,
-                                      selected_interactions,
-                                      prevalence_threshold):
-    if df is None or df.empty:
-        return None
-
-    # Convertir a arrays de NumPy para operaciones más rápidas
-    df_filtered = df[df['interaction_name'].isin(selected_interactions)]
-
-    # Optimizar búsqueda
-    search_status = get_search_state()
-    if search_status['active'] and search_status['search_term']:
-        search_term = search_status['search_term'].upper()
-        mask = df_filtered['sel2'].str.contains(search_term, case=False)
-        if mask.any():
-            df_filtered = df_filtered[mask]
-        else:
-            return None
-
-    # Filtrado por umbral usando NumPy
-    df_filtered = df_filtered[
-        df_filtered['prevalence'] >= prevalence_threshold]
-
-    if df_filtered.empty:
-        return None
-
+def create_receptor_interactions_plot(df, width, height):
     # Ordenar datos usando NumPy
     sort_idx = np.lexsort((
-        -df_filtered['prevalence'].to_numpy(),
-        df_filtered['sel2'].to_numpy()
+        -df['prevalence'].to_numpy(),
+        df['sel2'].to_numpy()
     ))
-    receptor_interactions = df_filtered.iloc[sort_idx]
+    receptor_interactions = df.iloc[sort_idx]
 
     # Crear figura
     fig = go.Figure()
@@ -483,7 +410,7 @@ def create_receptor_interactions_plot(df, width, height,
         width=width,
         height=height,
         barmode='overlay',
-        xaxis_title="Receptor Atoms",
+        xaxis_title="Selection 2",
         yaxis_title="Interaction Prevalence (%)",
         showlegend=True,
         legend=dict(
@@ -542,50 +469,55 @@ def create_receptor_interactions_plot(df, width, height,
     return fig
 
 
-def create_interactions_over_time_plot(df, width, height,
-                                       selected_interactions,
-                                       prevalence_threshold):
+# Primero, definimos las abreviaturas para cada tipo de interacción
+interaction_abbreviations = {
+    'HBDonor': 'HBD',
+    'HBAcceptor': 'HBA',
+    'Cationic': 'Cat',
+    'Anionic': 'Ani',
+    'Water Bridge': 'WB',
+    'PiStacking': 'πS',
+    'PiCation': 'πC',
+    'CationPi': 'Cπ',
+    'FaceToFace': 'F2F',
+    'EdgeToFace': 'E2F',
+    'MetalDonor': 'MD',
+    'MetalAcceptor': 'MA',
+    'VdWContact': 'VdW',
+    'CloseContact': 'CC',
+    'Hydrophobic': 'Hyd',
+    'XBAcceptor': 'XBA',
+    'XBDonor': 'XBD'
+}
+
+
+def create_interactions_over_time_plot(df, width, height):
     """
-    Create an interactive scatter plot with marginal histograms using plotly.
+    Create an interactive scatter plot with marginal histograms using plotly-resampler.
     """
-    if df is None or df.empty:
-        return None
 
-    # Filtrado inicial
-    mask = (df['interaction_name'].isin(selected_interactions) &
-            (df['prevalence'] >= prevalence_threshold))
-    df_filtered = df[mask]
+    # Crear pares de selecciones con abreviaturas de interacción
+    df['selection_pair'] = df['sel1'] + ' - ' + \
+                           df['sel2'] + ' (' + \
+                           df['interaction_name'].map(
+                               interaction_abbreviations) + ')'
 
-    if df_filtered.empty:
-        return None
-
-    # Procesamiento de búsqueda
-    search_status = get_search_state()
-    if search_status['active'] and search_status['search_term']:
-        search_term = search_status['search_term'].upper()
-        search_mask = (df_filtered['sel1'].str.contains(search_term,
-                                                             case=False) |
-                       df_filtered['sel2'].str.contains(search_term,
-                                                             case=False))
-        df_filtered = df_filtered[search_mask]
-
-    if df_filtered.empty:
-        return None
-
-    # Crear pares de selecciones
-    df_filtered['selection_pair'] = df_filtered['sel1'] + ' - ' + \
-                                    df_filtered['sel2']
+    ui.notification_show(
+        "We are preparing the plot with your current selections...\n"
+        "A lot of data huh  ;)"
+        , type="message", duration=20)
 
     # Procesar series de tiempo
     frame_interactions = []
-    for idx, row in df_filtered.iterrows():
+    for idx, row in df.iterrows():
         timeseries = np.array(list(row['timeseries']), dtype=int)
         frames_with_interaction = np.where(timeseries == 1)[0]
         for frame in frames_with_interaction:
             frame_interactions.append({
                 'selection_pair': row['selection_pair'],
                 'frame': frame,
-                'prevalence': row['prevalence']
+                'prevalence': row['prevalence'],
+                'interaction_name': row['interaction_name']
             })
 
     # Crear DataFrame para el scatter plot
@@ -602,41 +534,103 @@ def create_interactions_over_time_plot(df, width, height,
                [{"type": "scatter"}, {"type": "histogram"}]]
     )
 
+    # Inicializar FigureResampler
+    fig = FigureResampler(fig, default_n_shown_samples=2000)
+
     # Scatter plot principal
-    fig.add_trace(
-        go.Scatter(
-            x=scatter_df['frame'],
-            y=scatter_df['selection_pair'],
-            mode='markers',
-            marker=dict(
-                symbol='square',
-                size=8,
-                color='black'
+    for pair in scatter_df['selection_pair'].unique():
+        mask = scatter_df['selection_pair'] == pair
+        pair_data = scatter_df[mask]
+
+        fig.add_trace(
+            go.Scattergl(
+                x=pair_data['frame'],
+                y=[pair] * len(pair_data),
+                mode='markers',
+                marker=dict(
+                    symbol='square',
+                    size=8,
+                    color=pair_data['interaction_name'].map(
+                        all_interactions_colors),
+                    opacity=0.7
+                ),
+                name=pair,
+                hovertemplate=(
+                        "Frame: %{x}<br>" +
+                        "Selection Pair: %{y}<br>" +
+                        "Interaction: %{customdata[0]}<br>" +
+                        "Prevalence: %{customdata[1]:.1f}%<br>" +
+                        "<extra></extra>"
+                ),
+                customdata=pair_data[['interaction_name', 'prevalence']].values
             ),
-            name='Interactions'
-        ),
-        row=2, col=1
-    )
+            row=2, col=1,
+            limit_to_view=True
+            # Importante: esto permite el resampling sin reordenar
+        )
+
+    ui.notification_show("Hope you like it!", type="message",
+                         duration=3)
 
     # Histograma superior (interacciones por frame)
     fig.add_trace(
         go.Histogram(
             x=scatter_df['frame'],
-            nbinsx=50,
-            name='Interactions per Frame'
+            marker=dict(
+                color='rgb(64,81,181)',
+                opacity=0.7,
+                line=dict(
+                    color='gray',
+                    width=1
+                )
+            ),
+            xbins=dict(
+                size=1,
+                start=scatter_df['frame'].min() - 0.5,
+                end=scatter_df['frame'].max() + 0.5
+            ),
+            name='Interactions per Frame',
+            hovertemplate=(
+                    "Frame: %{x}<br>" +
+                    "n-Inters: %{y}<br>" +
+                    "<extra></extra>"
+            )
         ),
         row=1, col=1
     )
 
     # Histograma derecho (prevalencia por par)
-    prevalence_data = df_filtered.groupby('selection_pair')[
+    pairs_with_interactions = df['selection_pair'].unique()
+    prevalence_data = df.groupby('selection_pair')[
         'prevalence'].mean()
+
+    interaction_colors = []
+    for pair in prevalence_data.index:
+        interaction_abbrev = pair.split('(')[1].rstrip(')')
+        for full_name, abbrev in interaction_abbreviations.items():
+            if abbrev == interaction_abbrev:
+                interaction_colors.append(all_interactions_colors[full_name])
+                break
+
     fig.add_trace(
         go.Bar(
             y=prevalence_data.index,
-            x=prevalence_data.values * 100,  # Convertir a porcentaje
+            x=prevalence_data.values,
             orientation='h',
-            name='Prevalence (%)'
+            marker=dict(
+                color=interaction_colors,
+                opacity=0.7,
+                line=dict(
+                    color='#1a1a1a',
+                    width=1
+                )
+            ),
+            name='Prevalence (%)',
+            hovertemplate=(
+                    "Selection Pair: %{y}<br>" +
+                    "Prevalence: %{x:.1f}%<br>" +
+                    "<extra></extra>"
+            )
         ),
         row=2, col=2
     )
@@ -644,211 +638,66 @@ def create_interactions_over_time_plot(df, width, height,
     # Actualizar layout
     fig.update_layout(
         width=width,
-        height=height,
+        height=height * 1.2,
         showlegend=False,
         paper_bgcolor='white',
         plot_bgcolor='white',
-        margin=dict(l=50, r=50, t=50, b=50)
+        margin=dict(l=50, r=50, t=50, b=50),
+        dragmode='zoom',
+        hovermode='closest'
     )
 
-    # Actualizar ejes
+    # Configurar ejes vinculados
     fig.update_xaxes(
+        row=2, col=1,
         title_text="Frame Number",
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        row=2, col=1
+        domain=[0, 0.8]
+    )
+
+    fig.update_xaxes(
+        row=1, col=1,
+        showticklabels=False,
+        matches='x3',
+        domain=[0, 0.8]
     )
 
     fig.update_yaxes(
+        row=2, col=1,
         title_text="Selection Pairs",
         gridcolor='rgba(0,0,0,0.15)',
         zeroline=True,
         zerolinecolor='rgba(0,0,0,0.25)',
-        row=2, col=1
-    )
-
-    # Actualizar histograma superior
-    fig.update_xaxes(showticklabels=False, row=1, col=1)
-    fig.update_yaxes(title_text="Count", row=1, col=1)
-
-    # Actualizar histograma derecho
-    fig.update_xaxes(title_text="Prevalence (%)", row=2, col=2)
-    fig.update_yaxes(showticklabels=False, row=2, col=2)
-
-    return fig
-
-
-"""
-
-def create_interactions_over_time_plot(df, width, height,
-                                       selected_interactions,
-                                       prevalence_threshold):
-
-    if df is None or df.empty:
-        return None
-
-    # Filtrado vectorizado usando una sola máscara
-    mask = (df['interaction_name'].isin(selected_interactions) &
-            (df['prevalence'] >= prevalence_threshold))
-    df_filtered = df[mask]
-
-    if df_filtered.empty:
-        return None
-
-    # Filtrado de búsqueda vectorizado
-    search_status = get_search_state()
-    if search_status['active'] and search_status['search_term']:
-        search_term = search_status['search_term'].upper()
-        search_mask = (df_filtered['sel1'].str.contains(search_term,
-                                                             case=False) |
-                       df_filtered['sel2'].str.contains(search_term,
-                                                             case=False))
-        df_filtered = df_filtered[search_mask]
-
-    if df_filtered.empty:
-        return None
-
-    # Convertir las series de tiempo de string a arrays numpy
-    timeseries_arrays = [np.array(list(ts), dtype=int) for ts in
-                         df_filtered['timeseries']]
-    n_frames = len(timeseries_arrays[0])  # Número de frames
-
-    # Crear diccionario para almacenar información por frame
-    frame_data = {}
-    interactions_array = df_filtered['interaction_name'].values
-
-    # Procesar cada frame de manera vectorizada
-    for frame_idx in range(n_frames):
-        # Obtener máscara de interacciones activas en este frame
-        frame_mask = np.array([ts[frame_idx] == 1 for ts in timeseries_arrays])
-
-        if np.any(frame_mask):
-            # Obtener interacciones activas en este frame
-            frame_interactions = interactions_array[frame_mask]
-
-            # Contar interacciones de manera vectorizada
-            unique, counts = np.unique(frame_interactions, return_counts=True)
-            counts_dict = dict(zip(unique, counts))
-
-            if counts_dict:
-                frame_data[frame_idx] = {
-                    'counts': pd.Series(counts_dict),
-                    'total': len(frame_interactions)
-                }
-
-    # Crear figura
-    fig = go.Figure()
-
-    # Procesar cada tipo de interacción
-    unique_interactions = df_filtered['interaction_name'].unique()
-
-    for interaction_type in sorted(unique_interactions):
-        x_values = []
-        y_values = []
-        hover_texts = []
-
-        for frame_idx, data in frame_data.items():
-            if interaction_type in data['counts']:
-                count = data['counts'][interaction_type]
-                x_values.append(frame_idx)
-                y_values.append(count)
-
-                # Construir texto del hover
-                interactions_text = "<br>".join(
-                    f"• <span style='color: {all_interactions_colors[int_type]}'>{int_type}</span>: {data['counts'].get(int_type, 0)}"
-                    for int_type in sorted(data['counts'].index)
-                )
-
-                hover_text = (
-                    f"<b>Frame {frame_idx}</b><br><br>"
-                    f"<b>Interactions Present:</b><br>"
-                    f"{interactions_text}<br><br>"
-                    f"<b>Total Interactions:</b> {data['total']}"
-                )
-                hover_texts.append(hover_text)
-
-        if x_values:  # Solo añadir si hay datos para este tipo de interacción
-            fig.add_trace(go.Scatter(
-                x=x_values,
-                y=y_values,
-                mode='markers',
-                name=interaction_type,
-                marker=dict(
-                    size=10,
-                    color=all_interactions_colors[interaction_type],
-                    symbol='circle',
-                    line=dict(color='white', width=1)
-                ),
-                text=hover_texts,
-                hoverinfo='text',
-                hoverlabel=dict(
-                    bgcolor='rgba(255,255,255,0.95)',
-                    bordercolor=all_interactions_colors[interaction_type],
-                    font=dict(family='Arial', size=14, color='black')
-                )
-            ))
-
-    # El resto del código de actualización del diseño permanece igual
-    fig.update_layout(
-        width=width,
-        height=height,
-        xaxis_title="Frame Number",
-        yaxis_title="Number of Interactions",
-        showlegend=True,
-        legend=dict(
-            title=dict(
-                text="<b>Interaction Types</b>",
-                font=dict(family="RobotoRoboto", size=14,
-                          color='rgb(26, 26, 26)')
-            ),
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=1.02,
-            bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='rgba(0,0,0,0.2)',
-            borderwidth=1,
-            font=dict(family="Roboto", size=14, color='rgb(26, 26, 26)')
-        ),
-        margin=dict(l=50, r=150, t=50, b=50),
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        hovermode='closest',
-        hoverdistance=100,
-        hoverlabel=dict(
-            font_family="Roboto",
-            font_size=14,
-            align='left'
-        )
-    )
-
-    fig.update_xaxes(
-        gridcolor='rgba(0,0,0,0.15)',
-        zeroline=True,
-        zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)'),
-        showgrid=True,
-        nticks=10,
-        tickmode='auto',
-        minor_griddash='dot',
-        minor_gridwidth=1,
-        minor_gridcolor='rgba(0,0,0,0.1)'
+        domain=[0, 0.75]
     )
 
     fig.update_yaxes(
-        gridcolor='rgba(0,0,0,0.15)',
-        zeroline=True,
-        zerolinecolor='rgba(0,0,0,0.25)',
-        tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)'),
-        showgrid=True,
-        nticks=8,
-        tickmode='auto',
-        minor_griddash='dot',
-        minor_gridwidth=1,
-        minor_gridcolor='rgba(0,0,0,0.1)'
+        title_text="n-Inters",
+        row=1, col=1,
+        domain=[0.85, 1]
     )
 
-    return fig
+    fig.update_xaxes(
+        title_text="Prevalence (%)",
+        row=2, col=2,
+        domain=[0.85, 1]
+    )
 
-"""
+    fig.update_yaxes(
+        row=2, col=2,
+        matches='y3',
+        showticklabels=False,
+        domain=[0, 0.75]
+    )
+
+    # Actualizar fuentes y estilos
+    for axis in fig.layout:
+        if axis.startswith('xaxis') or axis.startswith('yaxis'):
+            fig.layout[axis].update(
+                tickfont=dict(family="Roboto", size=14,
+                              color='rgb(26, 26, 26)')
+            )
+
+    return fig

@@ -4,14 +4,15 @@ Launches the application with the appropriate configuration.
 
 """
 
-import webbrowser
-import threading
-import uvicorn
 import sys
+import threading
+import webbrowser
 from pathlib import Path
+
+import uvicorn
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from shiny import App
 
 # Configure root directory and system path
@@ -22,9 +23,11 @@ sys.path.insert(0, str(ROOT_DIR))
 STATIC_DIR = ROOT_DIR / "statics"
 FAVICON_PATH = STATIC_DIR / "favicon-32x32.png"
 
+
 def open_browser(port):
     """Opens the default web browser to the application URL."""
     webbrowser.open(f'http://127.0.0.1:{port}')
+
 
 def create_app():
     """Creates and configures the Shiny application with FastAPI wrapper."""
@@ -34,7 +37,8 @@ def create_app():
     fast_app = FastAPI()
 
     # Mount static files
-    fast_app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    fast_app.mount("/static", StaticFiles(directory=str(STATIC_DIR)),
+                   name="static")
 
     # Add favicon.ico endpoint
     @fast_app.get('/favicon.ico')
@@ -47,6 +51,7 @@ def create_app():
     fast_app.mount("/", app)
 
     return fast_app
+
 
 def main():
     """Main function to run the application."""
@@ -78,6 +83,7 @@ def main():
         factory=True,
         log_level="info"
     )
+
 
 if __name__ == "__main__":
     main()

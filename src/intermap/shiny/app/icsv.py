@@ -1,5 +1,4 @@
 # Created by rglez at 4/20/25
-import os
 from collections import defaultdict
 from os.path import dirname
 
@@ -36,16 +35,21 @@ class CSVFilter:
         if self.csv_path.split('.')[-1] != 'csv':
             raise ValueError('CSV file must have a .csv extension')
 
+        # Validate topology file
         self.topo_path = gnl.check_path(topo)
         if self.topo_path.split('.')[-1] not in self.mda_topols:
             raise ValueError(
                 'Topology file must be in a format compatible with MDAnalysis.'
-                ' The following are supported: {}')
+                f' The following are supported: {self.mda_topols}')
 
         self.root_dir = dirname(self.csv_path)
 
         # Load the main objects
-        self.universe = mda.Universe(self.topo_path)
+        try:
+            self.universe = mda.Universe(self.topo_path)
+        except Exception as e:
+            raise ValueError(f"Error loading topology file: {str(e)}")
+
         self.master, self.resolution = self.parse_csv()
         self.long = True if 'timeseries' in self.master.columns else False
         self.prevalences = self.master['prevalence'].astype(float)
@@ -57,27 +61,6 @@ class CSVFilter:
         self.res2at = self.res2at()
         self.notes2df = self.notes2df()
         self.inters2df = self.inters2df()
-
-    """
-    def check_topology(self):
-        with open(self.csv_path, 'rt') as f:
-            topo = next(f).split('#')[-1].strip()
-            topo_path = join(self.root_dir, topo)
-            if not os.path.isfile(topo_path):
-                raise FileNotFoundError(errors['noTopo'].format(self.csv_path))
-            return topo_path
-    """
-
-    def check_topology(self):
-        TOPO_DIR = "/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/"
-
-        with open(self.csv_path, 'rt') as f:
-            topo = next(f).split('#')[-1].strip()
-            topo_path = os.path.join(TOPO_DIR, topo)
-            print(f"Looking for topology file at: {topo_path}")
-            if not os.path.isfile(topo_path):
-                raise FileNotFoundError(errors['noTopo'].format(self.csv_path))
-            return topo_path
 
     def parse_csv(self):
         """
@@ -240,14 +223,13 @@ class CSVFilter:
         status = 0 if len(idx) > 0 else -1
         return idx, status
 
-
 # =============================================================================
 #
 # =============================================================================
-full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
-short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
+# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
+# short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
 
-self = CSVFilter(full)
+# self = CSVFilter(full)
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)

@@ -61,6 +61,7 @@ all_interactions_colors = {
 
 # Error messages dictionary
 ERROR_MESSAGES = {
+    'nothing_selected': "Change your filters, your selection is empty",
     'no_file': "Please upload a CSV file.",
     'invalid_file': "Invalid file format. Please upload a CSV file.",
     'no_data': "No data available for plotting.",

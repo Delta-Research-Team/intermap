@@ -3,6 +3,9 @@ Main application file for InterMap Visualizations.
 Integrates UI components with server-side logic.
 """
 
+import os
+import tempfile
+
 from shiny import App, reactive, render, ui
 
 from .css import ERROR_MESSAGES
@@ -24,30 +27,59 @@ def server(input, output, session):
     csv_filtered = reactive.Value(None)
 
     @reactive.Effect
-    @reactive.event(input.file)
+    @reactive.event(input.csv_file, input.top_file)
     def initialize_filter():
-        """Initialize CSVFilter when a file is uploaded."""
+        """Initialize CSVFilter when both files are uploaded."""
         try:
-            file_infos = input.file()
-            if not file_infos:
+            # Verificar que ambos archivos estén presentes
+            csv_infos = input.csv_file()
+            top_infos = input.top_file()
+
+            if not csv_infos or not top_infos:
                 csv.set(None)
                 filtered_idx.set(None)
                 csv_filtered.set(None)
                 return
 
-            csv_path = file_infos[0]["datapath"]
-            master_instance = CSVFilter(csv_path)
+            # Crear directorio temporal
+            temp_dir = tempfile.mkdtemp()
 
-            print(f"Topology path found: {master_instance.topo_path}")
+            # Guardar ambos archivos en el directorio temporal
+            csv_path = os.path.join(temp_dir, csv_infos[0]["name"])
+            top_path = os.path.join(temp_dir, top_infos[0]["name"])
+
+            # Copiar los archivos usando shutil
+            import shutil
+            shutil.copy2(csv_infos[0]["datapath"], csv_path)
+            shutil.copy2(top_infos[0]["datapath"], top_path)
+
+            # Inicializar CSVFilter con ambos archivos
+            master_instance = CSVFilter(
+                csv=csv_path,
+                topo=top_path
+            )
 
             csv.set(master_instance)
-            ui.notification_show("File loaded successfully!", type="message",
-                                 duration=5)
+
+            ui.notification_show(
+                "Files loaded successfully!",
+                duration=3000,
+                type="message"
+            )
+
+            # Seleccionar automáticamente la primera pestaña
+            ui.update_navs("plot_tabs", selected="Sele1 vs Sele2")
+
         except Exception as e:
             print(f"Error in initialize_filter: {str(e)}")
             csv.set(None)
             filtered_idx.set(None)
             csv_filtered.set(None)
+            ui.notification_show(
+                f"Error loading files: {str(e)}",
+                duration=5000,
+                type="error"
+            )
 
     @reactive.Effect
     @reactive.event(input.mda_selection_submit,
@@ -64,14 +96,32 @@ def server(input, output, session):
         master_instance = csv.get()
 
         # Obtain idx's using CSVFilter
-        mda_idx, _ = master_instance.by_mda(
-            'all' if not input.mda_selection() else input.mda_selection())
-        prev_idx, _ = master_instance.by_prevalence(
+        mda_idx, mda_status = master_instance.by_mda(
+            input.mda_selection() if input.mda_selection() else 'all')
+        prev_idx, prev_status = master_instance.by_prevalence(
             input.prevalence_threshold())
-        inter_idx, _ = master_instance.by_inters(tuple(
-            input.selected_interactions()) if input.selected_interactions() else 'all')
-        annot_idx, _ = master_instance.by_notes(tuple(
-            input.selected_annotations()) if input.selected_annotations() else 'all')
+        inter_idx, inter_status = master_instance.by_inters(tuple(
+            input.selected_interactions()) if input.selected_interactions() else input.selected_interactions())
+        annot_idx, notes_status = master_instance.by_notes(tuple(
+            input.selected_annotations()) if input.selected_annotations() else input.selected_annotations())
+
+        # Status section
+        if mda_status == -1:
+            ui.notification_show(
+                "There is not information for this MDAnalysis selection"
+                , type="message", duration=5)
+        elif prev_status == -1:
+            ui.notification_show(
+                "There are no interactions with this prevalence or higher."
+                , type="message", duration=5)
+        elif inter_status == -1:
+            ui.notification_show(
+                "There is not information for this Interaction selection"
+                , type="message", duration=5)
+        elif notes_status == -1:
+            ui.notification_show(
+                "There is not information for this Annotation selection"
+                , type="message", duration=5)
 
         # Update reactive states
         df_idx = set.intersection(mda_idx, prev_idx, inter_idx, annot_idx)
@@ -88,7 +138,7 @@ def server(input, output, session):
     def check_data():
         """Helper function to check if filtered data is available."""
         if csv_filtered.get() is None:
-            return ui.p(ERROR_MESSAGES["no_file"])
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
         return None
 
     def render_plot(create_plot_func, is_main=False):
@@ -101,8 +151,6 @@ def server(input, output, session):
             csv_filtered.get(),
             input.plot_width(),
             input.plot_height() if is_main else input.plot_height() // 1.5,
-            input.selected_interactions(),
-            input.prevalence_threshold(),
         ]
 
         if is_main:
@@ -111,7 +159,7 @@ def server(input, output, session):
         fig = create_plot_func(*plot_args)
 
         if fig is None:
-            return ui.p(ERROR_MESSAGES["no_interactions"])
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
 
         plot_html = fig.to_html(
             include_plotlyjs="cdn",
@@ -177,5 +225,6 @@ def server(input, output, session):
         """Render the annotation checkboxes."""
         return create_checkbox_group("selected_annotations",
                                      lambda x: x.notes2df.keys())
+
 
 app = App(app_ui, server)
