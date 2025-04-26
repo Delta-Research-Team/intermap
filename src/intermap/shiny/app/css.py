@@ -481,11 +481,11 @@ CSS_STYLES = {
         }
 
         .nav-tabs .nav-link.active {
-            background-color: #e0e0e0;
-            color: #1a1a1a;
+            background-color: #4051b5ff !important;  /* Cambiado a azul */
+            color: white !important;  /* Cambiado a blanco */
             font-weight: bold;
             border: none;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .nav-tabs .nav-link.active:hover {

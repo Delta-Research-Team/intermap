@@ -92,15 +92,7 @@ def create_file_input_section():
         ui.div({"class": "mda-selection-container"},
             ui.input_text("mda_selection", "MDAnalysis Selection:",
                 placeholder="e.g., resname ALA or protein (press Enter to apply)",
-                value="", width="100%"),
-            ui.tags.script(
-                """
-                document.getElementById('mda_selection').addEventListener('keypress', 
-                function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        Shiny.setInputValue('mda_selection_submit', 
-                        Date.now());}});""")),)
+                value="", width="100%")))
 
 def create_filters_section():
     """Create the filters section of the app."""
@@ -138,7 +130,36 @@ def create_filters_section():
                                  value=personal_width * 0.67),
                 ui.input_numeric("plot_height", "Plot Height:",
                                  value=personal_height * 0.75),),
-            ui.hr(),),)
+            ui.hr(),
+
+           # Botón de Plot con padding aumentado
+           ui.div(
+               {"style": "padding: 0 15px;"},  # Añadido padding lateral
+               ui.input_action_button(
+                   "plot_button",
+                   "PLOT",
+                   width="100%",
+                   style="""
+                               background-color: #4a4a4a;
+                               color: white;
+                               padding: 20px 35px;  
+                               font-family: Roboto;
+                               font-size: 16px;
+                               border: none;
+                               border-radius: 4px;
+                               cursor: pointer;
+                               transition: background-color 0.3s ease;
+                               margin: 10px 0;  
+                           """
+               )
+           ),
+           # CSS para el hover del botón
+           ui.tags.style("""
+                       #plot_button:hover {
+                           background-color: #4051b5ff !important;
+                       }
+                   """),
+           ))
 
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""
@@ -258,7 +279,7 @@ def create_footer():
                     """
                 },
                 ui.tags.i({"class": "fas fa-scroll"}),  # Paper scroll icon
-                "Intermap Paper",
+                "Intermap's Paper",
             ),
             href="https://scholar.google.com/citations?user=kSAc11cAAAAJ&hl=es&oi=ao",
             target="_blank",

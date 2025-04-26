@@ -82,8 +82,7 @@ def server(input, output, session):
             )
 
     @reactive.Effect
-    @reactive.event(input.mda_selection_submit,
-                    input.selected_interactions,
+    @reactive.event(input.selected_interactions,
                     input.selected_annotations,
                     input.prevalence_threshold)
     def update_filtered_idx():
@@ -187,24 +186,28 @@ def server(input, output, session):
     # =========================================================================
     @output
     @render.ui
+    @reactive.event(input.plot_button)
     def interaction_plot():
         """Render the main interaction heatmap plot."""
         return render_plot(create_plot, is_main=True)
 
     @output
     @render.ui
+    @reactive.event(input.plot_button)
     def ligand_interactions_plot():
         """Render the ligand interactions plot."""
         return render_plot(create_ligand_interactions_plot)
 
     @output
     @render.ui
+    @reactive.event(input.plot_button)
     def receptor_interactions_plot():
         """Render the receptor interactions plot."""
         return render_plot(create_receptor_interactions_plot)
 
     @output
     @render.ui
+    @reactive.event(input.plot_button)
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
         return render_plot(create_interactions_over_time_plot)
