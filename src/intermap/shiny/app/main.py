@@ -82,7 +82,8 @@ def server(input, output, session):
             )
 
     @reactive.Effect
-    @reactive.event(input.selected_interactions,
+    @reactive.event(input.plot_button,
+                    input.selected_interactions,
                     input.selected_annotations,
                     input.prevalence_threshold)
     def update_filtered_idx():
