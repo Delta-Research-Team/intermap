@@ -301,6 +301,7 @@ CSS_STYLES = {
         margin-left: 0vw;
         margin-right: 0vw;
         z-index: 999;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
     }
     
         .row {

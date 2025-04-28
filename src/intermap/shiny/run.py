@@ -55,7 +55,7 @@ def create_app():
 
 def main():
     """Main function to run the application."""
-    port = 8033
+    port = 8035
 
     # Start browser in a new thread after a short delay
     threading.Timer(1.5, open_browser, args=[port]).start()

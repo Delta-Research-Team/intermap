@@ -41,7 +41,7 @@ def create_app_ui():
     """Create the main UI of the app."""
     return ui.page_fluid(
         ui.tags.head(
-            ui.tags.title("InterMap Visualizations"),
+            ui.tags.title("InterVis"),
             ui.tags.link(rel="icon", type="image/png", href=favicon_path),
             ui.tags.link(rel="stylesheet",
                 href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
@@ -58,7 +58,10 @@ def create_app_ui():
 
 def create_welcome_section():
     """Create the welcome section of the app."""
-    return ui.div({"class": "welcome-section"},
+    return ui.div({
+        "class": "welcome-section",
+        "style": "box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"
+    },
         ui.div({"class": "welcome-text"},
             ui.h1("Welcome to Intervis!", {"class": "welcome-title"}),
             ui.p("InterMap's Visualization Hub",
@@ -77,21 +80,22 @@ def create_file_input_section():
     return ui.div({"class": "file-input-container"},
         ui.div({"class": "file-browse-container"},
             # CSV file input
-            ui.input_file("csv_file", "Upload CSV file:",
+            ui.input_file("csv_file", "Upload CSV file",
                 accept=[".csv"],
                 button_label="Browse CSV",
                 placeholder="No CSV file selected"),
             # Topology file input
-            ui.input_file("top_file", "Upload Topology file:",
+            ui.input_file("top_file", "Upload Topology file",
                 accept=['.psf', '.pdb', '.ent', '.pqr', '.pdbqt', '.gro', 'top', '.prmtop', '.parm7',
                         '.dms', '.tpr', '.itp', '.mol2', '.data', '.lammpsdump', '.xyz', '.txyz',
                         '.arc', '.gms', '.log', '.config', '.history', '.xml', '.gsd', '.mmtf', '.in'],
                 button_label="Browse Topology",
                 placeholder="No topology file selected"),
             ),
+        ui.hr(),
         ui.div({"class": "mda-selection-container"},
-            ui.input_text("mda_selection", "MDAnalysis Selection:",
-                placeholder="e.g., resname ALA or protein (press Enter to apply)",
+            ui.input_text("mda_selection", "Atomic Selection (MDAnalysis Syntax)",
+                placeholder="e.g., resname ALA or protein",
                 value="", width="100%")))
 
 def create_filters_section():
@@ -126,9 +130,9 @@ def create_filters_section():
             # Panel 6
             ui.h4("Plot Settings"),
             ui.layout_columns(
-                ui.input_numeric("plot_width", "Plot Width:",
+                ui.input_numeric("plot_width", "Plot Width",
                                  value=personal_width * 0.67),
-                ui.input_numeric("plot_height", "Plot Height:",
+                ui.input_numeric("plot_height", "Plot Height",
                                  value=personal_height * 0.75),),
             ui.hr(),
 
@@ -149,7 +153,7 @@ def create_filters_section():
                                border-radius: 4px;
                                cursor: pointer;
                                transition: background-color 0.3s ease;
-                               margin: 10px 0;  
+                               margin: 10px 0;  /* Añadido margen vertical */
                            """
                )
            ),
@@ -175,13 +179,13 @@ def create_plots_section():
                             ui.output_ui("interaction_plot"),),),
 
                     # Tab 2: Ligand Interactions
-                    ui.nav_panel("Details on Sele1",
+                    ui.nav_panel("Sele1 Prevalence",
                         ui.div({"style": "width: 100%; max-width: 90%; "
                                          "margin: 20px auto;"},
                             ui.output_ui("ligand_interactions_plot"),),),
 
                     # Tab 3: Receptor Interactions
-                    ui.nav_panel("Details on Sele2",
+                    ui.nav_panel("Sele2 Prevalence",
                         ui.div({"style": "width: 100%; max-width: 90%; "
                                          "margin: 20px auto;"},
                             ui.output_ui("receptor_interactions_plot"),),),
@@ -226,6 +230,7 @@ def create_footer():
                         transition: color 0.3s ease;
                         flex: 1;
                         justify-content: center;
+                        font-size: 18px;
                     """
                 },
                 ui.tags.i({"class": "fas fa-fingerprint"}),  # Fingerprint icon
@@ -251,6 +256,7 @@ def create_footer():
                         transition: color 0.3s ease;
                         flex: 1;
                         justify-content: center;
+                        font-size: 18px;
                     """
                 },
                 ui.tags.i({"class": "fas fa-book-open"}),  # Open book icon
@@ -276,10 +282,11 @@ def create_footer():
                         transition: color 0.3s ease;
                         flex: 1;
                         justify-content: center;
+                        font-size: 18px;
                     """
                 },
                 ui.tags.i({"class": "fas fa-scroll"}),  # Paper scroll icon
-                "Intermap's Paper",
+                "InterMap's Paper",
             ),
             href="https://scholar.google.com/citations?user=kSAc11cAAAAJ&hl=es&oi=ao",
             target="_blank",
@@ -301,6 +308,7 @@ def create_footer():
                         transition: color 0.3s ease;
                         flex: 1;
                         justify-content: center;
+                        font-size: 18px;
                     """
                 },
                 ui.tags.i({"class": "fab fa-github"}),  # GitHub icon
