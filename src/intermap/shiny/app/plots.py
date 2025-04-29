@@ -9,13 +9,11 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from intermap.shiny.app.css import all_interactions_colors
-from plotly_resampler import FigureResampler
-
 from shiny import ui
+
 
 def create_plot(df, width, height,
                 show_prevalence=False):
-
     interaction_priority = {
         # Strong interactions
         'Anionic': 1,
@@ -56,18 +54,18 @@ def create_plot(df, width, height,
 
     # Pivot de interacciones y permanencias - optimizado
     pivot_interaction = pd.pivot_table(priority_df,
-                                    values='interaction_name',
-                                    index='sel2',
-                                    columns='sel1',
-                                    aggfunc='first',
-                                    fill_value='')
+                                       values='interaction_name',
+                                       index='sel2',
+                                       columns='sel1',
+                                       aggfunc='first',
+                                       fill_value='')
 
     pivot_prevalence = pd.pivot_table(priority_df,
-                                    values='prevalence',
-                                    index='sel2',
-                                    columns='sel1',
-                                    aggfunc='first',
-                                    fill_value="")
+                                      values='prevalence',
+                                      index='sel2',
+                                      columns='sel1',
+                                      aggfunc='first',
+                                      fill_value="")
 
     # Pre-calcular valores redondeados
     pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
@@ -500,7 +498,7 @@ interaction_abbreviations = {
     'HBAcceptor': 'HBA',
     'Cationic': 'Cat',
     'Anionic': 'Ani',
-    'Water Bridge': 'WB',
+    'WaterBridge': 'WB',
     'PiStacking': 'πS',
     'PiCation': 'πC',
     'CationPi': 'Cπ',
@@ -524,32 +522,28 @@ def create_interactions_over_time_plot(df, width, height):
     """
 
     # Crear pares de selecciones con abreviaturas de interacción
-    df['selection_pair'] = df['sel1'] + ' - ' + \
-                           df['sel2'] + ' (' + \
-                           df['interaction_name'].map(
-                               interaction_abbreviations) + ')'
+    abbr = df['interaction_name'].map(interaction_abbreviations)
+    sel1 = df['sel1'].str.strip()
+    sel2 = df['sel2'].str.strip()
+    df['selection_pair'] = sel1 + '-' + sel2 + ' (' + abbr + ')'
+
+    # Procesar series de tiempo
+    frames_with_interaction = df['timeseries'].apply(np.nonzero)
+    where_concat = frames_with_interaction.apply(lambda x: x[0].tolist())
+    where_concat = [y for x in where_concat.values for y in x]
+    where_sum = frames_with_interaction.apply(lambda x: len(x[0]))
+    df = df.loc[df.index.repeat(where_sum)].reset_index(drop=True)
+    df['frame'] = where_concat
+    df = df[['selection_pair', 'frame', 'prevalence', 'interaction_name']]
+    df['color'] = df['interaction_name'].map(all_interactions_colors)
+    df.reset_index(drop=True, inplace=True)
+    df['prevalence'] = df['prevalence'].astype(np.float32)
+    df = df.sort_values(by=['frame', 'selection_pair'])
 
     ui.notification_show(
         "We are preparing the plot with your current selections...\n"
         "A lot of data huh  ;)"
         , type="message", duration=20)
-
-    # Procesar series de tiempo
-    frame_interactions = []
-    for idx, row in df.iterrows():
-        timeseries = np.array(list(row['timeseries']), dtype=int)
-        frames_with_interaction = np.where(timeseries == 1)[0]
-        for frame in frames_with_interaction:
-            frame_interactions.append({
-                'selection_pair': row['selection_pair'],
-                'frame': frame,
-                'prevalence': row['prevalence'],
-                'interaction_name': row['interaction_name']
-            })
-
-
-    # Crear DataFrame para el scatter plot
-    scatter_df = pd.DataFrame(frame_interactions)
 
     # Crear la figura con subplots
     fig = make_subplots(
@@ -566,103 +560,100 @@ def create_interactions_over_time_plot(df, width, height):
     fig = FigureResampler(fig, default_n_shown_samples=2000)
 
     # Scatter plot principal
-    for pair in scatter_df['selection_pair'].unique():
-        mask = scatter_df['selection_pair'] == pair
-        pair_data = scatter_df[mask]
+    # for pair in df['selection_pair'].unique():
+    #     mask = df['selection_pair'] == pair
+    #     pair_data = df[mask]
 
-        fig.add_trace(
-            go.Scattergl(
-                x=pair_data['frame'],
-                y=[pair] * len(pair_data),
-                mode='markers',
-                marker=dict(
-                    symbol='square',
-                    size=8,
-                    color=pair_data['interaction_name'].map(
-                        all_interactions_colors),
-                    opacity=0.7
-                ),
-                name=pair,
-                hovertemplate=(
-                        "Frame: %{x}<br>" +
-                        "Selection Pair: %{y}<br>" +
-                        "Interaction: %{customdata[0]}<br>" +
-                        "Prevalence: %{customdata[1]:.1f}%<br>" +
-                        "<extra></extra>"
-                ),
-                customdata=pair_data[['interaction_name', 'prevalence']].values
+    fig.add_trace(
+        go.Scattergl(
+            x=df['frame'],
+            y=df['selection_pair'],
+            mode='markers',
+            marker=dict(
+                symbol='square',
+                size=8,
+                color=df['color'],
+                opacity=0.7
             ),
-            row=2, col=1,
-            limit_to_view=True
-            # Importante: esto permite el resampling sin reordenar
-        )
+            # name=pair,
+            # hovertemplate=(
+            #         "Frame: %{x}<br>" +
+            #         "Selection Pair: %{y}<br>" +
+            #         "Interaction: %{customdata[0]}<br>" +
+            #         "Prevalence: %{customdata[1]:.1f}%<br>" +
+            #         "<extra></extra>"
+            # ),
+        #     customdata=df[['interaction_name', 'prevalence']].values
+        ),
+        row=2, col=1,
+        limit_to_view=True
+        # Importante: esto permite el resampling sin reordenar
+    )
 
     ui.notification_show("Hope you like it!", type="message",
                          duration=3)
 
-    # Histograma superior (interacciones por frame)
-    fig.add_trace(
-        go.Histogram(
-            x=scatter_df['frame'],
-            marker=dict(
-                color='rgb(64,81,181)',
-                opacity=0.7,
-                line=dict(
-                    color='gray',
-                    width=1
-                )
-            ),
-            xbins=dict(
-                size=1,
-                start=scatter_df['frame'].min() - 0.5,
-                end=scatter_df['frame'].max() + 0.5
-            ),
-            name='Interactions per Frame',
-            hovertemplate=(
-                    "Frame: %{x}<br>" +
-                    "n-Inters: %{y}<br>" +
-                    "<extra></extra>"
-            )
-        ),
-        row=1, col=1
-    )
-
-    # Histograma derecho (prevalencia por par)
-    pairs_with_interactions = df['selection_pair'].unique()
-    prevalence_data = df.groupby('selection_pair')[
-        'prevalence'].mean()
-
-    interaction_colors = []
-    for pair in prevalence_data.index:
-        interaction_abbrev = pair.split('(')[1].rstrip(')')
-        for full_name, abbrev in interaction_abbreviations.items():
-            if abbrev == interaction_abbrev:
-                interaction_colors.append(all_interactions_colors[full_name])
-                break
-
-    fig.add_trace(
-        go.Bar(
-            y=prevalence_data.index,
-            x=prevalence_data.values,
-            orientation='h',
-            marker=dict(
-                color=interaction_colors,
-                opacity=0.7,
-                line=dict(
-                    color='#1a1a1a',
-                    width=1
-                )
-            ),
-            name='Prevalence (%)',
-            hovertemplate=(
-                    "Selection Pair: %{y}<br>" +
-                    "Prevalence: %{x:.1f}%<br>" +
-                    "<extra></extra>"
-            )
-        ),
-        row=2, col=2
-    )
-
+    # # Histograma superior (interacciones por frame)
+    # fig.add_trace(
+    #     go.Histogram(
+    #         x=df['frame'],
+    #         marker=dict(
+    #             color='rgb(64,81,181)',
+    #             opacity=0.7,
+    #             line=dict(
+    #                 color='gray',
+    #                 width=1
+    #             )
+    #         ),
+    #         xbins=dict(
+    #             size=1,
+    #             start=df['frame'].min() - 0.5,
+    #             end=df['frame'].max() + 0.5
+    #         ),
+    #         name='Interactions per Frame',
+    #         hovertemplate=(
+    #                 "Frame: %{x}<br>" +
+    #                 "n-Inters: %{y}<br>" +
+    #                 "<extra></extra>"
+    #         )
+    #     ),
+    #     row=1, col=1
+    # )
+    #
+    # # Histograma derecho (prevalencia por par)
+    # prevalence_data = df.groupby('selection_pair')[
+    #     'prevalence'].mean()
+    #
+    # interaction_colors = []
+    # for pair in prevalence_data.index:
+    #     interaction_abbrev = pair.split('(')[1].rstrip(')')
+    #     for full_name, abbrev in interaction_abbreviations.items():
+    #         if abbrev == interaction_abbrev:
+    #             interaction_colors.append(all_interactions_colors[full_name])
+    #             break
+    #
+    # fig.add_trace(
+    #     go.Bar(
+    #         y=prevalence_data.index,
+    #         x=prevalence_data.values,
+    #         orientation='h',
+    #         marker=dict(
+    #             color=interaction_colors,
+    #             opacity=0.7,
+    #             line=dict(
+    #                 color='#1a1a1a',
+    #                 width=1
+    #             )
+    #         ),
+    #         name='Prevalence (%)',
+    #         hovertemplate=(
+    #                 "Selection Pair: %{y}<br>" +
+    #                 "Prevalence: %{x:.1f}%<br>" +
+    #                 "<extra></extra>"
+    #         )
+    #     ),
+    #     row=2, col=2
+    # )
 
     # Actualizar layout
     fig.update_layout(

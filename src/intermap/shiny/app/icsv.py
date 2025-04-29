@@ -272,8 +272,4 @@ class CSVFilter:
 # =============================================================================
 full_csv = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/nuc-wat/8oxoGA2_1_InterMap_full.csv'
 topology = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/nuc-wat/ncp-OCS-nosalt.prmtop'
-
-# =============================================================================
-# Merging waters
-# =============================================================================
-# self = CSVFilter(full_csv, topology)
+self = CSVFilter(full_csv, topology)
