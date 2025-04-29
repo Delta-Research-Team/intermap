@@ -6,11 +6,53 @@ import MDAnalysis as mda
 import numpy as np
 import pandas as pd
 import rgpack.generals as gnl
+from bitarray import bitarray as ba
+
+pd.options.mode.chained_assignment = None
 
 errors = {
     'noTopo':
         'Topology not found. Please manually copy the topology file used to run '
         'InterMap to the same directory as the csv file being loaded.'}
+
+
+def compress_wb(df):
+    """
+    Compress the timeseries of the WaterBridge interactions.
+    This is a destructive operation on the original df
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the timeseries data
+
+    Returns:
+        df (pd.DataFrame): DataFrame with the timeseries data compressed
+    """
+    # Convert timeseries to bitarrays
+    df['timeseries'] = df['timeseries'].apply(ba)
+
+    # Detect wbs between two residues with exchanging waters
+    wbs = df[df.interaction_name == 'WaterBridge'].groupby(
+        ['sel1', 'sel2']).indices
+    wbs = {k: v for k, v in wbs.items() if len(v) > 1}
+
+    # Merge the timeseries of the waters
+    to_del = []
+    for case in wbs:
+        indices = wbs[case]
+        ref_idx = indices[0]
+        bit_ref = df['timeseries'].loc[ref_idx].copy()
+        for idx in indices:
+            bit_ref |= df.loc[idx, 'timeseries']
+            if idx != ref_idx:
+                to_del.append(idx)
+        df['timeseries'].iloc[ref_idx] = bit_ref
+
+    # Drop the merged timeseries
+    df.drop(to_del, inplace=True)
+
+    # Convert bitarrays to numpy arrays for future plotting
+    df['timeseries'] = df['timeseries'].apply(lambda x: np.asarray(x.tolist()))
+    return df
 
 
 class CSVFilter:
@@ -69,17 +111,18 @@ class CSVFilter:
         Returns:
             csv (pd.DataFrame): DataFrame containing the InterMap data
         """
-        csv = pd.read_csv(self.csv_path, header=1, na_values=('', ' '))
-        raw = csv['sel1'][0]
+        df = pd.read_csv(self.csv_path, header=1, na_values=('', ' '),
+                         dtype=str)
+        raw = df['sel1'][0]
         resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
 
         N = 2 if resolution == 'residue' else 4
-        idx_1 = csv['sel1'].str.split('_', expand=True)[N].astype(int)
-        idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
-        csv['idx1'] = idx_1
-        csv['idx2'] = idx_2
-
-        return csv, resolution
+        idx_1 = df['sel1'].str.split('_', expand=True)[N].astype(int)
+        idx_2 = df['sel2'].str.split('_', expand=True)[N].astype(int)
+        df['idx1'] = idx_1
+        df['idx2'] = idx_2
+        df = compress_wb(df)
+        return df, resolution
 
     # =========================================================================
     # Static mappings
@@ -223,24 +266,14 @@ class CSVFilter:
         status = 0 if len(idx) > 0 else -1
         return idx, status
 
+
 # =============================================================================
 #
 # =============================================================================
-# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
-# short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
+full_csv = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/nuc-wat/8oxoGA2_1_InterMap_full.csv'
+topology = '/home/gonzalezroy/RoyHub/intermap/tests/imaps/nuc-wat/ncp-OCS-nosalt.prmtop'
 
-# self = CSVFilter(full)
-
-# mda_sele, mda_status = self.by_mda('all')
-# prevalence, preval_status = self.by_prevalence(95)
-# interactions, inters_status = self.by_inters('all')
-# annotations, notes_status = self.by_notes('all')
-
-# df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
-# df_status = 0 if len(df_idx) > 0 else -1
-# print(df_status)
-# self.master.iloc[260]
-# self.master.iloc[list(mda_sele)].columns
-# self.master.iloc[list(mda_sele)]['sel1']
-# self.master.iloc[list(mda_sele)]['sel2']
-# self.master.iloc[prevalence]['prevalence']
+# =============================================================================
+# Merging waters
+# =============================================================================
+# self = CSVFilter(full_csv, topology)
