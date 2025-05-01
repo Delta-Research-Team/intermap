@@ -230,5 +230,30 @@ def server(input, output, session):
         return create_checkbox_group("selected_annotations",
                                      lambda x: x.notes2df.keys())
 
+    @reactive.Effect
+    @reactive.event(input.select_all_interactions)
+    def update_interaction_selections():
+        """Handle select all/deselect all for interactions."""
+        if csv.get() is None:
+            return
+
+        choices = list(csv.get().inters2df.keys())
+        if input.select_all_interactions():
+            ui.update_checkbox_group("selected_interactions", selected=choices)
+        else:
+            ui.update_checkbox_group("selected_interactions", selected=[])
+
+    @reactive.Effect
+    @reactive.event(input.select_all_annotations)
+    def update_annotation_selections():
+        """Handle select all/deselect all for annotations."""
+        if csv.get() is None:
+            return
+
+        choices = list(csv.get().notes2df.keys())
+        if input.select_all_annotations():
+            ui.update_checkbox_group("selected_annotations", selected=choices)
+        else:
+            ui.update_checkbox_group("selected_annotations", selected=[])
 
 app = App(app_ui, server)

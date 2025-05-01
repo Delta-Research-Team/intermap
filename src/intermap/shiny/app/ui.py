@@ -107,16 +107,37 @@ def create_filters_section():
             create_file_input_section(),
             ui.hr(),
 
-            # Panel 2 and 3
-            ui.layout_columns(
-                ui.h4("Interactions"),
-                ui.h4("Annotations"),),
-            ui.layout_columns(
-                ui.div({"class": "checkbox-group"},
-                ui.output_ui("interaction_checkboxes")),
-                ui.div({"class": "checkbox-group"},
-                ui.output_ui("annotation_checkboxes")),),
-            ui.hr(),
+           # Panel 2 and 3
+           ui.layout_columns(
+               ui.h4("Interactions"),
+               ui.h4("Annotations"),
+           ),
+           ui.layout_columns(
+               ui.div(
+                   ui.div({"class": "select-all-container"},
+                          ui.input_checkbox(
+                              "select_all_interactions",
+                              "Select All",
+                              value=True
+                          )
+                          ),
+                   ui.div({"class": "checkbox-group"},
+                          ui.output_ui("interaction_checkboxes")
+                          )
+               ),
+               ui.div(
+                   ui.div({"class": "select-all-container"},
+                          ui.input_checkbox(
+                              "select_all_annotations",
+                              "Select All",
+                              value=True
+                          )
+                          ),
+                   ui.div({"class": "checkbox-group"},
+                          ui.output_ui("annotation_checkboxes")
+                          )
+               ),
+           ),
 
             # Panel 5
             ui.h4("Prevalence"),
