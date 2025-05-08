@@ -9,7 +9,7 @@ import tempfile
 from shiny import App, reactive, render, ui
 
 from .css import ERROR_MESSAGES
-from .icsv import CSVFilter
+from .icsv import CSVFilter, traspose, sortby
 from .plots import (create_interactions_over_time_plot,
                     create_ligand_interactions_plot, create_plot,
                     create_receptor_interactions_plot)
@@ -85,7 +85,8 @@ def server(input, output, session):
     @reactive.event(input.plot_button,
                     input.selected_interactions,
                     input.selected_annotations,
-                    input.prevalence_threshold)
+                    input.prevalence_threshold,
+                    input.sort_by)
     def update_filtered_idx():
         """Update filtered indices based on current UI selections."""
         if csv.get() is None:
@@ -126,8 +127,17 @@ def server(input, output, session):
         # Update reactive states
         df_idx = set.intersection(mda_idx, prev_idx, inter_idx, annot_idx)
         if df_idx:
+            filtered_df = csv.get().master.iloc[list(df_idx)]
+
+            # Apply transpose if checkbox is checked
+            if input.transpose_data():
+                filtered_df = traspose(filtered_df)
+
+            # Apply sorting based on radio button selection
+            filtered_df = sortby(filtered_df, input.sort_by())
+
             filtered_idx.set(df_idx)
-            csv_filtered.set(csv.get().master.iloc[list(df_idx)])
+            csv_filtered.set(filtered_df)
         else:
             filtered_idx.set(None)
             csv_filtered.set(None)

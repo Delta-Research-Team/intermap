@@ -12,6 +12,44 @@ errors = {
         'Topology not found. Please manually copy the topology file used to run '
         'InterMap to the same directory as the csv file being loaded.'}
 
+def traspose(df):
+    """
+    Transpose the DataFrame; sel1 becomes sel2 and sel2 becomes sel1
+
+    Args:
+        df (pd.DataFrame): DataFrame to transposes
+    """
+    df.rename(
+        columns={'sel1': 'sel2', 'sel2': 'sel1',
+                 'note1': 'note2', 'note2': 'note1',
+                 'idx1': 'idx2', 'idx2': 'idx1',
+                 }, inplace=True)
+    return df
+
+def sortby(df, choice):
+    """
+    Sort the DataFrame by the selected column
+
+    Args:
+        df (pd.DataFrame): DataFrame to sort
+        choice (str): column to sort by
+    """
+    choices = ['name', 'number', 'annotation']
+    if choice not in choices:
+        raise ValueError(
+            f'Invalid choice: {choice}. Available choices: {choices}')
+
+    if choice == 'name':
+        sorted_df = df.sort_values(by=['sel1', 'idx1', 'note1',
+                                       'sel2', 'idx2', 'note2'])
+    elif choice == 'number':
+        sorted_df = df.sort_values(by=['idx1', 'note1', 'sel1',
+                                       'idx2', 'note2', 'sel2'])
+    else:
+        sorted_df = df.sort_values(by=['note1', 'idx1', 'sel1',
+                                       'note2', 'idx2', 'sel2'])
+    return sorted_df
+
 
 class CSVFilter:
     """

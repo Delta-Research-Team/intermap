@@ -157,9 +157,29 @@ def create_filters_section():
                                  value=personal_height * 0.75),),
             ui.hr(),
 
-           # Botón de Plot con padding aumentado
+           # Add Sort Options
+           ui.h4("Sort Options"),
+           ui.input_radio_buttons(
+               "sort_by",
+               "",
+               choices={
+                   "name": "Sort by Name",
+                   "number": "Sort by Number",
+                   "annotation": "Sort by Annotation"
+               },
+               selected="name"
+           ),
+           ui.hr(),
+
+
+           # Add the transpose checkbox here
+           ui.input_checkbox("transpose_data", "Transpose Axes",
+                             value=False),
+           ui.hr(),
+
+
            ui.div(
-               {"style": "padding: 0 15px;"},  # Añadido padding lateral
+               {"style": "padding: 0 15px;"},
                ui.input_action_button(
                    "plot_button",
                    "PLOT",
