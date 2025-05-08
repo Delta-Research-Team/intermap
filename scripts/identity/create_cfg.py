@@ -1,13 +1,15 @@
 # Created by rglez at 4/6/25
 import configparser
 import os
-from os.path import dirname, join
-from run_prolif import topo_trajs, selections
+from os.path import join
+
+from run_prolif import selections, topo_trajs
+
 # =============================================================================
 #
 # =============================================================================
-template = '/home/gonzalezroy/RoyHub/intermap/scripts/identity/imap.cfg'
-out_dir = '/home/gonzalezroy/RoyHub/intermap/data/identity/runs/imap'
+template = '/home/rglez/RoyHub/intermap/scripts/identity/imap.cfg'
+out_dir = '/home/rglez/RoyHub/intermap/data/identity/runs/imap'
 os.makedirs(out_dir, exist_ok=True)
 resolutions = ['atom', 'residue']
 # =============================================================================

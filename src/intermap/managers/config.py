@@ -78,7 +78,7 @@ def detect_config_path(mode='debug'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/media/rglez/Expansion/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/imap.cfg'
+        config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/paper-imaps/DrHU-full-bigbox/DrHU-full-bigbox.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path

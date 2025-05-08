@@ -286,13 +286,15 @@ class IndexManager:
         pt = rdkit.Chem.GetPeriodicTable()
         radii = {e: pt.GetRvdw(e) for e in elements}
 
+        trajs = [x.strip() for x in self.traj.split(',')]
+
         try:
             any_bond = universe.bonds[0]
         except:
             logger.warning(f'The passed topology does not contain bonds. '
                            f'MDAnalysis will guess them automatically.')
             guessing = time.time()
-            universe = mda.Universe(self.topo, self.traj, guess_bonds=True,
+            universe = mda.Universe(self.topo, *trajs, guess_bonds=True,
                                     vdwradii=radii)
             n_bonds = len(universe.bonds)
             logger.info(
