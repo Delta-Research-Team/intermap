@@ -65,11 +65,11 @@ def guess_elements(universe):
 # =============================================================================
 #
 # =============================================================================
-topo = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/07_ace2_TRAJECTORIES_ace2_rbd_prot_glyc_memb_amarolab/ace2_rbd_prot_glyc_memb_amarolab.psf'
-traj = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/07_ace2_TRAJECTORIES_ace2_rbd_prot_glyc_memb_amarolab/ace2.dcd'
+topo = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/100_frames_trajs/02_IgG3/M1_IgG3.pdb'
+traj = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/100_frames_trajs/02_IgG3/IgG3.dcd'
 
-sel1 = 'protein'
-sel2 = 'not protein'
+sel1 = 'resid 1:290'
+sel2 = 'resid 291:1800'
 
 u = mda.Universe(topo, traj)
 elements = guess_elements(u)
