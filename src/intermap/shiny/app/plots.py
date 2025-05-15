@@ -3,11 +3,14 @@ Plotting components for the InterMap Visualizations app.
 """
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from plotly_resampler import FigureResampler
 
 from intermap.shiny.app.css import all_interactions_colors
+
+from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data
 
 
 def create_plot(df, width, height, show_prevalence=False):
@@ -36,6 +39,8 @@ def create_plot(df, width, height, show_prevalence=False):
         z_values = np.where(mask, interaction_to_num[interaction], None)
         text_matrix = np.where(mask, data['pivot_prevalence_rounded'].values,
                                '')
+        annotation_matrix = np.where(mask, data['pivot_annotation'].values,
+                                     '')
 
         fig.add_trace(go.Heatmap(
             z=z_values,
@@ -53,11 +58,13 @@ def create_plot(df, width, height, show_prevalence=False):
                 bordercolor='#1a1a1a',
                 font=dict(family="Roboto", size=15, color='rgb(26, 26, 26)')
             ),
+            customdata=annotation_matrix,
             hovertemplate=(
                     "<b>Selection_2:</b> %{y}<br>" +
                     f"<b>Interaction:</b> {interaction}<br>" +
                     "<b>Selection_1:</b> %{x}<br>" +
-                    "<b>Prevalence:</b> %{text}%<extra></extra>"
+                    "<b>Prevalence:</b> %{text}%<br>" +
+                    "<b>Annotation:</b> %{customdata}<extra></extra>"
             ),
             legendgroup=interaction,
             showlegend=False,
@@ -146,14 +153,16 @@ def create_ligand_interactions_plot(df, width, height):
             showlegend=item['show_legend'],
             legendgroup=item['interaction_name'],
             hovertemplate=(
-                    "<b>Selection_1:</b> %{x}<br>"
+                    "<b>Selection_1:</b> %{x}<br>" +
                     "<b>Interaction:</b> " + item[
                         'interaction_name'] + "<br>" +
                     "<b>Selection_2:</b> " + item['sel2'] + "<br>" +
-                    "<b>Prevalence:</b> " + f"{item['prevalence']:.1f}%" +
+                    "<b>Prevalence:</b> " + f"{item['prevalence']:.1f}%" + "<br>" +
+                    "<b>Annotation:</b> " + item['annotation'] +
                     "<extra></extra>"
             )
         ))
+
 
     fig.update_layout(
         width=width,
@@ -230,7 +239,8 @@ def create_receptor_interactions_plot(df, width, height):
                     "<b>Interaction:</b> " + item[
                         'interaction_name'] + "<br>" +
                     "<b>Selection_1:</b> " + item['sel1'] + "<br>" +
-                    "<b>Prevalence:</b> " + f"{item['prevalence']:.1f}%" +
+                    "<b>Prevalence:</b> " + f"{item['prevalence']:.1f}%" + "<br>" +
+                    "<b>Annotation:</b> " + item['annotation'] +
                     "<extra></extra>"
             )
         ))
@@ -304,6 +314,23 @@ def create_interactions_over_time_plot(df, width, height):
 
     fig = FigureResampler(fig, default_n_shown_samples=2000)
 
+
+    for interaction in sorted(data['scatter_df']['interaction_name'].unique()):
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(
+                    symbol='square',
+                    size=10,
+                    color=all_interactions_colors[interaction]
+                ),
+                name=interaction,
+                showlegend=True
+            )
+        )
+
     for pair in data['scatter_df']['selection_pair'].unique():
         pair_data = data['scatter_df'][
             data['scatter_df']['selection_pair'] == pair]
@@ -321,6 +348,7 @@ def create_interactions_over_time_plot(df, width, height):
                     opacity=0.7
                 ),
                 name=pair,
+                showlegend=False,
                 customdata=pair_data[
                     ['interaction_name', 'prevalence']].values,
                 hovertemplate=(
@@ -349,6 +377,7 @@ def create_interactions_over_time_plot(df, width, height):
                 end=data['scatter_df']['frame'].max() + 0.5
             ),
             name='Interactions per Frame',
+            showlegend=False,
             hovertemplate=(
                 "Frame: %{x}<br>"
                 "n-Inters: %{y}<br>"
@@ -369,6 +398,7 @@ def create_interactions_over_time_plot(df, width, height):
                 line=dict(color='#1a1a1a', width=1)
             ),
             name='Prevalence (%)',
+            showlegend=False,
             hovertemplate=(
                 "Selection Pair: %{y}<br>"
                 "Prevalence: %{x:.1f}%<br>"
@@ -381,12 +411,23 @@ def create_interactions_over_time_plot(df, width, height):
     fig.update_layout(
         width=width,
         height=height * 1.2,
-        showlegend=False,
+        showlegend=True,
         paper_bgcolor='white',
         plot_bgcolor='white',
-        margin=dict(l=50, r=50, t=50, b=50),
+        margin=dict(l=50, r=150, t=50, b=50),
         dragmode='zoom',
-        hovermode='closest'
+        hovermode='closest',
+        legend=dict(
+            title="<b>Interaction Types</b>",
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='rgba(0,0,0,0.2)',
+            borderwidth=1,
+            font=dict(family="Roboto", size=14, color='rgb(26, 26, 26)')
+        )
     )
 
     fig.update_xaxes(

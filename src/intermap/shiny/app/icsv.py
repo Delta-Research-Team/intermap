@@ -15,7 +15,7 @@ errors = {
         'InterMap to the same directory as the csv file being loaded.'}
 
 
-def traspose(df):
+def transpose(df):
     """
     Transpose the DataFrame; sel1 becomes sel2 and sel2 becomes sel1
 
@@ -63,23 +63,6 @@ class CSVFilter:
         'psf', 'pdb', 'ent', 'pqr', 'pdbqt', 'gro', 'top', 'prmtop', 'parm7',
         'dms', 'tpr', 'itp', 'mol2', 'data', 'lammpsdump', 'xyz', 'txyz',
         'arc', 'gms', 'log', 'config', 'history', 'xml', 'gsd', 'mmtf', 'in')
-
-    inter_priority = {
-        'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
-        'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
-        'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
-        'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
-        'CloseContact': 16
-    }
-
-    interaction_abbreviations = {
-        'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
-        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
-        'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
-        'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
-        'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
-    }
 
     def __init__(self, csv, topo):
         """
@@ -137,25 +120,6 @@ class CSVFilter:
         idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
         csv['idx1'] = idx_1
         csv['idx2'] = idx_2
-
-        def rename_seles(selx, notex):
-            """
-            Rename the selections in the DataFrame
-
-            Args:
-                selx (str): selection 1 or 2
-                notex (str): annotations 1 or 2
-
-            Returns:
-                new_names (pd.Series): new names for the selections
-            """
-            sx_sel = csv[selx].str.split('_', expand=False)
-            sx_sel = sx_sel.apply(lambda x: '-'.join(x[0:2]))
-            new_names = sx_sel.str.strip() + '-' + csv[notex].str.strip()
-            return new_names
-
-        csv['sel1'] = rename_seles('sel1', 'note1')
-        csv['sel2'] = rename_seles('sel2', 'note2')
 
         return csv, resolution
 
@@ -301,128 +265,154 @@ class CSVFilter:
         status = 0 if len(idx) > 0 else -1
         return idx, status
 
-    # =========================================================================
-    # Dataframes processing
-    # =========================================================================
-    def process_heatmap_data(self):
-        """Process data for heatmap plot."""
 
-        df = self.master.copy()
-        df['priority'] = df['interaction_name'].map(self.inter_priority)
+# =========================================================================
+# Funtions to process plots
+# =========================================================================
 
-        priority_df = (
-            df.sort_values(['sel1', 'sel2', 'priority', 'prevalence'],
-                           ascending=[True, True, True, False])
-            .groupby(['sel1', 'sel2']).first().reset_index())
+def process_heatmap_data(df):
+    """Process data for heatmap plot."""
+    interaction_priority = {
+        'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
+        'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
+        'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
+        'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
+        'CloseContact': 16
+    }
 
-        pivot_interaction = pd.pivot_table(
-            priority_df, values='interaction_name', index='sel2',
-            columns='sel1', aggfunc='first', fill_value='')
+    df['priority'] = df['interaction_name'].map(interaction_priority)
 
-        pivot_prevalence = pd.pivot_table(
-            priority_df, values='prevalence', index='sel2', columns='sel1',
-            aggfunc='first', fill_value="")
+    # Combinar note1 y note2 en una sola anotación
+    df['annotation'] = df['note1'].fillna('') + ' ' + df['note2'].fillna('')
+    df['annotation'] = df['annotation'].str.strip()
 
-        pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
+    priority_df = (df.sort_values(['sel1', 'sel2', 'priority', 'prevalence'],
+                                  ascending=[True, True, True, False])
+                   .groupby(['sel1', 'sel2']).first().reset_index())
 
-        present_interactions = sorted(priority_df['interaction_name'].unique(),
-                                      key=lambda x: self.inter_priority[x])
+    pivot_interaction = pd.pivot_table(priority_df, values='interaction_name',
+                                       index='sel2', columns='sel1',
+                                       aggfunc='first', fill_value='')
 
-        return {
-            'pivot_interaction': pivot_interaction,
-            'pivot_prevalence': pivot_prevalence,
-            'pivot_prevalence_rounded': pivot_prevalence_rounded,
-            'present_interactions': present_interactions
-        }
+    pivot_prevalence = pd.pivot_table(priority_df, values='prevalence',
+                                      index='sel2', columns='sel1',
+                                      aggfunc='first', fill_value="")
 
-    def process_prevalence_data(self, selection_column, batch_size=250):
-        """Process data for interaction plots.
+    pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
 
-        Args:
-            selection_column: Column to use for selection ('sel1' for ligand, 'sel2' for receptor)
-            batch_size: Size of batches for processing
+    pivot_annotation = pd.pivot_table(priority_df, values='annotation',
+                                      index='sel2', columns='sel1',
+                                      aggfunc='first', fill_value="")
 
-        Returns:
-            List of dictionaries with processed data for plotting
-        """
-        df = self.master.copy()
-        sort_idx = np.lexsort((-df['prevalence'].to_numpy(),
-                               df[selection_column].to_numpy()))
-        sorted_df = df.iloc[sort_idx]
+    present_interactions = sorted(priority_df['interaction_name'].unique(),
+                                  key=lambda x: interaction_priority[x])
 
-        batched_data = []
-        legend_entries = set()
-        unique_selections = sorted_df[selection_column].unique()
+    return {
+        'pivot_interaction': pivot_interaction,
+        'pivot_prevalence': pivot_prevalence,
+        'pivot_prevalence_rounded': pivot_prevalence_rounded,
+        'pivot_annotation': pivot_annotation,
+        'present_interactions': present_interactions
+    }
 
-        for i in range(0, len(unique_selections), batch_size):
-            batch_selections = unique_selections[i:i + batch_size]
-            batch_data = sorted_df[
-                sorted_df[selection_column].isin(batch_selections)]
 
-            for _, row in batch_data.iterrows():
-                show_legend = row['interaction_name'] not in legend_entries
-                if show_legend:
-                    legend_entries.add(row['interaction_name'])
+def process_prevalence_data(df, selection_column, batch_size=250):
+    """Process data for interaction plots.
 
-                batched_data.append({
-                    'sel1': row['sel1'],
-                    'sel2': row['sel2'],
-                    'prevalence': row['prevalence'],
-                    'interaction_name': row['interaction_name'],
-                    'show_legend': show_legend,
-                    'color': all_interactions_colors[row['interaction_name']]
-                })
+    Args:
+        df: DataFrame with interaction data
+        selection_column: Column to use for selection ('sel1' for ligand, 'sel2' for receptor)
+        batch_size: Size of batches for processing
 
-        return batched_data
+    Returns:
+        List of dictionaries with processed data for plotting
+    """
+    df['annotation'] = df['note1'].fillna('') + ' ' + df['note2'].fillna('')
+    df['annotation'] = df['annotation'].str.strip()
 
-    def process_time_series_data(self):
-        """Process data for time series plot."""
+    sort_idx = np.lexsort((-df['prevalence'].to_numpy(),
+                           df[selection_column].to_numpy()))
+    sorted_df = df.iloc[sort_idx]
 
-        df = self.master.copy()
-        df['selection_pair'] = (df['sel1'] + ' - ' + df['sel2'] + ' (' +
-                                df['interaction_name'].map(
-                                    self.interaction_abbreviations) + ')')
+    batched_data = []
+    legend_entries = set()
+    unique_selections = sorted_df[selection_column].unique()
 
-        frame_interactions = []
-        for _, row in df.iterrows():
-            timeseries = np.array(list(row['timeseries']), dtype=int)
-            frames_with_interaction = np.where(timeseries == 1)[0]
-            for frame in frames_with_interaction:
-                frame_interactions.append({
-                    'selection_pair': row['selection_pair'],
-                    'frame': frame,
-                    'prevalence': row['prevalence'],
-                    'interaction_name': row['interaction_name']
-                })
+    for i in range(0, len(unique_selections), batch_size):
+        batch_selections = unique_selections[i:i + batch_size]
+        batch_data = sorted_df[
+            sorted_df[selection_column].isin(batch_selections)]
 
-        scatter_df = pd.DataFrame(frame_interactions)
-        prevalence_data = df.groupby('selection_pair')['prevalence'].mean()
+        for _, row in batch_data.iterrows():
+            show_legend = row['interaction_name'] not in legend_entries
+            if show_legend:
+                legend_entries.add(row['interaction_name'])
 
-        interaction_colors = []
-        for pair in prevalence_data.index:
-            interaction_abbrev = pair.split('(')[1].rstrip(')')
-            for full_name, abbrev in self.interaction_abbreviations.items():
-                if abbrev == interaction_abbrev:
-                    interaction_colors.append(
-                        all_interactions_colors[full_name])
-                    break
+            batched_data.append({
+                'sel1': row['sel1'],
+                'sel2': row['sel2'],
+                'prevalence': row['prevalence'],
+                'interaction_name': row['interaction_name'],
+                'show_legend': show_legend,
+                'color': all_interactions_colors[row['interaction_name']],
+                'annotation': row['annotation']
+            })
 
-        return {
-            'scatter_df': scatter_df,
-            'prevalence_data': prevalence_data,
-            'interaction_colors': interaction_colors
-        }
+    return batched_data
 
+
+def process_time_series_data(df):
+    """Process data for time series plot."""
+    interaction_abbreviations = {
+        'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
+        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
+        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
+        'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
+        'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
+    }
+
+    df = df.copy()
+    df['selection_pair'] = (df['sel1'] + ' - ' + df['sel2'] + ' (' +
+                            df['interaction_name'].map(
+                                interaction_abbreviations) + ')')
+
+    frame_interactions = []
+    for _, row in df.iterrows():
+        timeseries = np.array(list(row['timeseries']), dtype=int)
+        frames_with_interaction = np.where(timeseries == 1)[0]
+        for frame in frames_with_interaction:
+            frame_interactions.append({
+                'selection_pair': row['selection_pair'],
+                'frame': frame,
+                'prevalence': row['prevalence'],
+                'interaction_name': row['interaction_name']
+            })
+
+    scatter_df = pd.DataFrame(frame_interactions)
+    prevalence_data = df.groupby('selection_pair')['prevalence'].mean()
+
+    interaction_colors = []
+    for pair in prevalence_data.index:
+        interaction_abbrev = pair.split('(')[1].rstrip(')')
+        for full_name, abbrev in interaction_abbreviations.items():
+            if abbrev == interaction_abbrev:
+                interaction_colors.append(all_interactions_colors[full_name])
+                break
+
+    return {
+        'scatter_df': scatter_df,
+        'prevalence_data': prevalence_data,
+        'interaction_colors': interaction_colors
+    }
 
 # =============================================================================
 #
 # =============================================================================
-full = '/media/gonzalezroy/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/paper-imaps/DrHU-full-smallbox/prot-nucleic_InterMap_full.csv'
-topo = '/media/gonzalezroy/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/paper-imaps/DrHU-full-smallbox/hmr_cionize_ions_solvent_sc150mM_WRAPPED.pdb'
+# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
 # short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
 
-self = CSVFilter(full, topo)
-df = self.master
+# self = CSVFilter(full)
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)

@@ -98,93 +98,227 @@ def create_file_input_section():
                 placeholder="e.g., resname ALA or protein",
                 value="", width="100%")))
 
+
 def create_filters_section():
     """Create the filters section of the app."""
     return ui.column(3,
-        ui.div({"class": "interaction-filter"},
-            # Panel 1
-            ui.h4("Data Input", style="font-family: Roboto;"),
-            create_file_input_section(),
-            ui.hr(),
+                     ui.div({"class": "interaction-filter"},
+                            # Panel 1
+                            ui.h4("Data Input", style="font-family: Roboto;"),
+                            create_file_input_section(),
+                            ui.hr(),
 
-           # Panel 2 and 3
-           ui.layout_columns(
-               ui.h4("Interactions"),
-               ui.h4("Annotations"),
-           ),
-           ui.layout_columns(
-               ui.div(
-                   ui.div({"class": "select-all-container"},
-                          ui.input_checkbox(
-                              "select_all_interactions",
-                              "Select All",
-                              value=True
-                          )
-                          ),
-                   ui.div({"class": "checkbox-group"},
-                          ui.output_ui("interaction_checkboxes")
-                          )
-               ),
-               ui.div(
-                   ui.div({"class": "select-all-container"},
-                          ui.input_checkbox(
-                              "select_all_annotations",
-                              "Select All",
-                              value=True
-                          )
-                          ),
-                   ui.div({"class": "checkbox-group"},
-                          ui.output_ui("annotation_checkboxes")
-                          )
-               ),
-           ),
+                            # Panel 2 and 3
+                            ui.layout_columns(
+                                ui.h4("Interactions"),
+                                ui.h4("Annotations"),
+                            ),
+                            ui.layout_columns(
+                                ui.div(
+                                    ui.div({"class": "select-all-container"},
+                                           ui.input_checkbox(
+                                               "select_all_interactions",
+                                               "Select All",
+                                               value=True
+                                           )
+                                           ),
+                                    ui.div({"class": "checkbox-group"},
+                                           ui.output_ui(
+                                               "interaction_checkboxes")
+                                           )
+                                ),
+                                ui.div(
+                                    ui.div({"class": "select-all-container"},
+                                           ui.input_checkbox(
+                                               "select_all_annotations",
+                                               "Select All",
+                                               value=True
+                                           )
+                                           ),
+                                    ui.div({"class": "checkbox-group"},
+                                           ui.output_ui(
+                                               "annotation_checkboxes")
+                                           )
+                                ),
+                            ),
 
-            # Panel 5
-            ui.h4("Prevalence"),
-            ui.layout_columns(
-                ui.input_slider("prevalence_threshold", "",
-                                min=0, max=100, value=30, step=1),
-                ui.input_switch("show_prevalence", "Show",
-                                value=False), col_widths=[9, 3],),
-            ui.hr(),
+                            # Panel 5
+                            ui.h4("Prevalence"),
+                            ui.layout_columns(
+                                ui.input_slider("prevalence_threshold", "",
+                                                min=0, max=100, value=30,
+                                                step=1),
+                                ui.input_switch("show_prevalence", "Show",
+                                                value=False),
+                                col_widths=[9, 3], ),
+                            ui.hr(),
 
-            # Panel 6
-            ui.h4("Plot Settings"),
-            ui.layout_columns(
-                ui.input_numeric("plot_width", "Plot Width",
-                                 value=personal_width * 0.67),
-                ui.input_numeric("plot_height", "Plot Height",
-                                 value=personal_height * 0.75),),
-            ui.hr(),
+                            # Panel 6
+                            ui.h4("Plot Settings"),
+                            ui.layout_columns(
+                                ui.input_numeric("plot_width", "Plot Width",
+                                                 value=personal_width * 0.67),
+                                ui.input_numeric("plot_height", "Plot Height",
+                                                 value=personal_height * 0.75), ),
+                            ui.hr(),
 
-           # Botón de Plot con padding aumentado
-           ui.div(
-               {"style": "padding: 0 15px;"},  # Añadido padding lateral
-               ui.input_action_button(
-                   "plot_button",
-                   "PLOT",
-                   width="100%",
-                   style="""
-                               background-color: #4a4a4a;
-                               color: white;
-                               padding: 20px 35px;  
-                               font-family: Roboto;
-                               font-size: 16px;
-                               border: none;
-                               border-radius: 4px;
-                               cursor: pointer;
-                               transition: background-color 0.3s ease;
-                               margin: 10px 0;  /* Añadido margen vertical */
-                           """
-               )
-           ),
-           # CSS para el hover del botón
-           ui.tags.style("""
-                       #plot_button:hover {
-                           background-color: #4051b5ff !important;
+                            # Add Sort Options
+                            ui.h4("Sort Options"),
+                            ui.input_radio_buttons(
+                                "sort_by",
+                                "",
+                                choices={
+                                    "name": "Sort by Name",
+                                    "number": "Sort by Number",
+                                    "annotation": "Sort by Annotation"
+                                },
+                                selected="name"
+                            ),
+
+                            ui.div(
+                                {"class": "transpose-button-container"},
+                                ui.input_action_button(
+                                    "transpose_button",
+                                    ui.div(
+                                        {"class": "transpose-button-content"},
+                                        ui.tags.i(
+                                            {"class": "fas fa-exchange-alt"}),
+                                        "Transpose Axes"
+                                    ),
+                                    class_="transpose-button"
+                                )
+                            ),
+                            ui.hr(),
+
+
+                            ui.tags.style("""
+               .transpose-button-container {
+                   padding: 10px 15px;
+                   margin-bottom: 15px;
+               }
+
+               .transpose-button {
+                   width: 100%;
+                   background-color: #4d4d4dd0;
+                   color: white;
+                   padding: 12px 20px;
+                   border: none;
+                   border-radius: 4px;
+                   cursor: pointer;
+                   transition: all 0.3s ease;
+                   display: flex;
+                   align-items: center;
+                   justify-content: center;
+                   font-family: Roboto;
+                   font-size: 14px;
+               }
+
+               .transpose-button:hover {
+                   background-color: #4051b5ff;
+                   transform: translateY(-2px);
+                   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+               }
+
+               .transpose-button:active {
+                   transform: translateY(0);
+               }
+
+               .transpose-button-content {
+                   display: flex;
+                   align-items: center;
+                   gap: 8px;
+               }
+
+               .transpose-button.active {
+                   background-color: #4051b5ff;
+               }
+
+               .fa-exchange-alt {
+                   transition: transform 0.3s ease;
+               }
+
+               .transpose-button.active .fa-exchange-alt {
+                   transform: rotate(90deg);
+               }
+           """),
+
+                            # Script para manejar la actualización del botón
+                            ui.tags.script("""
+               $(document).ready(function() {
+                   Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
+                       const button = document.querySelector('.transpose-button');
+                       if (message.active) {
+                           button.classList.add('active');
+                       } else {
+                           button.classList.remove('active');
                        }
-                   """),
-           ))
+                   });
+
+                   Shiny.addCustomMessageHandler('refresh-plots', function(message) {
+                       var plotTabs = ['interaction_plot', 'ligand_interactions_plot', 
+                                     'receptor_interactions_plot', 'interactions_over_time_plot'];
+                       plotTabs.forEach(function(plotId) {
+                           if (Shiny.shinyapp.$bindings[plotId]) {
+                               Shiny.shinyapp.$bindings[plotId].invalidate();
+                           }
+                       });
+                   });
+               });
+           """),
+
+                            ui.div(
+                                {"style": "padding: 0 15px;"},
+                                ui.input_action_button(
+                                    "plot_button",
+                                    "PLOT",
+                                    width="100%",
+                                    style="""
+                                      background-color: #4a4a4a;
+                                      color: white;
+                                      padding: 20px 35px;  
+                                      font-family: Roboto;
+                                      font-size: 16px;
+                                      border: none;
+                                      border-radius: 4px;
+                                      cursor: pointer;
+                                      transition: background-color 0.3s ease;
+                                      margin: 10px 0;
+                                  """
+                                )
+                            ),
+                            # Botón de descarga
+                            ui.div(
+                                {"style": "padding: 0 15px;"},
+                                ui.input_action_button(
+                                    "download_plot_button",
+                                    "SAVE PLOT",
+                                    width="100%",
+                                    style="""
+                              background-color: #4051b5ff;
+                              color: white;
+                              padding: 20px 35px;
+                              font-family: Roboto;
+                              font-size: 16px;
+                              border: none;
+                              border-radius: 4px;
+                              cursor: pointer;
+                              transition: background-color 0.3s ease;
+                              margin: 10px 0;
+                          """
+                                )
+                            ),
+                            # Actualizar el CSS
+                            ui.tags.style("""
+                      #plot_button:hover {
+                          background-color: #4051b5ff !important;
+                      }
+                      #download_plot_button:hover {
+                          background-color: #4a4a4a !important;
+                      }
+                  """),
+                            ))
+
+
 
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""

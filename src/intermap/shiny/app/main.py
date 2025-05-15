@@ -4,12 +4,15 @@ Integrates UI components with server-side logic.
 """
 
 import os
+import shutil
 import tempfile
+from datetime import datetime
+from pathlib import Path
 
 from shiny import App, reactive, render, ui
 
 from .css import ERROR_MESSAGES
-from .icsv import CSVFilter
+from .icsv import CSVFilter, sortby, transpose
 from .plots import (create_interactions_over_time_plot,
                     create_ligand_interactions_plot, create_plot,
                     create_receptor_interactions_plot)
@@ -25,13 +28,13 @@ def server(input, output, session):
     csv = reactive.Value(None)
     filtered_idx = reactive.Value(None)
     csv_filtered = reactive.Value(None)
+    transpose_state = reactive.Value(False)
 
     @reactive.Effect
     @reactive.event(input.csv_file, input.top_file)
     def initialize_filter():
         """Initialize CSVFilter when both files are uploaded."""
         try:
-            # Verificar que ambos archivos estén presentes
             csv_infos = input.csv_file()
             top_infos = input.top_file()
 
@@ -41,19 +44,14 @@ def server(input, output, session):
                 csv_filtered.set(None)
                 return
 
-            # Crear directorio temporal
             temp_dir = tempfile.mkdtemp()
 
-            # Guardar ambos archivos en el directorio temporal
             csv_path = os.path.join(temp_dir, csv_infos[0]["name"])
             top_path = os.path.join(temp_dir, top_infos[0]["name"])
 
-            # Copiar los archivos usando shutil
-            import shutil
             shutil.copy2(csv_infos[0]["datapath"], csv_path)
             shutil.copy2(top_infos[0]["datapath"], top_path)
 
-            # Inicializar CSVFilter con ambos archivos
             master_instance = CSVFilter(
                 csv=csv_path,
                 topo=top_path
@@ -67,7 +65,6 @@ def server(input, output, session):
                 type="message"
             )
 
-            # Seleccionar automáticamente la primera pestaña
             ui.update_navs("plot_tabs", selected="Sele1 vs Sele2")
 
         except Exception as e:
@@ -82,10 +79,31 @@ def server(input, output, session):
             )
 
     @reactive.Effect
+    @reactive.event(input.transpose_button)
+    def handle_transpose():
+        """Handle the transpose button click."""
+        transpose_state.set(not transpose_state.get())
+
+        session.send_custom_message(
+            "update-transpose-button",
+            {"active": transpose_state.get()}
+        )
+
+        if filtered_idx.get() is not None and csv.get() is not None:
+            filtered_df = csv.get().master.iloc[
+                list(filtered_idx.get())].copy()
+            if transpose_state.get():
+                filtered_df = transpose(filtered_df)
+            filtered_df = sortby(filtered_df, input.sort_by())
+            csv_filtered.set(filtered_df)
+            session.send_custom_message("refresh-plots", {})
+
+    @reactive.Effect
     @reactive.event(input.plot_button,
                     input.selected_interactions,
                     input.selected_annotations,
-                    input.prevalence_threshold)
+                    input.prevalence_threshold,
+                    input.sort_by)
     def update_filtered_idx():
         """Update filtered indices based on current UI selections."""
         if csv.get() is None:
@@ -126,11 +144,75 @@ def server(input, output, session):
         # Update reactive states
         df_idx = set.intersection(mda_idx, prev_idx, inter_idx, annot_idx)
         if df_idx:
+            filtered_df = master_instance.master.iloc[list(df_idx)].copy()
+            if transpose_state.get():
+                filtered_df = transpose(filtered_df)
+            filtered_df = sortby(filtered_df, input.sort_by())
             filtered_idx.set(df_idx)
-            csv_filtered.set(csv.get().master.iloc[list(df_idx)])
+            csv_filtered.set(filtered_df)
         else:
             filtered_idx.set(None)
             csv_filtered.set(None)
+
+    @reactive.Effect
+    @reactive.event(input.download_plot_button)
+    def handle_download():
+        """Handle the plot download when the download button is clicked."""
+        if csv_filtered.get() is None:
+            ui.notification_show(
+                "No plot to save. Please generate a plot first.",
+                duration=3000,
+                type="warning"
+            )
+            return
+
+        # Determinar qué pestaña está activa
+        active_tab = input.plot_tabs()
+
+        # Obtener el plot correspondiente
+        if active_tab == "Sele1 vs Sele2":
+            fig = create_plot(csv_filtered.get(), input.plot_width(),
+                              input.plot_height(), input.show_prevalence())
+        elif active_tab == "Sele1 Prevalence":
+            fig = create_ligand_interactions_plot(csv_filtered.get(),
+                                                  input.plot_width(),
+                                                  input.plot_height() // 1.5)
+        elif active_tab == "Sele2 Prevalence":
+            fig = create_receptor_interactions_plot(csv_filtered.get(),
+                                                    input.plot_width(),
+                                                    input.plot_height() // 1.5)
+        elif active_tab == "Time Series":
+            fig = create_interactions_over_time_plot(csv_filtered.get(),
+                                                     input.plot_width(),
+                                                     input.plot_height())
+
+        try:
+            # Crear nombre de archivo con timestamp
+            timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+            filename = f"plot_{active_tab.lower().replace(' ', '_')}_{timestamp}.html"
+
+            # Crear directorio 'saved_plots' si no existe
+            save_dir = Path("saved_plots")
+            save_dir.mkdir(exist_ok=True)
+
+            # Ruta completa del archivo
+            filepath = save_dir / filename
+
+            # Guardar el plot como HTML
+            fig.write_html(filepath)
+
+            ui.notification_show(
+                f"Plot saved successfully as '{filename}' in 'saved_plots' directory in your/path/to/intermap/src/intermap/shiny/",
+                duration=5000,
+                type="message"
+            )
+
+        except Exception as e:
+            ui.notification_show(
+                f"Error saving plot: {str(e)}",
+                duration=5000,
+                type="error"
+            )
 
     # =========================================================================
     # Rendering helper functions
@@ -187,7 +269,7 @@ def server(input, output, session):
     # =========================================================================
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.transpose_button)
     def interaction_plot():
         """Render the main interaction heatmap plot."""
         return render_plot(create_plot, is_main=True)
@@ -255,5 +337,6 @@ def server(input, output, session):
             ui.update_checkbox_group("selected_annotations", selected=choices)
         else:
             ui.update_checkbox_group("selected_annotations", selected=[])
+
 
 app = App(app_ui, server)
