@@ -1,4 +1,4 @@
-# Created by gonzalezroy at 4/14/25
+# Created by rglez at 4/14/25
 import os
 from os.path import join
 
@@ -67,8 +67,8 @@ def guess_elements(universe):
 # =============================================================================
 # TopoTrajs
 # =============================================================================
-topo_traj_path = '/home/gonzalezroy/RoyHub/intermap/data/100_frames_trajs/'
-out_dir = f'/home/gonzalezroy/RoyHub/intermap/scripts/identity/runs/prolif'
+topo_traj_path = '/home/rglez/RoyHub/intermap/data/100_frames_trajs/'
+out_dir = f'/home/rglez/RoyHub/intermap/scripts/identity/runs/prolif'
 
 # =============================================================================
 
@@ -142,3 +142,17 @@ if __name__ == '__main__':
         fp.run(u.trajectory, ligand_selection, protein_selection)
         df = fp.to_dataframe()
         gnl.pickle_to_file(df, join(out_dir, 'prolif.pkl'))
+
+# =============================================================================
+#
+# =============================================================================
+lig = '/media/rglez/Expansion1/roy-external/RoyData/stdock/data/redmat/poses-redmat-2/M1/smina/lig-M1-smina.pdb'
+rec = '/media/rglez/Expansion1/roy-external/RoyData/stdock/data/redmat/poses-redmat-2/M1/smina/rec-M1-smina.pdb'
+
+u = mda.Universe(rec)
+u2 = mda.Universe(lig)
+from MDAnalysis.analysis.dssp import DSSP
+
+u = mda.Universe(PDB)
+s = DSSP(u).run().results.dssp[0]
+print(s)
