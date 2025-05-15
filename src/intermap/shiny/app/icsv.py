@@ -12,6 +12,7 @@ errors = {
         'Topology not found. Please manually copy the topology file used to run '
         'InterMap to the same directory as the csv file being loaded.'}
 
+
 def traspose(df):
     """
     Transpose the DataFrame; sel1 becomes sel2 and sel2 becomes sel1
@@ -25,6 +26,7 @@ def traspose(df):
                  'idx1': 'idx2', 'idx2': 'idx1',
                  }, inplace=True)
     return df
+
 
 def sortby(df, choice):
     """

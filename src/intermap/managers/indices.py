@@ -763,36 +763,34 @@ class IndexManager:
         if annot_file:
             with open(annot_file) as f:
                 lines = f.readlines()
-            lines = [x.strip() for x in lines if x not in ['', '\n', '#']]
 
-            for line in lines:
-                if line.startswith('#'):
-                    continue
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('#') or len(stripped) == 0:
+                continue
 
-                try:
-                    name, value = line.split('=')
-                except ValueError:
-                    raise ValueError(
-                        f'Error parsing the annotations file. The line: {line}'
-                        f' is not valid. The expected format is: name = value.'
-                        f' While the name can be any string, the value must be'
-                        f' a valid MDAnalysis selection string.')
+            try:
+                name, value = stripped.split('=')
+            except ValueError:
+                raise ValueError(
+                    f"Error parsing the annotations file. The line "
+                    f"{line} does not contain a valid annotation.")
 
-                indices = universe.select_atoms(value).indices
-                annotations[name.strip()].update(indices)
-                if len(indices) == 0:
-                    logger.warning(
-                        f"Selection {value} for the key {name} returned no"
-                        f" atoms in the topology {self.args.topology}. "
-                        f"Please check the selection.")
+            indices = universe.select_atoms(value).indices
+            annotations[name.strip()].update(indices)
+            if len(indices) == 0:
+                logger.warning(
+                    f"Selection {value} for the key {name} returned no"
+                    f" atoms in the topology {self.args.topology}. "
+                    f"Please check the selection.")
 
-                intersect = set(indices).intersection(cumulative)
-                cumulative.update(indices)
-                if len(intersect) > 0:
-                    raise ValueError(
-                        f"Error parsing the annotations file. The selection "
-                        f"{value} for the key {name} overlaps with one or"
-                        f" more of the previously defined selections.")
+            intersect = set(indices).intersection(cumulative)
+            cumulative.update(indices)
+            if len(intersect) > 0:
+                raise ValueError(
+                    f"Error parsing the annotations file. The selection "
+                    f"{value} for the key {name} overlaps with one or"
+                    f" more of the previously defined selections.")
 
         return annotations
 
