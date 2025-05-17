@@ -333,18 +333,35 @@ def create_plots_section():
                                          "margin: 20px auto;"},
                             ui.output_ui("interaction_plot"),),),
 
-                    # Tab 2: Ligand Interactions
-                    ui.nav_panel("Sele1 Prevalence",
-                        ui.div({"style": "width: 100%; max-width: 90%; "
-                                         "margin: 20px auto;"},
-                            ui.output_ui("ligand_interactions_plot"),),),
+                    # Tab 2:
+                    ui.nav_panel("Prevalence",
+                                 ui.div(
+                                     {"style": "width: 100%; max-width: 90%; "
+                                               "margin: 20px auto;"},
+                                     ui.div({
+                                                "style": "display: flex; flex-direction: column; gap: 50px;"},
+                                            ui.div({
+                                                       "style": "width: 100%; margin-bottom: 40px; padding: 20px; "
+                                                                "border-bottom: 1px solid #e0e0e0;"},
+                                                   ui.div({
+                                                              "style": "height: 400px;"},
+                                                          ui.output_ui(
+                                                              "ligand_interactions_plot"),
+                                                          ),
+                                                   ),
+                                            ui.div({
+                                                       "style": "width: 100%; padding: 20px;"},
+                                                   ui.div({
+                                                              "style": "height: 400px;"},
+                                                          ui.output_ui(
+                                                              "receptor_interactions_plot"),
+                                                          ),
+                                                   ),
+                                            ),
+                                     ),
+                                 ),
 
-                    # Tab 3: Receptor Interactions
-                    ui.nav_panel("Sele2 Prevalence",
-                        ui.div({"style": "width: 100%; max-width: 90%; "
-                                         "margin: 20px auto;"},
-                            ui.output_ui("receptor_interactions_plot"),),),
-                    # Tab 4: Interactions Over Time
+                    # Tab 3: Interactions Over Time (antes Tab 4)
                     ui.nav_panel("Time Series",
                         ui.div({"style": "width: 100%; max-width: 90%; "
                                          "margin: 20px auto;"},
