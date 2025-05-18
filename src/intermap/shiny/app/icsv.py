@@ -115,12 +115,20 @@ class CSVFilter:
         raw = csv['sel1'][0]
         resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
 
-        N = 2 if resolution == 'residue' else 4
-        idx_1 = csv['sel1'].str.split('_', expand=True)[N].astype(int)
-        idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
-        csv['idx1'] = idx_1
-        csv['idx2'] = idx_2
+        expanded_sel1 = csv['sel1'].str.split('_', expand=True)
+        expanded_sel2 = csv['sel2'].str.split('_', expand=True)
 
+        resname_idx = 0
+        csv['resname1'] = expanded_sel1[resname_idx]
+        csv['resname2'] = expanded_sel2[resname_idx]
+
+        resnum_idx = 1
+        csv['resnum1'] = expanded_sel1[resnum_idx].astype(int)
+        csv['resnum2'] = expanded_sel2[resnum_idx].astype(int)
+
+        resindex_idx = 2
+        csv['idx1'] = expanded_sel1[resindex_idx].astype(int)
+        csv['idx2'] = expanded_sel2[resindex_idx].astype(int)
         return csv, resolution
 
     # =========================================================================
@@ -361,6 +369,68 @@ def process_prevalence_data(df, selection_column, batch_size=250):
     return batched_data
 
 
+def process_prevalence_data2(df, selection_column, sort_by='note'):
+    """Process data for interaction plots.
+
+    Args:
+        df: DataFrame with interaction data
+        selection_column: Column to use for selection ('sel1' for ligand, 'sel2' for receptor)
+        sort_by: Additional sorting column ('resname', 'resnum', 'idx', 'note')
+
+    Returns:
+        List of dictionaries with processed data for plotting
+    """
+    df['annotation'] = df['note1'].fillna('') + ' ' + df['note2'].fillna('')
+    df['annotation'] = df['annotation'].str.strip()
+    # Assign colors based on interaction names
+    sorted_df = df.copy()
+    inter_name = df['interaction_name']
+    inter_colors = all_interactions_colors
+    sorted_df['color'] = inter_name.map(inter_colors)
+
+    # Show legend for the first occurrence of each interaction
+    _, indices = np.unique(inter_name.to_numpy(), return_index=True)
+    show_legend = np.zeros(len(sorted_df), dtype=bool)
+    show_legend[indices] = True
+    sorted_df['show_legend'] = show_legend
+
+    # Sorting
+    which = selection_column[-1]
+    resname = f'resname{which}'
+    resnum = f'resnum{which}'
+    idx = f'idx{which}'
+    note = f'note{which}'
+
+    # Sort by the selected column
+    if sort_by == 'resname':
+        groups = sorted_df.groupby([resname, resnum, idx, note]).indices
+    elif sort_by == 'resnum':
+        groups = sorted_df.groupby([resnum, resname, idx, note]).indices
+    elif sort_by == 'idx':
+        groups = sorted_df.groupby([idx, resname, resnum, note]).indices
+    elif sort_by == 'note':
+        groups = sorted_df.groupby([note, resname, resnum, idx]).indices
+    else:
+        raise ValueError(
+            f'Invalid sort_by value: {sort_by}. Available options: '
+            'resname, resnum, idx, note')
+
+    # Sort by prevalence
+    for group in groups:
+        indices = groups[group]
+        sorted_indices = (sorted_df.iloc[indices].sort_values(
+            by='prevalence', ascending=False).index)
+        groups[group] = sorted_indices
+    concat_indices = np.concatenate(list(groups.values()))
+    sorted_df = sorted_df.iloc[concat_indices]
+
+    # Create batched data
+    batched_df = sorted_df[['sel1', 'sel2', 'prevalence', 'interaction_name',
+                            'show_legend', 'color', 'annotation']]
+    batched_data = batched_df.to_dict(orient='records')
+    return batched_data
+
+
 def process_time_series_data(df):
     """Process data for time series plot."""
     interaction_abbreviations = {
@@ -406,13 +476,15 @@ def process_time_series_data(df):
         'interaction_colors': interaction_colors
     }
 
+
 # =============================================================================
 #
 # =============================================================================
-# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
+# full = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/DrHU-Tails-8k-atomic/dna-prot_InterMap_full.csv'
+# topo = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/DrHU-Tails-8k-atomic/hmr.psf'
 # short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
 
-# self = CSVFilter(full)
+# self = CSVFilter(full, topo)
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)
