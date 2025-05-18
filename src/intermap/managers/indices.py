@@ -69,18 +69,59 @@ def any_hh_bonds(universe):
     return False
 
 
-def get_hh_bonds(universe):
+def calc_dist(a, b):
     """
-    Get the hydrogen-hydrogen bonds in the Universe
+    Calculate the distance between two atoms
+
+    Args:
+        a (numpy.ndarray): Coordinates of atom a
+        b (numpy.ndarray): Coordinates of atom b
 
     Returns:
-        bonds (list): List of hydrogen-hydrogen bonds
+        float: Distance between the two atoms
+    """
+    return np.linalg.norm(a - b)
+
+
+def fix_hh_and_hvalence(universe):
+    """
+    Delete H-H bonds from the universe
+
+    Args:
+        universe (MDAnalysis.Universe): Universe object
     """
     bonds = universe.bonds
-    for bond in bonds:
-        atom1, atom2 = bond
-        if (atom1.element == 'H') and (atom2.element == 'H'):
-            yield bond
+    neighbors = defaultdict(list)
+
+    hh = []
+    for a1, a2 in bonds:
+        a1_idx = a1.index
+        a2_idx = a2.index
+        if (a1.element == 'H') and (a2.element == 'H'):
+            hh.append((a1_idx, a2_idx))
+            continue
+        if a1.element == 'H':
+            neighbors[a1_idx].append(a2_idx)
+        if a2.element == 'H':
+            neighbors[a2_idx].append(a1_idx)
+
+    # Remove H-H bonds
+    universe.delete_bonds(hh)
+
+    offending = {k: v for k, v in neighbors.items() if len(v) > 1}
+    hv = []
+    for k, v in offending.items():
+        distances = []
+        for j in v:
+            distance = calc_dist(universe.atoms[k].position,
+                                 universe.atoms[j].position)
+            distances.append(distance)
+        argmin = np.argmin(distances)
+        v.pop(argmin)
+        for x in v:
+            hv.append((k, x))
+    universe.delete_bonds(hv)
+    return universe
 
 
 def ag2rdkit(ag):
@@ -306,7 +347,10 @@ class IndexManager:
         universe.add_TopologyAttr('elements', elements)
         stamp1 = time.time()
         are_hh = any_hh_bonds(universe)
-        universe.delete_bonds(get_hh_bonds(universe))
+
+        universe = fix_hh_and_hvalence(universe)
+        # universe.delete_bonds(get_hh_bonds(universe))
+
         del_time = time.time() - stamp1
         if are_hh:
             logger.warning(
