@@ -3,14 +3,15 @@ Plotting components for the InterMap Visualizations app.
 """
 
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from plotly_resampler import FigureResampler
 
 from intermap.shiny.app.css import all_interactions_colors
-
-from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data
+from intermap.shiny.app.icsv import (process_heatmap_data,
+                                     process_prevalence_data,
+                                     process_prevalence_data2,
+                                     process_time_series_data)
 
 
 def create_plot(df, width, height, show_prevalence=False):
@@ -138,6 +139,7 @@ def create_plot(df, width, height, show_prevalence=False):
 def create_ligand_interactions_plot(df, width, height):
     """Create ligand interactions plot."""
     batched_data = process_prevalence_data(df, 'sel1')
+    batched_data2 = process_prevalence_data2(df, 'sel1')
 
     fig = go.Figure()
 
