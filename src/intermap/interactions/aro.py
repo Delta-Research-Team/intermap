@@ -19,10 +19,12 @@ def get_trees(xyzs_aro, s2_aro_indices):
 
 
 @njit(parallel=True, cache=True)
-def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
+def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat, s1_ani, s2_ani):
     d1, d3 = xyzs.shape[0], xyzs.shape[2]
-    d2 = (s1_cat.shape[0] + s2_cat.shape[0] + s1_rings.shape[0] +
-          s2_rings.shape[0])
+    d2 = (
+            s1_cat.shape[0] + s2_cat.shape[0] + s1_ani.shape[0] + s2_ani.shape[
+        0] +
+            s1_rings.shape[0] + s2_rings.shape[0])
 
     xyzs_aro = np.empty((d1, d2, d3), dtype=np.float32)
     s1_centrs = np.empty((d1, s1_rings.shape[0], 3), dtype=np.float32)
@@ -33,7 +35,8 @@ def get_aro_xyzs(xyzs, s1_rings, s2_rings, s1_cat, s2_cat):
         s1_centr = geom.calc_centroids(s1_rings, xyz)
         s2_centr = geom.calc_centroids(s2_rings, xyz)
         xyzs_aro[i] = concat(
-            (xyz[s1_cat], xyz[s2_cat], s1_centr, s2_centr), axis=0)
+            (xyz[s1_cat], xyz[s2_cat], xyz[s1_ani], xyz[s2_ani], s1_centr,
+             s2_centr), axis=0)
         s1_centrs[i] = s1_centr
         s2_centrs[i] = s2_centr
 
@@ -91,7 +94,7 @@ def get_intersect_point(s1_normal, s1_centroid, s2_normal, s2_centroid):
 
 @njit(parallel=False, cache=True)
 def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
-              s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm,
+              s2_rings_idx, s1_ionic_idx, s2_ionic_idx, s1_norm, s2_norm,
               cutoffs_aro, selected_aro):
     """
     Helper function to compute the pi-cation // cation-pi interactions
@@ -104,11 +107,11 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
     max_ang = cutoffs_aro[3, idx]
 
     # Select the pairs
-    if inter_name == 'PiCation':
+    if inter_name in ('PiCation', 'PiAnion'):
         s1_is_type = geom.isin(row1, s1_rings_idx)
-        s2_is_type = geom.isin(row2, s2_cat_idx)
-    elif inter_name == 'CationPi':
-        s1_is_type = geom.isin(row1, s1_cat_idx)
+        s2_is_type = geom.isin(row2, s2_ionic_idx)
+    elif inter_name in ('CationPi', 'AnionPi'):
+        s1_is_type = geom.isin(row1, s1_ionic_idx)
         s2_is_type = geom.isin(row2, s2_rings_idx)
     else:
         raise ValueError(f"Invalid interaction name: {inter_name}")
@@ -124,10 +127,12 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
     vector_ctr_cat = xyz_aro[row1_pairs] - xyz_aro[row2_pairs]
 
-    if inter_name == 'PiCation':
+    if inter_name in ('PiCation', 'PiAnion'):
         normals = s1_norm[geom.indices(s1_rings_idx, row1_pairs)]
-    else:
+    elif inter_name in ('CationPi', 'AnionPi'):
         normals = s2_norm[geom.indices(s2_rings_idx, row2_pairs)]
+    else:
+        raise ValueError(f"Invalid interaction name: {inter_name}")
 
     angles = geom.calc_angles_2v(normals, vector_ctr_cat)
 
@@ -194,9 +199,8 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 @njit(parallel=False, cache=True)
 def aro(
         xyz_aro, xyz_aro_idx, ijf_aro_tmp, dists_aro, s1_rings_idx,
-        s2_rings_idx,
-        s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, s1_ctrs, s2_ctrs, cuts_aro,
-        selected_aro):
+        s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_ani_idx, s2_ani_idx, s1_norm,
+        s2_norm, s1_ctrs, s2_ctrs, cuts_aro, selected_aro):
     ijf_aro = ijf_aro_tmp.copy()
     row1 = ijf_aro[:, 0]
     row2 = ijf_aro[:, 1]
@@ -206,18 +210,32 @@ def aro(
         return ijf_aro, inters_aro
 
     if 'PiCation' in selected_aro:
-        pi_idx, pi_cat = pications(
+        picat_idx, pi_cat = pications(
             'PiCation', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
-            s2_rings_idx,
-            s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
-        inters_aro[:, pi_idx] = pi_cat
+            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro,
+            selected_aro)
+        inters_aro[:, picat_idx] = pi_cat
+
+    if 'PiAnion' in selected_aro:
+        piani_idx, pi_anion = pications(
+            'PiAnion', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
+            s2_rings_idx, s1_ani_idx, s2_ani_idx, s1_norm, s2_norm, cuts_aro,
+            selected_aro)
+        inters_aro[:, piani_idx] = pi_anion
 
     if 'CationPi' in selected_aro:
         cat_idx, cat_pi = pications(
             'CationPi', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
-            s2_rings_idx,
-            s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro, selected_aro)
+            s2_rings_idx, s1_cat_idx, s2_cat_idx, s1_norm, s2_norm, cuts_aro,
+            selected_aro)
         inters_aro[:, cat_idx] = cat_pi
+
+    if 'AnionPi' in selected_aro:
+        ani_idx, ani_pi = pications(
+            'AnionPi', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
+            s2_rings_idx, s1_ani_idx, s2_ani_idx, s1_norm, s2_norm, cuts_aro,
+            selected_aro)
+        inters_aro[:, ani_idx] = ani_pi
 
     if 'PiStacking' in selected_aro or 'EdgeToFace' in selected_aro or 'FaceToFace' in selected_aro:
         # Get the ring pairs
