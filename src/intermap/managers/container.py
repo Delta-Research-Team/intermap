@@ -259,7 +259,13 @@ class ContainerManager:
         """
         with open(path1, 'w') as file1, open(path2, 'w') as file2:
             file1.write(f'# {basename(self.args.topology)}\n')
+            file1.write(
+                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
+
             file2.write(f'# {basename(self.args.topology)}\n')
+            file2.write(
+                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
+
             file1.write(
                 'sel1,note1,sel2,note2,water,interaction_name,prevalence,timeseries\n')
             file2.write(
