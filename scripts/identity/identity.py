@@ -1,143 +1,83 @@
-import os
-from os.path import basename, join
-
 import numpy as np
 import pandas as pd
 from bitarray import bitarray as ba
 from rgpack import generals as gnl
 
+
+class Kompare:
+    def __init__(self, plif_pickle, imap_csv, ignores=()):
+        self.plif_input = plif_pickle
+        self.imap_input = imap_csv
+        self.ignores = ignores
+
+    def plif2dict(self):
+        """
+        Convert a Prolif pickle file to a dictionary.
+        """
+        df = gnl.unpickle_from_file(self.plif_input)
+        prolif_dict = {}
+        for column in df.columns:
+            r1 = column[0].split('.')[0].strip()
+            r2 = column[1].split('.')[0].strip()
+            inter = column[2].strip()
+            time = np.asarray(df[column], dtype=bool).nonzero()[0]
+            if r1 == r2:
+                continue
+            prolif_dict[(r1, r2, inter)] = time
+        inters_types = set([x[-1] for x in prolif_dict.keys()])
+        return prolif_dict, inters_types
+
+    def imap2dict(self):
+        """
+        Convert an InterMap csv file to a dictionary.
+        """
+        df = pd.read_csv(self.imap_input, header=2, na_values=('', ' '))
+        name1 = [f'{x[0]}{x[1]}' for x in df.sel1.str.split('_')]
+        name2 = [f'{x[0]}{x[1]}' for x in df.sel2.str.split('_')]
+        inter = df.interaction_name.str.strip().tolist()
+
+        imap_dict = {}
+        for i, x in enumerate(name1):
+            key = (name1[i].strip(), name2[i].strip(), inter[i].strip())
+            time = np.asarray(list(ba(df.iloc[i, -1]))).nonzero()[0]
+            imap_dict[key] = time
+        inters_types = set([x[-1] for x in imap_dict.keys()])
+        return imap_dict, inters_types
+
+    def get_missing_in_target(self, reference, target):
+        """
+        Get the missing interactions in the target dictionary compared to the reference.
+        """
+        missing = {}
+        diverging = {}
+        for inter in reference:
+            type_ = inter[-1]
+            if type_ in self.ignores:
+                continue
+            ref_time = reference.get(inter)
+            tar_time = target.get(inter, None)
+
+            if tar_time is None:
+                missing[inter] = ref_time
+            else:
+                equal = np.array_equal(ref_time, tar_time)
+                if not equal:
+                    difference = np.setdiff1d(ref_time, tar_time)
+                    diverging[inter] = difference
+        return missing, diverging
+
+
 # =============================================================================
 # User-defined variables
 # =============================================================================
-root_dir = '/media/rglez/Roy2TB/Dropbox/DockingBoys/storage/identity_prolif_100frames/'
-cases = [join(root_dir, x) for x in os.listdir(root_dir)]
+out_dir = '/home/gonzalezroy/RoyHub/intermap/scripts/identity/'
+imap_input = '/media/gonzalezroy/Roy2TB/RoyData/intermap/IDENTITY-FINAL/imaps/mpro/mpro_InterMap_full.csv'
+plif_input = '/media/gonzalezroy/Roy2TB/RoyData/intermap/IDENTITY-FINAL/mpro/prolif.pkl'
 
-results = {}
-for case in cases:
-    pkl = next(gnl.recursive_finder('fingerprint.pkl', case))
-    csv = next(gnl.recursive_finder('*_full.csv', case))
-    results[basename(case)] = (pkl, csv)
+kompare = Kompare(plif_input, imap_input)
+plif_dict, plif_types = kompare.plif2dict()
+imap_dict, imap_types = kompare.imap2dict()
+missing, diverging = kompare.get_missing_in_target(plif_dict, imap_dict)
 
-case = 'mpro'
-
-df = gnl.unpickle_from_file(results[case][0]).to_dataframe()
-imap = pd.read_csv(results[case][1], header=1, na_values=('', ' '))
-
-# =============================================================================
-# Transforming Prolif data
-# =============================================================================
-prolif_dict = {}
-for column in df.columns:
-    r1 = column[0].split('.')[0]
-    r2 = column[1].split('.')[0]
-    inter = column[2]
-    time = np.asarray(df[column], dtype=bool)
-    prolif_dict[(r1, r2, inter)] = time
-total_prolif = 0
-for x in prolif_dict:
-    total_prolif += prolif_dict[x].sum()
-
-prolif_inters = set()
-for x in prolif_dict:
-    r1, r2, inter = x
-    prolif_inters.add(inter.strip())
-
-# =============================================================================
-# Reducing InterMap data
-# =============================================================================
-imap_dict_raw = dict()
-for x in imap.values:
-    a1, _, a2, _, a3, inter_raw, prev, time = x
-    a1, a2, inter_raw = a1.strip(), a2.strip(), inter_raw.strip()
-    inter = str(inter_raw).strip()
-    a1_resname, a1_resnum, a1_resid = a1.split('_')
-    a1_label = f'{a1_resname}{a1_resnum}'
-    a2_resname, a2_resnum, a2_resid = a2.split('_')
-    a2_label = f'{a2_resname}{a2_resnum}'.strip()
-    current_time = ba(time)
-
-    if (a1_label, a2_label, inter) in imap_dict_raw:
-        previous_time = imap_dict_raw[(a1_label, a2_label, inter)]
-        or_time = previous_time | current_time
-        imap_dict_raw[(a1_label, a2_label, inter)] = or_time
-    else:
-        imap_dict_raw[(a1_label, a2_label, inter)] = current_time
-
-imap_dict = dict()
-for x in imap_dict_raw:
-    imap_dict[x] = np.asarray(imap_dict_raw[x].tolist())
-total_imap = 0
-for x in imap_dict:
-    total_imap += imap_dict[x].sum()
-
-imap_inters = set()
-for x in imap_dict_raw:
-    r1, r2, inter = x
-    imap_inters.add(inter.strip())
-
-# =============================================================================
-# Comparing Prolif and InterMap data in general terms
-# =============================================================================
-
-# Interactions types in Prolif but not in InterMap
-not_imap = prolif_inters - imap_inters
-print('Interactions in Prolif but not in InterMap:', not_imap)
-
-# Interactions in InterMap but not in Prolif
-not_prolif = imap_inters - prolif_inters
-print('Interactions in InterMap but not in Prolif:', not_prolif)
-
-# PLF @ IMAP
-# todo: what about self-interactions? within same residue? Remove a==b !
-INTER = 'CationPi'
-count = 0
-for pl_inter in prolif_dict:
-    a, b, c = pl_inter
-    pl_inverse = (b, a, c)
-    if (c != INTER) or (a == b):
-        continue
-    if pl_inter not in imap_dict:
-        count += 1
-        print(f'Prolif interaction {pl_inter} not in InterMap')
-print(
-    f'Percentage of Prolif {INTER} not in InterMap: {count / len(prolif_dict) * 100:.2f}%')
-
-# IMAP @ PLF
-count = 0
-for im_inter in imap_dict:
-    d, e, f = im_inter
-    im_inverse = (e, d, f)
-    if (d == e) or (f != INTER):
-        continue
-    if (im_inter not in prolif_dict) and (
-            im_inter[-1] in ['CloseContact']):
-        count += 1
-        print(f'InterMap interaction {im_inter} not in Prolif')
-print(
-    f'Percentage of InterMap interactions not in Prolif: {count / len(imap_dict) * 100:.2f}%')
-
-# =============================================================================
-# Comparing Prolif and InterMap data in specific terms
-# =============================================================================
-# count = 0
-# for inter in prolif_dict:
-#     plf_time = prolif_dict[inter].nonzero()[0]
-#     imap_time = imap_dict[inter].nonzero()[0]
-#     equal = np.array_equal(plf_time, imap_time)
-#     if not equal:
-#         diff1 = np.setdiff1d(plf_time, imap_time)
-#         diff2 = np.setdiff1d(imap_time, plf_time)
-#         if diff1.size > 0:
-#             print(f'Prolif time values {diff1} not in InterMap for {inter}')
-#             print(plf_time)
-#             print(imap_time)
-#         if diff2.size > 0:
-#             count += 1
-#             print(f'InterMap time values {diff2} not in Prolif for {inter}')
-#             print(plf_time)
-#             print(imap_time)
-
-gnl.pickle_to_file(imap_dict,
-                   '/home/gonzalezroy/RoyHub/intermap/scripts/identity/imap_dict.pkl')
-gnl.pickle_to_file(prolif_dict,
-                   '/home/gonzalezroy/RoyHub/intermap/scripts/identity/prolif_dict.pkl')
+gnl.pickle_to_file(plif_dict, out_dir + 'prolif_dict.pkl')
+gnl.pickle_to_file(imap_dict, out_dir + 'imap_dict.pkl')

@@ -3,7 +3,6 @@ from collections import defaultdict
 from os.path import join
 
 import matplotlib.pyplot as plt
-import numpy as np
 from rgpack import generals as gnl
 
 import commonplots as cmp
@@ -27,31 +26,63 @@ inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
 
 data = defaultdict(lambda: defaultdict(list))
 for inter in inters:
-    if inter[-1] == 'CloseContact':
-        continue
     try:
-        plif_time = (prolif_dict[inter] > 0).astype(int)
+        plif_time = set(prolif_dict[inter])
     except KeyError:
-        plif_time = np.zeros_like(imap_dict[inter])
+        plif_time = set()
 
     try:
-        imap_time = imap_dict[inter]
+        imap_time = set(imap_dict[inter])
     except KeyError:
-        imap_time = np.zeros_like(plif_time)
+        imap_time = set()
 
-    in_both = np.bitwise_and(plif_time, imap_time)
-    in_plif = (plif_time - in_both).sum()
-    in_imap = (imap_time - in_both).sum()
+    in_both = set.intersection(plif_time, imap_time)
+    in_plif = set.difference(plif_time, in_both)
+    in_imap = set.difference(imap_time, in_both)
 
-    data[inter[2]]['plif'].append(in_plif)
-    data[inter[2]]['imap'].append(in_imap)
-    data[inter[2]]['both'].append(in_both.sum())
+    data[inter[2]]['plif'].append(len(in_plif))
+    data[inter[2]]['imap'].append(len(in_imap))
+    data[inter[2]]['both'].append(len(in_both))
 
+# %%===========================================================================
+#
+# =============================================================================
+cmp.generic_matplotlib()
+
+n_inters = len(data)
+x_pos = range(3 * n_inters)
+
+fig1, ax1 = plt.subplots(dpi=300, figsize=(18, 6))
+ax1.set_xlabel('Interaction type', fontweight='bold')
+ax1.set_ylabel('Interactions count', fontweight='bold')
+
+spacer = 3
+current = 0
+for inter in data:
+    both = data[inter]['both']
+    bplot = ax1.boxplot(both, positions=[current], patch_artist=True)
+    for patch, color in zip(bplot['boxes'], colors):
+     patch.set_facecolor(color)
+    current += 1
+
+    imap = data[inter]['imap']
+    ax1.boxplot(imap, positions=[current], widths=0.5)
+    current += 1
+
+    plif = data[inter]['plif']
+    ax1.boxplot(plif, positions=[current], widths=0.5)
+    current += spacer
+
+plt.savefig(join(out_dir, 'identity-per-type.png'))
+
+# %%===========================================================================
+#
+# =============================================================================
 condensed = defaultdict(lambda: defaultdict(list))
 for inter in data:
-    plif = np.array(data[inter]['plif']).sum()
-    imap = np.array(data[inter]['imap']).sum()
-    both = np.array(data[inter]['both']).sum()
+    plif = len(data[inter]['plif'])
+    imap = len(data[inter]['imap'])
+    both = len(data[inter]['both'])
     condensed[inter]['plif'].append(plif)
     condensed[inter]['imap'].append(imap)
     condensed[inter]['both'].append(both)
@@ -83,17 +114,21 @@ for i, inter in enumerate(percentage):
     both = percentage[order[i][0]]['both'][0]
     plif = percentage[order[i][0]]['plif'][0]
     imap = percentage[order[i][0]]['imap'][0]
-    ax1.bar(i, both, color=cmp.c3, zorder=1, lw=0.5)
-    ax1.bar(i, imap, color=cmp.c2, bottom=both + plif, zorder=1)
-    ax1.bar(i, plif, color=cmp.c1, bottom=both, zorder=1)
+    ax1.bar(i, both, color=cmp.c3, zorder=1, lw=0.5, alpha=cmp.alpha1)
+    ax1.bar(i, imap, color=cmp.c2, bottom=both + plif, zorder=1,
+            alpha=cmp.alpha1)
+    ax1.bar(i, plif, color=cmp.c1, bottom=both, zorder=1, alpha=cmp.alpha1)
 
-ax1.grid(axis='y', lw=1, ls='--', color=cmp.c2, zorder=5)
-ax1.bar(i, both, color=cmp.c3, label='Both')
-ax1.bar(i, imap, color=cmp.c2, label='InterMap only', bottom=both + plif)
-ax1.bar(i, plif, color=cmp.c1, label='ProLIF only', bottom=both)
+ax1.grid(axis='y', lw=1, ls='--', color='k', zorder=5, alpha=0.5)
+ax1.bar(i, both, color=cmp.c3, label='Both', alpha=0)
+ax1.bar(i, imap, color=cmp.c2, label='InterMap only', bottom=both + plif,
+        alpha=0)
+ax1.bar(i, plif, color=cmp.c1, label='ProLIF only', bottom=both, alpha=0)
 
-ax1.legend(loc='lower center', ncol=3, fontsize='medium', fancybox=False,
-           framealpha=0.95)
+leg = ax1.legend(loc='lower center', ncol=3, fontsize='medium', fancybox=False,
+                 framealpha=0.95)
+for lh in leg.legend_handles:
+    lh.set_alpha(1)
 ax1.set_xticks(range(len(order)))
 ax1.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
 plt.tight_layout()
@@ -103,9 +138,9 @@ plt.close()
 # %% ==========================================================================
 # Plot 2: Detailed Insights
 # =============================================================================
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+fig, ax1 = plt.subplots(1, 1, sharex=True)
 
-ax2.set_xlabel('Interaction type', fontweight='bold')
+# ax2.set_xlabel('Interaction type', fontweight='bold')
 fig.text(0.0, 0.6, '# Detected interactions', va='center', rotation='vertical',
          fontweight='bold')
 
@@ -114,38 +149,38 @@ for i, inter in enumerate(condensed):
     plif = condensed[order[i][0]]['plif'][0]
     imap = condensed[order[i][0]]['imap'][0]
     ax1.bar(i, both, color=cmp.c3, zorder=1, lw=0.5)
-    ax2.bar(i, both, color=cmp.c3, zorder=1, lw=0.5)
+    # ax2.bar(i, both, color=cmp.c3, zorder=1, lw=0.5)
     ax1.bar(i, imap, color=cmp.c2, bottom=both + plif, zorder=1)
-    ax2.bar(i, imap, color=cmp.c2, bottom=both + plif, zorder=1)
+    # ax2.bar(i, imap, color=cmp.c2, bottom=both + plif, zorder=1)
     ax1.bar(i, plif, color=cmp.c1, bottom=both, zorder=1)
-    ax2.bar(i, plif, color=cmp.c1, bottom=both, zorder=1)
+    # ax2.bar(i, plif, color=cmp.c1, bottom=both, zorder=1)
 
-ax1.set_ylim(0, 5500)  # outliers only
-ax2.set_ylim(0, 10)  # most of the data
+# ax1.set_ylim(0, 100)  # outliers only
+# ax2.set_ylim(0, 10)  # most of the data
 
 ax1.spines.bottom.set_visible(False)
-ax2.spines.top.set_visible(False)
+# ax2.spines.top.set_visible(False)
 
-ax1.grid(axis='y', lw=1, ls='--', color=cmp.c2, zorder=5, alpha=cmp.alpha3)
-ax2.grid(axis='y', lw=1, ls='--', color=cmp.c2, zorder=5, alpha=cmp.alpha3)
+ax1.grid(axis='y', lw=1, ls='--', color='gray', zorder=5, alpha=cmp.alpha3)
+# ax2.grid(axis='y', lw=1, ls='--', color=cmp.c2, zorder=5, alpha=cmp.alpha3)
 
 ax1.bar(i, both, color=cmp.c3, label='Both')
-ax2.bar(i, both, color=cmp.c3, label='Both')
+# ax2.bar(i, both, color=cmp.c3, label='Both')
 ax1.bar(i, imap, color=cmp.c2, label='InterMap only', bottom=both + plif)
-ax2.bar(i, imap, color=cmp.c2, label='InterMap only', bottom=both + plif)
+# ax2.bar(i, imap, color=cmp.c2, label='InterMap only', bottom=both + plif)
 ax1.bar(i, plif, color=cmp.c1, label='ProLIF only', bottom=both)
-ax2.bar(i, plif, color=cmp.c1, label='ProLIF only', bottom=both)
+# ax2.bar(i, plif, color=cmp.c1, label='ProLIF only', bottom=both)
 ax1.legend(loc='upper center', ncol=3, fontsize='medium', fancybox=False,
            framealpha=cmp.alpha1)
 
-ax2.set_xticks(range(len(order)))
-ax2.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
+# ax2.set_xticks(range(len(order)))
+# ax2.set_xticklabels([x[0] for x in order], rotation=45, ha='right')
 
 d = 0.25  # proportion of vertical to horizontal extent of the slanted line
 kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
               linestyle="none", color=cmp.c1, mec='k', mew=1.5, clip_on=False)
 ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
-ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+# ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
 
 plt.tight_layout()
 plt.savefig(join(out_dir, 'identity-per-type-detailed.png'))

@@ -242,6 +242,9 @@ class ContainerManager:
                     s2_name_swap = self.names[s1]
                     s2_note_swap = self.anotations.get(s1, '')
                     inter_name_swap = self.swap_inters[inter_name]
+                    s3_name = self.names[wat] if wat else ''
+                    time = bu.sc_decode(self.dict[key])
+                    prevalence = round(time.count() / self.n_frames * 100, 2)
                     full_line_swap = (
                         f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
                         f'{s2_note_swap}, {s3_name}, {inter_name_swap},'

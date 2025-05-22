@@ -148,7 +148,7 @@ def pications(inter_name, xyz_aro, row1, row2, dists, s1_rings_idx,
 
 @njit(parallel=False, cache=True)
 def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
-              cutoffs_aro, selected_aro):
+              cuts_aro, selected_aro):
     """
     Helper function to compute the pi-stacking interactions
 
@@ -156,11 +156,11 @@ def stackings(inter_name, ring_dists, n1n2, n1c1c2, n2c2c1, idists,
 
     # Parse the cutoffs
     idx = selected_aro.index(inter_name)
-    dist_cut = cutoffs_aro[0, idx]
-    min_ang1 = cutoffs_aro[2, idx]
-    max_ang1 = cutoffs_aro[3, idx]
-    min_ang2 = cutoffs_aro[4, idx]
-    max_ang2 = cutoffs_aro[5, idx]
+    dist_cut = cuts_aro[0, idx]
+    min_ang1 = cuts_aro[2, idx]
+    max_ang1 = cuts_aro[3, idx]
+    min_ang2 = cuts_aro[4, idx]
+    max_ang2 = cuts_aro[5, idx]
     if inter_name == 'FaceToFace':
         iradius = np.inf
     elif inter_name == 'EdgeToFace':
@@ -270,23 +270,23 @@ def aro(
                             geom.calc_dist(ipoints, s2_centroids))
 
         if 'EdgeToFace' in selected_aro:
-            idx_etf, etf_stacking = stackings(
-                'EdgeToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
-                cuts_aro, selected_aro)
+            idx_etf, etf_stacking = stackings('EdgeToFace', ring_dists, n1n2,
+                                              n1c1c2, n2c2c1, idists, cuts_aro,
+                                              selected_aro)
             inters_aro[:, idx_etf][pairs] = etf_stacking
 
         if 'FaceToFace' in selected_aro:
-            idx_ftf, ftf_stacking = stackings(
-                'FaceToFace', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
-                cuts_aro, selected_aro)
+            idx_ftf, ftf_stacking = stackings('FaceToFace', ring_dists, n1n2,
+                                              n1c1c2, n2c2c1, idists, cuts_aro,
+                                              selected_aro)
             inters_aro[:, idx_ftf][pairs] = ftf_stacking
 
         if 'PiStacking' in selected_aro:
-            idx_pi, pi_stacking = stackings(
-                'PiStacking', ring_dists, n1n2, n1c1c2, n2c2c1, idists,
-                cuts_aro, selected_aro)
-            # inters_aro[:, idx_pi][pairs] = pi_stacking
-            inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
+            idx_pi, pi_stacking = stackings('PiStacking', ring_dists, n1n2,
+                                            n1c1c2, n2c2c1, idists, cuts_aro,
+                                            selected_aro)
+            inters_aro[:, idx_pi][pairs] = pi_stacking
+            # inters_aro[:, idx_pi][pairs] = ftf_stacking | etf_stacking
 
     frame_id = ijf_aro[0][-1]
     mask = geom.get_compress_mask(inters_aro)

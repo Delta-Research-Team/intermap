@@ -42,7 +42,7 @@ cutoffs = {
     'max_ang_nc_EdgeToFace': 30,
     'intersect_radius_EdgeToFace': 1.5,
 
-    'dist_cut_PiStacking': 6.5,
+    'dist_cut_PiStacking': 5.5,
     'min_ang_nn_PiStacking': 0,
     'max_ang_nn_PiStacking': 90,
     'min_ang_nc_PiStacking': 0,
