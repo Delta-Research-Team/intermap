@@ -227,8 +227,10 @@ class IndexManager:
         'xb_acc': '[$([O,S;+0]),$([N;v3,v4&+1]),n+0]-[H]',
         'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
         'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
-        'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
-        'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        # 'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'rings5': '[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1',
+        'rings6': '[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1',
+        # 'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
         'water': ' [OH2]'}
 
     def __init__(self, args):
