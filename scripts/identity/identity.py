@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from bitarray import bitarray as ba
@@ -70,9 +72,10 @@ class Kompare:
 # =============================================================================
 # User-defined variables
 # =============================================================================
-out_dir = '/home/gonzalezroy/RoyHub/intermap/scripts/identity/'
-imap_input = '/media/gonzalezroy/Roy2TB/RoyData/intermap/IDENTITY-FINAL/imaps/mpro/mpro_InterMap_full.csv'
-plif_input = '/media/gonzalezroy/Roy2TB/RoyData/intermap/IDENTITY-FINAL/mpro/prolif.pkl'
+user = os.getenv('USER')
+out_dir = f'/home/{user}/RoyHub/intermap/scripts/identity/'
+imap_input = f'/home/rglez/mpro/mpro_InterMap_full.csv'
+plif_input = f'/media/{user}/Roy2TB/RoyData/intermap/IDENTITY-FINAL/mpro/prolif.pkl'
 
 kompare = Kompare(plif_input, imap_input)
 plif_dict, plif_types = kompare.plif2dict()
