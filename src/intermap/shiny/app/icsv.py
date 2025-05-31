@@ -6,8 +6,11 @@ import MDAnalysis as mda
 import numpy as np
 import pandas as pd
 import rgpack.generals as gnl
+from bitarray import bitarray as ba
 
 from intermap.shiny.app.css import all_interactions_colors
+
+pd.options.mode.chained_assignment = None
 
 errors = {
     'noTopo':
@@ -27,6 +30,45 @@ def transpose(df):
                  'note1': 'note2', 'note2': 'note1',
                  'idx1': 'idx2', 'idx2': 'idx1',
                  }, inplace=True)
+    return df
+
+
+def compress_wb(df):
+    """
+    Compress the timeseries of the WaterBridge interactions.
+    This is a destructive operation on the original df
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the timeseries data
+
+    Returns:
+        df (pd.DataFrame): DataFrame with the timeseries data compressed
+    """
+    # Convert timeseries to bitarrays
+    df['timeseries'] = df['timeseries'].apply(ba)
+
+    # Detect wbs between two residues with exchanging waters
+    wbs = df[df.interaction_name == 'WaterBridge'].groupby(
+        ['sel1', 'sel2']).indices
+    wbs = {k: v for k, v in wbs.items() if len(v) > 1}
+
+    # Merge the timeseries of the waters
+    to_del = []
+    for case in wbs:
+        indices = wbs[case]
+        ref_idx = indices[0]
+        bit_ref = df['timeseries'].loc[ref_idx].copy()
+        for idx in indices:
+            bit_ref |= df.loc[idx, 'timeseries']
+            if idx != ref_idx:
+                to_del.append(idx)
+        df['timeseries'].iloc[ref_idx] = bit_ref
+
+    # Drop the merged timeseries
+    df.drop(to_del, inplace=True)
+
+    # Convert bitarrays to numpy arrays for future plotting
+    df['timeseries'] = df['timeseries'].apply(lambda x: np.asarray(x.tolist()))
     return df
 
 
@@ -115,20 +157,13 @@ class CSVFilter:
         raw = csv['sel1'][0]
         resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
 
-        expanded_sel1 = csv['sel1'].str.split('_', expand=True)
-        expanded_sel2 = csv['sel2'].str.split('_', expand=True)
+        N = 2 if resolution == 'residue' else 4
+        idx_1 = csv['sel1'].str.split('_', expand=True)[N].astype(int)
+        idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
+        csv['idx1'] = idx_1
+        csv['idx2'] = idx_2
+        #csv = compress_wb(csv)
 
-        resname_idx = 0
-        csv['resname1'] = expanded_sel1[resname_idx]
-        csv['resname2'] = expanded_sel2[resname_idx]
-
-        resnum_idx = 1
-        csv['resnum1'] = expanded_sel1[resnum_idx].astype(int)
-        csv['resnum2'] = expanded_sel2[resnum_idx].astype(int)
-
-        resindex_idx = 2
-        csv['idx1'] = expanded_sel1[resindex_idx].astype(int)
-        csv['idx2'] = expanded_sel2[resindex_idx].astype(int)
         return csv, resolution
 
     # =========================================================================
@@ -290,36 +325,37 @@ def process_heatmap_data(df):
 
     df['priority'] = df['interaction_name'].map(interaction_priority)
 
-    # Combinar note1 y note2 en una sola anotación
-    df['annotation'] = df['note1'].fillna('') + ' ' + df['note2'].fillna('')
-    df['annotation'] = df['annotation'].str.strip()
-
     priority_df = (df.sort_values(['sel1', 'sel2', 'priority', 'prevalence'],
-                                  ascending=[True, True, True, False])
-                   .groupby(['sel1', 'sel2']).first().reset_index())
+                                 ascending=[True, True, True, False])
+                  .groupby(['sel1', 'sel2']).first().reset_index())
 
     pivot_interaction = pd.pivot_table(priority_df, values='interaction_name',
-                                       index='sel2', columns='sel1',
-                                       aggfunc='first', fill_value='')
+                                     index='sel2', columns='sel1',
+                                     aggfunc='first', fill_value='')
 
     pivot_prevalence = pd.pivot_table(priority_df, values='prevalence',
-                                      index='sel2', columns='sel1',
-                                      aggfunc='first', fill_value="")
+                                    index='sel2', columns='sel1',
+                                    aggfunc='first', fill_value="")
 
     pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
 
-    pivot_annotation = pd.pivot_table(priority_df, values='annotation',
-                                      index='sel2', columns='sel1',
-                                      aggfunc='first', fill_value="")
+    pivot_note1 = pd.pivot_table(priority_df, values='note1',
+                               index='sel2', columns='sel1',
+                               aggfunc='first', fill_value="")
+
+    pivot_note2 = pd.pivot_table(priority_df, values='note2',
+                               index='sel2', columns='sel1',
+                               aggfunc='first', fill_value="")
 
     present_interactions = sorted(priority_df['interaction_name'].unique(),
-                                  key=lambda x: interaction_priority[x])
+                                key=lambda x: interaction_priority[x])
 
     return {
         'pivot_interaction': pivot_interaction,
         'pivot_prevalence': pivot_prevalence,
         'pivot_prevalence_rounded': pivot_prevalence_rounded,
-        'pivot_annotation': pivot_annotation,
+        'pivot_note1': pivot_note1,
+        'pivot_note2': pivot_note2,
         'present_interactions': present_interactions
     }
 
@@ -367,7 +403,6 @@ def process_prevalence_data(df, selection_column, batch_size=250):
             })
 
     return batched_data
-
 
 def process_prevalence_data2(df, selection_column, sort_by='note'):
     """Process data for interaction plots.
@@ -476,15 +511,13 @@ def process_time_series_data(df):
         'interaction_colors': interaction_colors
     }
 
-
 # =============================================================================
 #
 # =============================================================================
-# full = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/DrHU-Tails-8k-atomic/dna-prot_InterMap_full.csv'
-# topo = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/0A-prelude/DrHU-repliques/second_step/DrHU-Tails-8k-atomic/hmr.psf'
+# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
 # short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
 
-# self = CSVFilter(full, topo)
+# self = CSVFilter(full)
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)

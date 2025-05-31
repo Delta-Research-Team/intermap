@@ -64,7 +64,7 @@ def create_welcome_section():
     },
         ui.div({"class": "welcome-text"},
             ui.h1("Welcome to Intervis!", {"class": "welcome-title"}),
-            ui.p("InterMap's Visualization Hub",
+            ui.p("InterMap's Visualization App",
                 {"class": "welcome-subtitle", "style": "font-style: italic;"},),),
         ui.a(ui.img(
                 src=get_image_base64(logo_path),
@@ -156,9 +156,9 @@ def create_filters_section():
                             # Panel 6
                             ui.h4("Plot Settings"),
                             ui.layout_columns(
-                                ui.input_numeric("plot_width", "Plot Width",
+                                ui.input_numeric("plot_width", "Width",
                                                  value=personal_width * 0.67),
-                                ui.input_numeric("plot_height", "Plot Height",
+                                ui.input_numeric("plot_height", "Height",
                                                  value=personal_height * 0.75), ),
                             ui.hr(),
 
@@ -168,11 +168,12 @@ def create_filters_section():
                                 "sort_by",
                                 "",
                                 choices={
-                                    "name": "Sort by Name",
-                                    "number": "Sort by Number",
-                                    "annotation": "Sort by Annotation"
+                                    "name": "Name",
+                                    "number": "Number",
+                                    "annotation": "Annotation"
                                 },
-                                selected="name"
+                                selected="name",
+                                inline=True,
                             ),
 
                             ui.div(
@@ -242,7 +243,6 @@ def create_filters_section():
                }
            """),
 
-                            # Script para manejar la actualización del botón
                             ui.tags.script("""
                $(document).ready(function() {
                    Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
@@ -267,56 +267,56 @@ def create_filters_section():
            """),
 
                             ui.div(
-                                {"style": "padding: 0 15px;"},
+                                {"style": """
+                                    display: flex;
+                                    flex-direction: row;
+                                    gap: 10px;
+                                    padding: 0 15px;
+                                """},
                                 ui.input_action_button(
                                     "plot_button",
                                     "PLOT",
-                                    width="100%",
+                                    width="50%",
                                     style="""
-                                      background-color: #4a4a4a;
-                                      color: white;
-                                      padding: 20px 35px;  
-                                      font-family: Roboto;
-                                      font-size: 16px;
-                                      border: none;
-                                      border-radius: 4px;
-                                      cursor: pointer;
-                                      transition: background-color 0.3s ease;
-                                      margin: 10px 0;
-                                  """
-                                )
-                            ),
-                            # Botón de descarga
-                            ui.div(
-                                {"style": "padding: 0 15px;"},
+                                        background-color: #4a4a4a;
+                                        color: white;
+                                        padding: 20px 35px;  
+                                        font-family: Roboto;
+                                        font-size: 16px;
+                                        border: none;
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        transition: background-color 0.3s ease;
+                                        margin: 10px 0;
+                                    """
+                                ),
                                 ui.input_action_button(
                                     "download_plot_button",
                                     "SAVE PLOT",
-                                    width="100%",
+                                    width="50%",
                                     style="""
-                              background-color: #4051b5ff;
-                              color: white;
-                              padding: 20px 35px;
-                              font-family: Roboto;
-                              font-size: 16px;
-                              border: none;
-                              border-radius: 4px;
-                              cursor: pointer;
-                              transition: background-color 0.3s ease;
-                              margin: 10px 0;
-                          """
-                                )
-                            ),
-                            # Actualizar el CSS
-                            ui.tags.style("""
-                      #plot_button:hover {
-                          background-color: #4051b5ff !important;
-                      }
-                      #download_plot_button:hover {
-                          background-color: #4a4a4a !important;
-                      }
-                  """),
-                            ))
+                                        background-color: #4051b5ff;
+                                        color: white;
+                                        padding: 20px 35px;
+                                        font-family: Roboto;
+                                        font-size: 16px;
+                                        border: none;
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        transition: background-color 0.3s ease;
+                                        margin: 10px 0;
+                                    """
+                                ),
+                                # Actualizar el CSS
+                                ui.tags.style("""
+                                    #plot_button:hover {
+                                        background-color: #4051b5ff !important;
+                                    }
+                                    #download_plot_button:hover {
+                                        background-color: #4a4a4a !important;
+                                    }
+                                """),
+                            )))
 
 
 
@@ -336,19 +336,44 @@ def create_plots_section():
                     # Tab 2:
                     ui.nav_panel("Prevalence",
                                  ui.div(
-                                     {"style": "width: 100%; max-width: 90%; "
-                                               "margin: 20px auto;"},
-                                     ui.div({"style": "display: flex; flex-direction: column; gap: 50px;"},
-                                            ui.div({"style": "width: 100%; margin-bottom: 40px; padding: 20px; "
-                                                                "border-bottom: 1px solid #e0e0e0;"},
-                                                   ui.div({"style": "height: 400px;"},
-                                                          ui.output_ui("ligand_interactions_plot"),),),
-                                            ui.div({"style": "width: 100%; padding: 20px;"},
-                                                   ui.div({"style": "height: 400px;"},
-                                                          ui.output_ui("receptor_interactions_plot"),
+                                     {
+                                         "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                                     ui.div(
+                                         {
+                                             "style": "display: flex; flex-direction: column; gap: 60px;"},
+                                         ui.div(
+                                             {
+                                                 "style": "width: 100%; display: flex; flex-direction: column;"},
+                                             ui.h3("",
+                                                   {
+                                                       "style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
+                                             ui.div(
+                                                 {
+                                                     "style": "width: 100%; min-height: 450px;"},
+                                                 ui.output_ui(
+                                                     "ligand_interactions_plot"),
+                                             ),
+                                         ),
+                                         ui.div(
+                                             {
+                                                 "style": "width: 100%; display: flex; flex-direction: column;"},
+                                             ui.h3("",
+                                                   {
+                                                       "style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
+                                             ui.div(
+                                                 {
+                                                     "style": "width: 100%; min-height: 450px;"},
+                                                 ui.output_ui(
+                                                     "receptor_interactions_plot"),
                                                           ),),),),),
 
-                    # Tab 3: Interactions Over Time
+                    ui.nav_panel("Life Time",
+                                 ui.div({
+                                            "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                                        ui.output_ui("lifetime_plot"),
+                                        ),
+                                 ),
+                    # Tab 4: Interactions Over Time
                     ui.nav_panel("Time Series",
                         ui.div({"style": "width: 100%; max-width: 90%; "
                                          "margin: 20px auto;"},

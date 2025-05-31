@@ -400,15 +400,49 @@ CSS_STYLES = {
     }
     """,
 
-    #'search_container': """
-    #.search-container {
-    #    display: flex;
-    #    align-items: center;
-    #    gap: 10px;
-    #    margin-bottom: 10px;
-    #    font-family: 'Roboto', sans-serif;
-    #}
-    #""",
+    'select_all_checkbox': """
+        .interaction-filter .select-all-container {
+            padding: 4px !important;
+            margin-bottom: 5px !important;
+            background-color: transparent !important;
+            border-radius: 4px !important;
+        }
+
+        .interaction-filter .select-all-container input[type="checkbox"] {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            width: 16px !important;
+            height: 16px !important;
+            border: 2px solid red !important;
+            border-radius: 50% !important;
+            background-color: white !important;
+            cursor: pointer !important;
+            margin-right: 8px !important;
+            position: relative !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .interaction-filter .select-all-container input[type="checkbox"]:checked {
+            background-color: red !important;
+        }
+
+        .interaction-filter .select-all-container input[type="checkbox"]:checked::after {
+            content: '✓' !important;
+            color: white !important;
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            font-size: 12px !important;
+        }
+
+        .interaction-filter .select-all-container label {
+            font-family: 'Roboto', sans-serif !important;
+            font-size: 0.9em !important;
+            color: red !important;
+        }
+        """,
 
     'plot_container': """
     .plot-container {
@@ -498,81 +532,6 @@ CSS_STYLES = {
             width: 100%;
             margin-bottom: 20px;
         }
-        """,
-
-
-
-
-    'select_all_checkbox': """
-    .select-all-container {
-        padding: 4px;
-        margin-bottom: 5px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .select-all-container input[type="checkbox"] {
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        width: 16px !important;
-        height: 16px !important;
-        border: 2px solid #4051b5ff !important;
-        border-radius: 50% !important;  
-        background-color: #FEFBF6 !important;
-        cursor: pointer !important;
-        margin-right: 8px !important;
-        position: relative !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .select-all-container input[type="checkbox"]:checked {
-        background-color: #4051b5ff !important;
-    }
-
-    .select-all-container input[type="checkbox"]:checked::after {
-        content: '✓' !important;
-        color: #FEFBF6 !important;
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        font-size: 12px !important;
-    }
-
-    .select-all-container label {
-        font-family: 'Roboto', sans-serif !important;
-        font-size: 0.9em !important;
-        color: #383747ff !important;
-    }
-    """,
-
-    'checkbox_group': """
-    .checkbox-group {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: 'Roboto', sans-serif;
-        scrollbar-width: thin;
-        scrollbar-color: #4051b5ff #f0f0f0;
-        margin-top: 5px;  
-    }
-
-    .checkbox-group::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .checkbox-group::-webkit-scrollbar-track {
-        background: #f0f0f0;
-        border-radius: 4px;
-    }
-
-    .checkbox-group::-webkit-scrollbar-thumb {
-        background-color: #4051b5ff;
-        border-radius: 4px;
-    }
-    """
+        """
 
 }

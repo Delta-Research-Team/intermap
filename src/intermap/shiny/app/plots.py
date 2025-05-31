@@ -11,6 +11,7 @@ from plotly_resampler import FigureResampler
 from intermap.shiny.app.css import all_interactions_colors
 
 from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data
+from rdkit.sping.colors import white
 
 
 def create_plot(df, width, height, show_prevalence=False):
@@ -39,8 +40,30 @@ def create_plot(df, width, height, show_prevalence=False):
         z_values = np.where(mask, interaction_to_num[interaction], None)
         text_matrix = np.where(mask, data['pivot_prevalence_rounded'].values,
                                '')
-        annotation_matrix = np.where(mask, data['pivot_annotation'].values,
-                                     '')
+
+        # Crear matrices de customdata
+        customdata = []
+        for i, sel2 in enumerate(data['pivot_interaction'].index):
+            row = []
+            for j, sel1 in enumerate(data['pivot_interaction'].columns):
+                if mask[i, j]:
+                    # Buscar en el DataFrame original
+                    row_data = df[(df['sel1'] == sel1) &
+                                  (df['sel2'] == sel2) &
+                                  (df['interaction_name'] == interaction)]
+                    if not row_data.empty:
+                        note1 = row_data['note1'].iloc[0] if pd.notna(
+                            row_data['note1'].iloc[0]) else ''
+                        note2 = row_data['note2'].iloc[0] if pd.notna(
+                            row_data['note2'].iloc[0]) else ''
+                        row.append([sel1, note1, sel2, note2])
+                    else:
+                        row.append(['', '', '', ''])
+                else:
+                    row.append(['', '', '', ''])
+            customdata.append(row)
+
+        customdata = np.array(customdata)
 
         fig.add_trace(go.Heatmap(
             z=z_values,
@@ -58,13 +81,15 @@ def create_plot(df, width, height, show_prevalence=False):
                 bordercolor='#1a1a1a',
                 font=dict(family="Roboto", size=15, color='rgb(26, 26, 26)')
             ),
-            customdata=annotation_matrix,
+            customdata=customdata,
             hovertemplate=(
-                    "<b>Selection_2:</b> %{y}<br>" +
+                    "<b>Sel1:</b> %{customdata[0]}<br>" +
+                    "<b>Note1:</b> %{customdata[1]}<br>" +
+                    "<b>Sel2:</b> %{customdata[2]}<br>" +
+                    "<b>Note2:</b> %{customdata[3]}<br>" +
                     f"<b>Interaction:</b> {interaction}<br>" +
-                    "<b>Selection_1:</b> %{x}<br>" +
                     "<b>Prevalence:</b> %{text}%<br>" +
-                    "<b>Annotation:</b> %{customdata}<extra></extra>"
+                    "<extra></extra>"
             ),
             legendgroup=interaction,
             showlegend=False,
@@ -494,3 +519,310 @@ def create_interactions_over_time_plot(df, width, height):
             )
 
     return fig
+
+
+def process_lifetime_data(df):
+    """Process data for lifetime boxplot."""
+    from bitarray import bitarray as ba, util as bu
+
+    interaction_abbreviations = {
+        'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
+        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
+        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
+        'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
+        'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
+    }
+
+    lifetimes_data = []
+
+    for _, row in df.iterrows():
+        array = ba(row['timeseries'])
+        lifetimes = [x[2] - x[1] for x in bu.intervals(array) if x[0] == 1]
+        if lifetimes:
+            # Calcular prevalencia
+            prevalence = row['prevalence']
+            pair_name = f"{row['sel1']} - {row['sel2']} ({interaction_abbreviations.get(row['interaction_name'], row['interaction_name'])})"
+            lifetimes_data.append({
+                'pair': pair_name,
+                'lifetimes': lifetimes,
+                'interaction_name': row['interaction_name'],
+                'prevalence': prevalence
+            })
+
+    return lifetimes_data
+
+
+def create_lifetime_plot(df, width, height, show_prevalence=False):
+    """Create violin plot for interaction lifetimes."""
+    lifetimes_data = process_lifetime_data(df)
+
+    if not lifetimes_data:
+        return None
+
+    PLOT_BGCOLOR = "white"
+    AXIS_COLOR = '#d3d3d3'
+
+    fig = go.Figure()
+
+    shown_interactions = set()
+    annotations = []
+
+    for idx, data in enumerate(lifetimes_data):
+        interaction_name = data['interaction_name']
+        show_legend = interaction_name not in shown_interactions
+        if show_legend:
+            shown_interactions.add(interaction_name)
+
+        lifetimes = data['lifetimes']
+        prevalence = data['prevalence']
+
+        # Calcular la media para posicionar la anotación
+        mean_lifetime = sum(lifetimes) / len(lifetimes)
+
+        fig.add_trace(go.Violin(
+            y=lifetimes,
+            name=data['pair'],
+            fillcolor=all_interactions_colors[interaction_name],
+            line=dict(
+                width=2,
+                color=all_interactions_colors[interaction_name]
+            ),
+            meanline=dict(
+                visible=True,
+                color='rgba(0,0,0,0.5)',
+                width=2
+            ),
+            points='outliers',  # Cambiado de False a 'outliers'
+            pointpos=0,  # Posición de los puntos (0 = centro)
+            marker=dict(  # Configuración de los outliers
+                color='rgba(50,50,50,0.7)',  # Gris oscuro semi-transparente
+                size=4,  # Tamaño de los puntos
+                symbol='circle'  # Forma de los puntos
+            ),
+            box=dict(
+                visible=True,
+                width=0.1,
+            ),
+            legendgroup=interaction_name,
+            showlegend=False,
+            customdata=[[prevalence]],
+            hovertemplate=(
+                    f"<b>{data['pair']}</b><br><br>" +
+                    f"Prevalence: {prevalence:.1f}%<br>" +
+                    "<extra></extra>"
+            ),
+            hoverlabel=dict(
+                bgcolor=all_interactions_colors[interaction_name],
+                font_size=14,
+                font_family="Roboto"
+            ),
+            opacity=0.7,
+            side='both',
+            width=0.7,
+            spanmode='soft',
+            scalemode='width',
+            scalegroup=interaction_name
+        ))
+
+        if show_prevalence:
+            annotations.append(dict(
+                x=idx,
+                y=mean_lifetime,
+                text=f"{prevalence:.1f}%",
+                showarrow=False,
+                font=dict(
+                    family="Roboto",
+                    size=12,
+                    color='black'
+                ),
+                xanchor='center',
+                yanchor='middle'
+            ))
+
+        if show_legend:
+            fig.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(
+                    size=16,
+                    color=all_interactions_colors[interaction_name],
+                    symbol='circle'
+                ),
+                name=interaction_name,
+                showlegend=True,
+                legendgroup=interaction_name
+            ))
+
+    fig.update_layout(
+        width=width,
+        height=height,
+        title=dict(
+            text="<b>Interaction Lifetimes Distribution</b>",
+            x=0.5,
+            font=dict(family="Roboto", size=20)
+        ),
+        showlegend=True,
+        legend=dict(
+            title=dict(
+                text="<b>Interaction Types</b>",
+                font=dict(family="Roboto", size=14)
+            ),
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='rgba(0,0,0,0.2)',
+            borderwidth=1
+        ),
+        xaxis=dict(
+            title="<b>Selection Pairs</b>",
+            tickangle=45,
+            title_font=dict(family="Roboto", size=16),
+            tickfont=dict(family="Roboto", size=14),
+            showgrid=False,
+            zeroline=False,
+            linewidth=1.5,
+            linecolor=AXIS_COLOR,
+            mirror=True
+        ),
+        yaxis=dict(
+            title="<b>Interaction Lifetime (frames)</b>",
+            title_font=dict(family="Roboto", size=16),
+            tickfont=dict(family="Roboto", size=14),
+            showgrid=False,
+            zeroline=False,
+            linewidth=1.5,
+            linecolor=AXIS_COLOR,
+            mirror=True
+        ),
+        paper_bgcolor='white',
+        plot_bgcolor=PLOT_BGCOLOR,
+        violinmode='group',
+        margin=dict(l=50, r=150, t=50, b=50),
+        violingap=0.3,
+        violingroupgap=0.1,
+        annotations=annotations
+    )
+
+    return fig
+
+"""
+def create_lifetime_plot(df, width, height):
+
+    lifetimes_data = process_lifetime_data(df)
+
+    if not lifetimes_data:
+        return None
+
+    PLOT_BGCOLOR = "white"
+    AXIS_COLOR = '#d3d3d3'
+
+    fig = go.Figure()
+
+    shown_interactions = set()
+
+    for data in lifetimes_data:
+        interaction_name = data['interaction_name']
+        show_legend = interaction_name not in shown_interactions
+        if show_legend:
+            shown_interactions.add(interaction_name)
+
+        lifetimes = data['lifetimes']
+        prevalence = data['prevalence']
+
+        fig.add_trace(go.Box(
+            y=lifetimes,
+            name=data['pair'],
+            marker_color=all_interactions_colors[interaction_name],
+            marker=dict(
+                size=6,
+                line=dict(width=0)
+            ),
+            line=dict(width=2),
+            boxmean=True,
+            legendgroup=interaction_name,
+            showlegend=False,
+            customdata=[[prevalence]],
+            hovertemplate=(
+                f"<b>{data['pair']}</b><br><br>" +
+                f"Prevalence: {prevalence:.1f}%<br>" +
+                "<extra></extra>"
+            ),
+            hoverlabel=dict(
+                bgcolor=all_interactions_colors[interaction_name],
+                font_size=14,
+                font_family="Roboto"
+            )
+        ))
+
+        if show_legend:
+            fig.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(
+                    size=16,
+                    color=all_interactions_colors[interaction_name],
+                    symbol='circle'
+                ),
+                name=interaction_name,
+                showlegend=True,
+                legendgroup=interaction_name
+            ))
+
+    fig.update_layout(
+        width=width,
+        height=height,
+        title=dict(
+            text="<b>Interaction Lifetimes Distribution</b>",
+            x=0.5,
+            font=dict(family="Roboto", size=20)
+        ),
+        showlegend=True,
+        legend=dict(
+            title=dict(
+                text="<b>Interaction Types</b>",
+                font=dict(family="Roboto", size=14)
+            ),
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='rgba(0,0,0,0.2)',
+            borderwidth=1
+        ),
+        xaxis=dict(
+            title="<b>Selection Pairs</b>",
+            tickangle=45,
+            title_font=dict(family="Roboto", size=16),
+            tickfont=dict(family="Roboto", size=14),
+            showgrid=False,
+            zeroline=False,
+            linewidth=1.5,
+            linecolor=AXIS_COLOR,
+            mirror=True
+        ),
+        yaxis=dict(
+            title="<b>Interaction Lifetime (frames)</b>",
+            title_font=dict(family="Roboto", size=16),
+            tickfont=dict(family="Roboto", size=14),
+            showgrid=False,
+            zeroline=False,
+            linewidth=1.5,
+            linecolor=AXIS_COLOR,
+            mirror=True
+        ),
+        paper_bgcolor='white',
+        plot_bgcolor=PLOT_BGCOLOR,
+        boxmode='group',
+        margin=dict(l=50, r=150, t=50, b=50),
+        boxgap=0.8,
+        boxgroupgap=0.1
+    )
+
+    return fig
+"""

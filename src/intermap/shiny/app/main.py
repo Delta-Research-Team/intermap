@@ -15,7 +15,8 @@ from .css import ERROR_MESSAGES
 from .icsv import CSVFilter, sortby, transpose
 from .plots import (create_interactions_over_time_plot,
                     create_ligand_interactions_plot, create_plot,
-                    create_receptor_interactions_plot)
+                    create_receptor_interactions_plot,
+                    create_lifetime_plot)
 from .ui import app_ui
 
 
@@ -166,28 +167,55 @@ def server(input, output, session):
             )
             return
 
-        # Determinar qué pestaña está activa
-        active_tab = input.plot_tabs()
-
-        # Obtener el plot correspondiente
-        if active_tab == "Sele1 vs Sele2":
-            fig = create_plot(csv_filtered.get(), input.plot_width(),
-                              input.plot_height(), input.show_prevalence())
-        elif active_tab == "Sele1 Prevalence":
-            fig = create_ligand_interactions_plot(csv_filtered.get(),
-                                                  input.plot_width(),
-                                                  input.plot_height() // 1.5)
-        elif active_tab == "Sele2 Prevalence":
-            fig = create_receptor_interactions_plot(csv_filtered.get(),
-                                                    input.plot_width(),
-                                                    input.plot_height() // 1.5)
-        elif active_tab == "Time Series":
-            fig = create_interactions_over_time_plot(csv_filtered.get(),
-                                                     input.plot_width(),
-                                                     input.plot_height())
-
         try:
-            # Crear nombre de archivo con timestamp
+            # Determinar qué pestaña está activa
+            active_tab = input.plot_tabs()
+
+            # Obtener el plot correspondiente manteniendo el mismo formato que en la aplicación
+
+            if active_tab == "Life Time":
+                fig = create_lifetime_plot(csv_filtered.get(),
+                                           input.plot_width(),
+                                           input.plot_height())
+
+            elif active_tab == "Sele1 vs Sele2":
+                fig = create_plot(csv_filtered.get(), input.plot_width(),
+                                  input.plot_height(), input.show_prevalence())
+            elif active_tab == "Prevalence":
+                # Guardar los dos plots por separado
+                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+
+                # Plot de Selection 1
+                fig1 = create_ligand_interactions_plot(csv_filtered.get(),
+                                                       input.plot_width(),
+                                                       input.plot_height() // 1.5)
+                filename1 = f"plot_selection1_prevalence_{timestamp}.html"
+                save_dir = Path("saved_plots")
+                save_dir.mkdir(exist_ok=True)
+                filepath1 = save_dir / filename1
+                fig1.write_html(filepath1)
+
+                # Plot de Selection 2
+                fig2 = create_receptor_interactions_plot(csv_filtered.get(),
+                                                         input.plot_width(),
+                                                         input.plot_height() // 1.5)
+                filename2 = f"plot_selection2_prevalence_{timestamp}.html"
+                filepath2 = save_dir / filename2
+                fig2.write_html(filepath2)
+
+                ui.notification_show(
+                    f"Plots saved as '{filename1}' and '{filename2}' in 'saved_plots' directory",
+                    duration=5000,
+                    type="message"
+                )
+                return
+
+            elif active_tab == "Time Series":
+                fig = create_interactions_over_time_plot(csv_filtered.get(),
+                                                         input.plot_width(),
+                                                         input.plot_height())
+
+            # Para los tabs que no son "Prevalence"
             timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
             filename = f"plot_{active_tab.lower().replace(' ', '_')}_{timestamp}.html"
 
@@ -201,11 +229,12 @@ def server(input, output, session):
             # Guardar el plot como HTML
             fig.write_html(filepath)
 
-            ui.notification_show(
-                f"Plot saved successfully as '{filename}' in 'saved_plots' directory in your/path/to/intermap/src/intermap/shiny/",
-                duration=5000,
-                type="message"
-            )
+            if active_tab != "Prevalence":  # Ya mostramos la notificación para Prevalence arriba
+                ui.notification_show(
+                    f"Plot saved successfully as '{filename}' in 'saved_plots' directory",
+                    duration=5000,
+                    type="message"
+                )
 
         except Exception as e:
             ui.notification_show(
@@ -213,7 +242,6 @@ def server(input, output, session):
                 duration=5000,
                 type="error"
             )
-
     # =========================================================================
     # Rendering helper functions
     # =========================================================================
@@ -295,6 +323,33 @@ def server(input, output, session):
         """Render the interactions over time plot."""
         return render_plot(create_interactions_over_time_plot)
 
+    @output
+    @render.ui
+    @reactive.event(input.plot_button)
+    def lifetime_plot():
+        """Render the lifetime boxplot."""
+        error = check_data()
+        if error is not None:
+            return error
+
+        fig = create_lifetime_plot(csv_filtered.get(),
+                                   input.plot_width(),
+                                   input.plot_height(),
+                                   input.show_prevalence())
+
+        if fig is None:
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
+
+        plot_html = fig.to_html(
+            include_plotlyjs="cdn",
+            full_html=False,
+            config={"responsive": True}
+        )
+
+        return ui.tags.div(
+            ui.HTML(plot_html),
+            style=f"width:100%; height:{input.plot_height()}px;"
+        )
     # =========================================================================
     # Checkbox Rendering
     # =========================================================================
