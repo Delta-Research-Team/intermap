@@ -1,4 +1,5 @@
 # Created by rglez at 4/6/25
+import os
 import re
 from os.path import join
 
@@ -13,9 +14,9 @@ import intermap.commonplots as cmp
 
 def parse_performance(txt):
     # Regular expression patterns
-    elapsed_time = r'Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): (\d+:\d+\.\d+)'
+    elapsed_time = r'Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): .*\n'
     max_memory = r'Maximum resident set size \(kbytes\): (\d+)'
-    exit_status = r'Command terminated by signal (\d+)'
+    exit_status = r'Signals delivered: (\d+)'
 
     # Read the file
     with open(txt) as f:
@@ -27,14 +28,14 @@ def parse_performance(txt):
     exit_status_match = re.findall(exit_status, text)
 
     # Process matches
-    elapsed_time = elapsed_time_match.split(':')
+    elapsed_time = elapsed_time_match.split('):')[-1].split(':')
     if len(elapsed_time) == 2:
         time = int(elapsed_time[0]) * 60 + float(elapsed_time[1])
     else:
         time = int(elapsed_time[0]) * 3600 + int(elapsed_time[1]) * 60 + float(
             elapsed_time[2])
 
-    ram = int(max_memory_match) / 2 ** 20
+    ram = int(max_memory_match) / 2 ** 10
     status = int(exit_status_match[0]) if exit_status_match else 0
     return round(time / 60, 2), round(ram, 2), status
 
@@ -53,7 +54,7 @@ def plot_block(matrix, axis, cmap, vmin=None, vmax=None):
     axis.tick_params(axis='y', which='minor', length=0)
     axis.tick_params(axis='x', which='minor', length=0)
     axis.tick_params(axis='x', which='major', length=0)
-    axis.grid(True, axis='both', color='k', linestyle='-',
+    axis.grid(True, axis='both', color='k', linestyle='--',
               linewidth=cmp.lw1, which='minor')
     return im1
 
@@ -71,8 +72,8 @@ def plot_colorbar(ax1, ax2, im1, title=None):
 # =============================================================================
 # User-defined variables
 # =============================================================================
-user = 'gonzalezroy'
-root_dir = '/home/rglez/RoyHub/intermap/scripts/scalability'
+user = os.getenv('USER')
+root_dir = f'/media/{user}/Roy2TB/RoyData/intermap/SCALABILITY-FINAL/mpro_copy/'
 out_dir = root_dir
 # =============================================================================
 
@@ -99,7 +100,7 @@ residic = to_plot[to_plot['resolution'] == 'residue']
 # %% ==========================================================================
 # Plotting
 # =============================================================================
-
+cmp.generic_matplotlib()
 
 # >>>> Grid layout
 gridspec = dict(hspace=0., wspace=0., height_ratios=[1, 0.1, 1])
@@ -114,10 +115,13 @@ axs[1, 1].set_visible(False)
 ax_atom_ram = axs[2, 1]
 ax_resid_ram = axs[2, 0]
 
-ax_atom_time.set_title('Resolution: "atom"', fontweight='bold')
-ax_atom_ram.set_title('Resolution: "atom"', fontweight='bold')
-ax_resid_ram.set_title('Resolution: "residue"', fontweight='bold')
-ax_resid_time.set_title('Resolution: "residue"', fontweight='bold')
+fs1 = 14
+ax_atom_time.set_title('Resolution: "atom"', fontweight='bold', fontsize=fs1)
+ax_atom_ram.set_title('Resolution: "atom"', fontweight='bold', fontsize=fs1)
+ax_resid_ram.set_title('Resolution: "residue"', fontweight='bold',
+                       fontsize=fs1)
+ax_resid_time.set_title('Resolution: "residue"', fontweight='bold',
+                        fontsize=fs1)
 
 # >>>> Prepare data
 atom_time = atomic.pivot(index='chunk_size', columns='n_procs',
@@ -145,7 +149,7 @@ im1 = plot_block(atom_ram, ax_atom_ram, cmap=cmp.cmap1, vmin=minim, vmax=maxim)
 im2 = plot_block(resid_ram, ax_resid_ram, cmap=cmp.cmap1, vmin=minim,
                  vmax=maxim)
 
-plot_colorbar(ax_atom_ram, ax_resid_ram, im1, title='RAM (GB)')
+plot_colorbar(ax_atom_ram, ax_resid_ram, im1, title='RAM (MB)')
 
 # Set labels
 ax_atom_ram.set_xlabel('# Processors', fontweight='roman')

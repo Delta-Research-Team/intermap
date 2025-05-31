@@ -78,7 +78,7 @@ def detect_config_path(mode='debug'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/media/rglez/Roy2TB/Dropbox/DockingBoys/storage/identity_prolif_100frames/IgG3/imap.cfg'
+        config_path = '/media/gonzalezroy/Roy2TB/RoyData/intermap/IDENTITY-FINAL/imaps/mpro/InterMap-job.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path

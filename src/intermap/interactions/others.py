@@ -146,7 +146,7 @@ def detect_1d(inter_name, dists, row1, type1, row2, type2, cutoffs_others,
 
 
 @njit(parallel=False, cache=True)
-def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
+def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_don,
                   ha_cut, da_cut, min_ang, max_ang, selected_others):
     """"
     Detect the hydrogen bonds
@@ -159,7 +159,7 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
         type2 (ndarray): Type of the atoms to be found in the second selection
         dists (ndarray): Distances between the atoms in the first and second
         xyz (ndarray): Coordinates of the atoms in the system
-        hb_donors (ndarray): Indices of the hydrogen bond donors
+        hb_don (ndarray): Indices of the hydrogen bond donors
         ha_cut (float): Cutoff distance for the hydrogen-acceptor atoms
         min_ang (float): Minimum angle for the hydrogen bond
         max_ang (float): Maximum angle for the hydrogen bond
@@ -179,14 +179,14 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
     t3 = np.full(passing_HA.size, fill_value=-1, dtype=np.float32)
     if "HBDonor" in inter_name:
         idx_hydros = geom.indices(type1, t1)
-        D = hb_donors[idx_hydros]
+        D = hb_don[idx_hydros]
         DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
         DA_dists = geom.calc_dist(xyz[D], xyz[t2])
         DHA_angles[DA_dists > da_cut] = -1
 
     elif "HBAcceptor" in inter_name:
         idx_hydros = geom.indices(type2, t2)
-        D = hb_donors[idx_hydros]
+        D = hb_don[idx_hydros]
         DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
         DA_dists = geom.calc_dist(xyz[D], xyz[t1])
         DHA_angles[DA_dists > da_cut] = -1
@@ -196,12 +196,12 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_donors,
 
     # Detect DHA tuples that pass the angle cutoff
     passing_DHA1 = (t3 >= min_ang) & (t3 <= max_ang)
-    passing_DHA2 = (t3 >= 180 - max_ang) & (t3 <= 180 - min_ang)
-    passing_DHA = passing_DHA1 | passing_DHA2
+    # passing_DHA2 = (t3 >= 180 - max_ang) & (t3 <= 180 - min_ang)
+    # passing_DHA = passing_DHA1 | passing_DHA2
 
     if not t3.any():
         return idx_name, np.zeros(dists.size, dtype=np.bool_)
-    return idx_name, passing_DHA
+    return idx_name, passing_DHA1
 
 
 @njit(parallel=False, cache=True)
@@ -279,9 +279,9 @@ def others(
 
         if 'HBDonor' in selected_others:
             hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydr, row2,
-                                         hb_acc, dists, xyz, hb_don,
-                                         ha_cut_hb, da_cut_hb, min_ang_hb,
-                                         max_ang_hb, selected_others)
+                                         hb_acc, dists, xyz, hb_don, ha_cut_hb,
+                                         da_cut_hb, min_ang_hb, max_ang_hb,
+                                         selected_others)
             inters[:, hbd_idx] = hbd
 
     # [XBonds]
@@ -291,16 +291,16 @@ def others(
 
         if 'XBAcceptor' in selected_others:
             xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
-                                         xb_hal, dists, xyz, xb_don,
-                                         ha_cut_xb, da_cut_xb, min_ang_xb,
-                                         max_ang_xb, selected_others)
+                                         xb_hal, dists, xyz, xb_don, ha_cut_xb,
+                                         da_cut_xb, min_ang_xb, max_ang_xb,
+                                         selected_others)
             inters[:, xba_idx] = xba
 
         if 'XBDonor' in selected_others:
-            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_hal, row2,
-                                         xb_acc, dists, xyz, xb_don,
-                                         ha_cut_xb, da_cut_xb, min_ang_xb,
-                                         max_ang_xb, selected_others)
+            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_hal, row2, xb_acc,
+                                         dists, xyz, xb_don, ha_cut_xb,
+                                         da_cut_xb, min_ang_xb, max_ang_xb,
+                                         selected_others)
             inters[:, xbd_idx] = xbd
 
     mask = geom.get_compress_mask(inters)

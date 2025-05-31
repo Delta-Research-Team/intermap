@@ -129,6 +129,27 @@ class ContainerManager:
     """
     A dictionary to store InterMap interactions
     """
+    swap_inters = {
+        'CloseContact': 'CloseContact',
+        'VdWContact': 'VdWContact',
+        'Hydrophobic': 'Hydrophobic',
+        'Anionic': 'Cationic',
+        'Cationic': 'Anionic',
+        'MetalDonor': 'MetalAcceptor',
+        'MetalAcceptor': 'MetalDonor',
+        'HBAcceptor': 'HBDonor',
+        'HBDonor': 'HBAcceptor',
+        'XBAcceptor': 'XBDonor',
+        'XBDonor': 'XBAcceptor',
+        'FaceToFace': 'FaceToFace',
+        'EdgeToFace': 'EdgeToFace',
+        'PiStacking': 'PiStacking',
+        'PiCation': 'CationPi',
+        'CationPi': 'PiCation',
+        'AnionPi': 'PiAnion',
+        'PiAnion': 'AnionPi',
+        'WaterBridge': 'WaterBridge'
+    }
 
     def __init__(self, args, iman, cuts):
 
@@ -212,6 +233,27 @@ class ContainerManager:
             short_line = (
                 f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
                 f'{inter_name},{prevalence}\n')
+
+            shared = self.iman.shared_idx
+            if len(shared) > 0:
+                if (s1 in shared) or (s2 in shared):
+                    s1_name_swap = self.names[s2]
+                    s1_note_swap = self.anotations.get(s2, '')
+                    s2_name_swap = self.names[s1]
+                    s2_note_swap = self.anotations.get(s1, '')
+                    inter_name_swap = self.swap_inters[inter_name]
+                    s3_name = self.names[wat] if wat else ''
+                    time = bu.sc_decode(self.dict[key])
+                    prevalence = round(time.count() / self.n_frames * 100, 2)
+                    full_line_swap = (
+                        f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
+                        f'{s2_note_swap}, {s3_name}, {inter_name_swap},'
+                        f'{prevalence},{time.to01()}\n')
+                    short_line_swap = (
+                        f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
+                        f'{s2_note_swap}, {s3_name}, {inter_name_swap},'
+                        f'{prevalence}\n')
+                    yield full_line_swap, short_line_swap, full_line, short_line
             yield full_line, short_line
 
     def save(self, path1, path2):
@@ -220,14 +262,26 @@ class ContainerManager:
         """
         with open(path1, 'w') as file1, open(path2, 'w') as file2:
             file1.write(f'# {basename(self.args.topology)}\n')
+            file1.write(
+                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
+
             file2.write(f'# {basename(self.args.topology)}\n')
+            file2.write(
+                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
+
             file1.write(
                 'sel1,note1,sel2,note2,water,interaction_name,prevalence,timeseries\n')
             file2.write(
                 'sel1,note1,sel2,note2,water,interaction_name,prevalence\n')
-            for full_line, short_line in self.generate_lines():
-                file1.write(full_line)
-                file2.write(short_line)
+            for x in self.generate_lines():
+                if len(x) == 2:
+                    file1.write(x[0])
+                    file2.write(x[1])
+                else:
+                    file1.write(x[0])
+                    file2.write(x[1])
+                    file1.write(x[2])
+                    file2.write(x[3])
 
     def get_inter_names(self):
         """
