@@ -401,48 +401,48 @@ CSS_STYLES = {
     """,
 
     'select_all_checkbox': """
-        .interaction-filter .select-all-container {
-            padding: 4px !important;
-            margin-bottom: 5px !important;
-            background-color: transparent !important;
-            border-radius: 4px !important;
-        }
+    .interaction-filter .select-all-container {
+        padding: 4px !important;
+        margin-bottom: 5px !important;
+        background-color: transparent !important;
+        border-radius: 4px !important;
+    }
 
-        .interaction-filter .select-all-container input[type="checkbox"] {
-            -webkit-appearance: none !important;
-            -moz-appearance: none !important;
-            appearance: none !important;
-            width: 16px !important;
-            height: 16px !important;
-            border: 2px solid red !important;
-            border-radius: 50% !important;
-            background-color: white !important;
-            cursor: pointer !important;
-            margin-right: 8px !important;
-            position: relative !important;
-            transition: all 0.3s ease !important;
-        }
+    .interaction-filter .select-all-container input[type="checkbox"] {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        width: 16px !important;
+        height: 16px !important;
+        border: 2px solid #ff5555ff !important; 
+        border-radius: 50% !important;
+        background-color: white !important;
+        cursor: pointer !important;
+        margin-right: 8px !important;
+        position: relative !important;
+        transition: all 0.3s ease !important;
+    }
 
-        .interaction-filter .select-all-container input[type="checkbox"]:checked {
-            background-color: red !important;
-        }
+    .interaction-filter .select-all-container input[type="checkbox"]:checked {
+        background-color: #ff5555ff !important;  
+    }
 
-        .interaction-filter .select-all-container input[type="checkbox"]:checked::after {
-            content: '✓' !important;
-            color: white !important;
-            position: absolute !important;
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            font-size: 12px !important;
-        }
+    .interaction-filter .select-all-container input[type="checkbox"]:checked::after {
+        content: '✓' !important;
+        color: white !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-size: 12px !important;
+    }
 
-        .interaction-filter .select-all-container label {
-            font-family: 'Roboto', sans-serif !important;
-            font-size: 0.9em !important;
-            color: red !important;
-        }
-        """,
+    .interaction-filter .select-all-container label {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 0.9em !important;
+        color: black !important;  
+    }
+    """,
 
     'plot_container': """
     .plot-container {
