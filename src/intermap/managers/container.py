@@ -208,6 +208,9 @@ class ContainerManager:
             short_line: str
                 The short line to be written in the short csv file
         """
+
+        shared = self.iman.shared_idx
+        dejavu = set()
         for key in self.dict:
             if len(key) == 3:
                 s1, s2, inter = key
@@ -234,7 +237,7 @@ class ContainerManager:
                 f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
                 f'{inter_name},{prevalence}\n')
 
-            shared = self.iman.shared_idx
+            entry = (s1, s2, inter_name, wat)
             if len(shared) > 0:
                 if (s1 in shared) or (s2 in shared):
                     s1_name_swap = self.names[s2]
@@ -244,6 +247,7 @@ class ContainerManager:
                     inter_name_swap = self.swap_inters[inter_name]
                     s3_name = self.names[wat] if wat else ''
                     time = bu.sc_decode(self.dict[key])
+                    entry = (s2, s1, inter_name_swap, wat)
                     prevalence = round(time.count() / self.n_frames * 100, 2)
                     full_line_swap = (
                         f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
@@ -253,7 +257,13 @@ class ContainerManager:
                         f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
                         f'{s2_note_swap}, {s3_name}, {inter_name_swap},'
                         f'{prevalence}\n')
-                    yield full_line_swap, short_line_swap, full_line, short_line
+
+                    if entry not in dejavu:
+                        dejavu.add(entry)
+                        yield full_line_swap, short_line_swap, full_line, short_line
+            else:
+                if entry not in dejavu:
+                    dejavu.add(entry)
             yield full_line, short_line
 
     def save(self, path1, path2):

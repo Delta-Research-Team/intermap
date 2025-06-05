@@ -192,3 +192,29 @@ def workflow(args):
 
 if __name__ == '__main__':
     run()
+
+# =============================================================================
+# Transient debugin for duplicate lines in the output file
+# =============================================================================
+# import pandas as pd
+#
+#
+#
+# # csv = compress_wb(csv)
+# def find_duplicates(path):
+#     """
+#     Find duplicates in the InterMap output file.
+#     """
+#     df = pd.read_csv(path, header=2, na_values=('', ' '))
+#
+#     groups = df.groupby(['sel1', 'sel2', 'interaction_name']).indices
+#
+#     for key, indices in groups.items():
+#         if len(indices) >= 2:
+#             print(f"Duplicate found: {key} at indices {indices.tolist()}")
+#     return df
+#
+#
+# path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/outputs/residue-12-50_InterMap_full.csv'
+# df = find_duplicates(path)
+# 14125:3139881:33.41 s
