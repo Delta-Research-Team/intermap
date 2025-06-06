@@ -174,7 +174,8 @@ class ContainerManager:
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
-        self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
+        # self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
+        self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
         # Detect water bridges ?
         self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
@@ -194,9 +195,51 @@ class ContainerManager:
             else:
                 to_assign = transform_wb(ijfs)
             for key, value in to_assign.items():
-                decoded = bu.sc_decode(self.dict[key])
-                decoded[value.tolist()] = True
-                self.dict[key] = bu.sc_encode(decoded)
+                # decoded = bu.sc_decode(self.dict[key])
+                # decoded[value.tolist()] = True
+                # self.dict[key] = bu.sc_encode(decoded)
+                self.dict[key][value.tolist()] = True
+
+    def get_line_elements(self, dict_key):
+        """
+        Get the elements of an output line from the dictionary key
+
+        Args:
+            dict_key (tuple): The key of the dictionary, which can be either
+                a tuple of 3 elements (s1, s2, inter) or 4 elements
+                (s1, s2, wat, inter_name).
+
+        Returns:
+            s1_name (str): The name of the first selection.
+            s1_note (str): The note of the first selection.
+            s2_name (str): The name of the second selection.
+            s2_note (str): The note of the second selection.
+            s3_name (str): The name of the water selection, if applicable.
+            inter_name (str): The name of the interaction.
+            prevalence (float): The prevalence of the interaction.
+            time (bitarray): The time series of the interaction.
+        """
+
+        # Check the length of the key and assign values accordingly
+        if len(dict_key) == 3:
+            s1, s2, inter = dict_key
+            wat = ''
+            inter_name = self.inter_names[inter]
+        elif len(dict_key) == 4:
+            s1, s2, wat, inter_name = dict_key
+        else:
+            raise ValueError('The key must have 3 or 4 elements')
+
+        # Get the names and notes for the selections
+        s1_name = self.names[s1]
+        s1_note = self.anotations.get(s1, '')
+        s2_name = self.names[s2]
+        s2_note = self.anotations.get(s2, '')
+        s3_name = self.names[wat] if wat else ''
+        # time = bu.sc_decode(self.dict[dict_key])
+        time = self.dict[dict_key]
+        prevalence = round(time.count() / self.n_frames * 100, 2)
+        return s1_name, s1_note, s2_name, s2_note, s3_name, inter_name, prevalence, time
 
     def generate_lines(self):
         """
@@ -208,28 +251,15 @@ class ContainerManager:
             short_line: str
                 The short line to be written in the short csv file
         """
-
         shared = self.iman.shared_idx
-        dejavu = set()
+
         for key in self.dict:
-            if len(key) == 3:
-                s1, s2, inter = key
-                wat = ''
-                inter_name = self.inter_names[inter]
-            elif len(key) == 4:
-                s1, s2, wat, inter_name = key
-            else:
-                raise ValueError('The key must have 3 or 4 elements')
+            # Get the selections and interaction name from the key
+            s1, s2 = key[0], key[1]
+            (s1_name, s1_note, s2_name, s2_note, s3_name, inter_name,
+             prevalence, time) = self.get_line_elements(key)
 
-            s1_name = self.names[s1]
-            s1_note = self.anotations.get(s1, '')
-            s2_name = self.names[s2]
-            s2_note = self.anotations.get(s2, '')
-            s3_name = self.names[wat] if wat else ''
-            time = bu.sc_decode(self.dict[key])
-            prevalence = round(time.count() / self.n_frames * 100, 2)
-
-            # Yield each line as a generator
+            # Create the full and short lines
             full_line = (
                 f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
                 f'{inter_name},{prevalence},{time.to01()}\n')
@@ -237,34 +267,19 @@ class ContainerManager:
                 f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
                 f'{inter_name},{prevalence}\n')
 
-            entry = (s1, s2, inter_name, wat)
-            if len(shared) > 0:
-                if (s1 in shared) or (s2 in shared):
-                    s1_name_swap = self.names[s2]
-                    s1_note_swap = self.anotations.get(s2, '')
-                    s2_name_swap = self.names[s1]
-                    s2_note_swap = self.anotations.get(s1, '')
-                    inter_name_swap = self.swap_inters[inter_name]
-                    s3_name = self.names[wat] if wat else ''
-                    time = bu.sc_decode(self.dict[key])
-                    entry = (s2, s1, inter_name_swap, wat)
-                    prevalence = round(time.count() / self.n_frames * 100, 2)
-                    full_line_swap = (
-                        f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
-                        f'{s2_note_swap}, {s3_name}, {inter_name_swap},'
-                        f'{prevalence},{time.to01()}\n')
-                    short_line_swap = (
-                        f'{s1_name_swap}, {s1_note_swap}, {s2_name_swap},'
-                        f'{s2_note_swap}, {s3_name}, {inter_name_swap},'
-                        f'{prevalence}\n')
-
-                    if entry not in dejavu:
-                        dejavu.add(entry)
-                        yield full_line_swap, short_line_swap, full_line, short_line
+            # Yield each line as a generator
+            # yield full_line, short_line
+            both_shared = (s1 in shared) and (s2 in shared)
+            if not both_shared:
+                yield full_line, short_line
             else:
-                if entry not in dejavu:
-                    dejavu.add(entry)
-            yield full_line, short_line
+                full_line_swap = (
+                    f'{s2_name}, {s2_note}, {s1_name}, {s1_note}, {s3_name},'
+                    f'{self.swap_inters[inter_name]},{prevalence},{time.to01()}\n')
+                short_line_swap = (
+                    f'{s2_name}, {s2_note}, {s1_name}, {s1_note}, {s3_name},'
+                    f'{self.swap_inters[inter_name]},{prevalence}\n')
+                yield full_line_swap, short_line_swap, full_line, short_line
 
     def save(self, path1, path2):
         """

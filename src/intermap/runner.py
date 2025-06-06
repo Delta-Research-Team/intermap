@@ -56,7 +56,7 @@ def workflow(args):
     if isinstance(args, dict):
         args = Namespace(**args)
 
-    # %%=======================================================================
+    # =========================================================================
     # 2. Load the indices & interactions to compute
     # =========================================================================
     iman = IndexManager(args)
@@ -79,7 +79,7 @@ def workflow(args):
         iman.overlap, iman.universe, iman.resid_names, iman.atom_names,
         iman.resconv, iman.n_frames, iman.traj_frames, iman.inters_requested)
 
-    # %%=======================================================================
+    # =========================================================================
     # 3. Parse the interactions & cutoffs
     # =========================================================================
     cuts = CutoffsManager(args, iman)
@@ -90,7 +90,7 @@ def workflow(args):
         cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
         cuts.max_dist_others)
 
-    # %%=======================================================================
+    # =========================================================================
     # 4. Estimating memory allocation
     # =========================================================================
     atomic = True if args.resolution == 'atom' else False
@@ -104,7 +104,7 @@ def workflow(args):
         cuts_others, selected_others, len_others, max_dist_aro,
         max_dist_others, overlap, atomic, resconv)
 
-    # %%=======================================================================
+    # =========================================================================
     # 5. Trim the trajectory
     # =========================================================================
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
@@ -113,7 +113,7 @@ def workflow(args):
     contiguous = list(cmn.split_in_chunks(np.arange(traj_frames.size),
                                           args.chunk_size))
 
-    # %%=======================================================================
+    # =========================================================================
     # 6. Detect the interactions & Fill the container
     # =========================================================================
     total_pairs, total_inters = 0, 0
@@ -197,10 +197,9 @@ if __name__ == '__main__':
 # Transient debugin for duplicate lines in the output file
 # =============================================================================
 # import pandas as pd
-#
-#
-#
-# # csv = compress_wb(csv)
+
+
+# csv = compress_wb(csv)
 # def find_duplicates(path):
 #     """
 #     Find duplicates in the InterMap output file.
