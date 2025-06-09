@@ -174,8 +174,8 @@ class ContainerManager:
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
-        # self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
-        self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
+        self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
+        # self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
         # Detect water bridges ?
         self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
@@ -195,10 +195,10 @@ class ContainerManager:
             else:
                 to_assign = transform_wb(ijfs)
             for key, value in to_assign.items():
-                # decoded = bu.sc_decode(self.dict[key])
-                # decoded[value.tolist()] = True
-                # self.dict[key] = bu.sc_encode(decoded)
-                self.dict[key][value.tolist()] = True
+                decoded = bu.sc_decode(self.dict[key])
+                decoded[value.tolist()] = True
+                self.dict[key] = bu.sc_encode(decoded)
+                # self.dict[key][value.tolist()] = True
 
     def get_line_elements(self, dict_key):
         """
@@ -236,8 +236,8 @@ class ContainerManager:
         s2_name = self.names[s2]
         s2_note = self.anotations.get(s2, '')
         s3_name = self.names[wat] if wat else ''
-        # time = bu.sc_decode(self.dict[dict_key])
-        time = self.dict[dict_key]
+        time = bu.sc_decode(self.dict[dict_key])
+        # time = self.dict[dict_key]
         prevalence = round(time.count() / self.n_frames * 100, 2)
         return s1_name, s1_note, s2_name, s2_note, s3_name, inter_name, prevalence, time
 
