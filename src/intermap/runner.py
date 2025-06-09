@@ -117,7 +117,7 @@ def workflow(args):
     # 6. Detect the interactions & Fill the container
     # =========================================================================
     total_pairs, total_inters = 0, 0
-    container = ContainerManager(args, iman, cuts)
+    self = ContainerManager(args, iman, cuts)
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
@@ -152,32 +152,33 @@ def workflow(args):
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            container.fill(ijf_chunk, inters_chunk)
+            self.fill(ijf_chunk, inters_chunk)
 
             # 6.7 Fill the container with the water bridges
-            if container.detect_wb:
-                ijwf = wb1(ijf_chunk, inters_chunk, waters, container.hb_idx,
+            if self.detect_wb:
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, self.hb_idx,
                            resconv, atomic=atomic)
-                container.fill(ijwf, inters='wb')
+                self.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
     out_name1 = f"{basename(args.job_name)}_InterMap_full"
-    out_name2 = f"{basename(args.job_name)}_InterMap_short"
-    csv_path1 = join(args.output_dir, f'{out_name1}.csv')
-    csv_path2 = join(args.output_dir, f'{out_name2}.csv')
-    container.save(csv_path1, csv_path2)
+    # out_name2 = f"{basename(args.job_name)}_InterMap_short"
+    csv_path1 = join(args.output_dir, f'{out_name1}.pickle')
+    # csv_path2 = join(args.output_dir, f'{out_name2}.csv')
+    # self.save(csv_path1, csv_path2)
+    self.writebin(csv_path1)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(container.dict)
+    ldict = len(self.dict)
     pair_type = 'atom' if atomic else 'residue'
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
+        # f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
         f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")

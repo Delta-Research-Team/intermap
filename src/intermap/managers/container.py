@@ -3,8 +3,9 @@
 from collections import defaultdict
 from os.path import basename
 
-import bitarray.util as bu
 import numpy as np
+import rgpack.generals as gnl
+from bitarray import util as bu
 from numba import njit, types
 from numba.typed import List
 
@@ -280,6 +281,22 @@ class ContainerManager:
                     f'{s2_name}, {s2_note}, {s1_name}, {s1_note}, {s3_name},'
                     f'{self.swap_inters[inter_name]},{prevalence}\n')
                 yield full_line_swap, short_line_swap, full_line, short_line
+
+    def writebin(self, path):
+        """
+        Write the dictionary to a binary file
+
+        Args:
+            path (str): The path to the binary file
+        """
+        key = list(self.dict.keys())[0]
+        value = self.dict[key]
+        try:
+            bu.sc_decode(value)
+        except TypeError:
+            self.dict = {key: bu.sc_encode(self.dict[key]) for key in
+                         self.dict}
+        gnl.pickle_to_file(dict(self.dict), path)
 
     def save(self, path1, path2):
         """
