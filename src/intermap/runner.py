@@ -56,7 +56,7 @@ def workflow(args):
     if isinstance(args, dict):
         args = Namespace(**args)
 
-    # %%=======================================================================
+    # =========================================================================
     # 2. Load the indices & interactions to compute
     # =========================================================================
     iman = IndexManager(args)
@@ -79,7 +79,7 @@ def workflow(args):
         iman.overlap, iman.universe, iman.resid_names, iman.atom_names,
         iman.resconv, iman.n_frames, iman.traj_frames, iman.inters_requested)
 
-    # %%=======================================================================
+    # =========================================================================
     # 3. Parse the interactions & cutoffs
     # =========================================================================
     cuts = CutoffsManager(args, iman)
@@ -90,7 +90,7 @@ def workflow(args):
         cuts.selected_others, cuts.len_aro, cuts.len_others, cuts.max_dist_aro,
         cuts.max_dist_others)
 
-    # %%=======================================================================
+    # =========================================================================
     # 4. Estimating memory allocation
     # =========================================================================
     atomic = True if args.resolution == 'atom' else False
@@ -104,7 +104,7 @@ def workflow(args):
         cuts_others, selected_others, len_others, max_dist_aro,
         max_dist_others, overlap, atomic, resconv)
 
-    # %%=======================================================================
+    # =========================================================================
     # 5. Trim the trajectory
     # =========================================================================
     chunk_frames = list(cmn.split_in_chunks(traj_frames, args.chunk_size))
@@ -113,11 +113,11 @@ def workflow(args):
     contiguous = list(cmn.split_in_chunks(np.arange(traj_frames.size),
                                           args.chunk_size))
 
-    # %%=======================================================================
+    # =========================================================================
     # 6. Detect the interactions & Fill the container
     # =========================================================================
     total_pairs, total_inters = 0, 0
-    container = ContainerManager(args, iman, cuts)
+    self = ContainerManager(args, iman, cuts)
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
@@ -152,32 +152,33 @@ def workflow(args):
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            container.fill(ijf_chunk, inters_chunk)
+            self.fill(ijf_chunk, inters_chunk)
 
             # 6.7 Fill the container with the water bridges
-            if container.detect_wb:
-                ijwf = wb1(ijf_chunk, inters_chunk, waters, container.hb_idx,
+            if self.detect_wb:
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, self.hb_idx,
                            resconv, atomic=atomic)
-                container.fill(ijwf, inters='wb')
+                self.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
     out_name1 = f"{basename(args.job_name)}_InterMap_full"
-    out_name2 = f"{basename(args.job_name)}_InterMap_short"
-    csv_path1 = join(args.output_dir, f'{out_name1}.csv')
-    csv_path2 = join(args.output_dir, f'{out_name2}.csv')
-    container.save(csv_path1, csv_path2)
+    # out_name2 = f"{basename(args.job_name)}_InterMap_short"
+    csv_path1 = join(args.output_dir, f'{out_name1}.pickle')
+    # csv_path2 = join(args.output_dir, f'{out_name2}.csv')
+    # self.save(csv_path1, csv_path2)
+    self.writebin(csv_path1)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(container.dict)
+    ldict = len(self.dict)
     pair_type = 'atom' if atomic else 'residue'
     logger.info(
         f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
+        # f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
         f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
@@ -192,3 +193,28 @@ def workflow(args):
 
 if __name__ == '__main__':
     run()
+
+# =============================================================================
+# Transient debugin for duplicate lines in the output file
+# =============================================================================
+# import pandas as pd
+
+
+# csv = compress_wb(csv)
+# def find_duplicates(path):
+#     """
+#     Find duplicates in the InterMap output file.
+#     """
+#     df = pd.read_csv(path, header=2, na_values=('', ' '))
+#
+#     groups = df.groupby(['sel1', 'sel2', 'interaction_name']).indices
+#
+#     for key, indices in groups.items():
+#         if len(indices) >= 2:
+#             print(f"Duplicate found: {key} at indices {indices.tolist()}")
+#     return df
+#
+#
+# path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/outputs/residue-12-50_InterMap_full.csv'
+# df = find_duplicates(path)
+# 14125:3139881:33.41 s
