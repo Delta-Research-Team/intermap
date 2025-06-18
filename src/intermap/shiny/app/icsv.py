@@ -153,23 +153,17 @@ class CSVFilter:
         Returns:
             csv (pd.DataFrame): DataFrame containing the InterMap data
         """
-        # Primero leemos el archivo completo sin especificar header
         with open(self.csv_path, 'r') as file:
             lines = file.readlines()
-            # La segunda línea contiene la información de los ejes
             axis_line = lines[1].strip()
-            # Dividimos por ',' y limpiamos los espacios
             axis_parts = [part.strip() for part in axis_line.split(',')]
 
-            # Extraemos la información de los ejes
             axisx = axis_parts[0]
             axisy = axis_parts[1]
 
-            # Guardamos la información en el objeto
             self.axisx = axisx
             self.axisy = axisy
 
-        # Continuamos con la lectura normal del DataFrame
         csv = pd.read_csv(self.csv_path, header=2, na_values=('', ' '))
         raw = csv['sel1'][0]
         resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
@@ -329,7 +323,7 @@ class CSVFilter:
 # Funtions to process plots
 # =========================================================================
 
-def process_heatmap_data(df):  # Añadimos los parámetros axisx y axisy
+def process_heatmap_data(df):
     """Process data for heatmap plot."""
     interaction_priority = {
         'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
@@ -534,6 +528,9 @@ def process_time_series_data(df):
 #topo = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/hmr.psf'
 
 #self = CSVFilter(full, topo)
+
+#axisx = self.axisx
+#axisy = self.axisy
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)

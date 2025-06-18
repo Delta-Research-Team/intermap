@@ -13,8 +13,7 @@ from intermap.shiny.app.css import all_interactions_colors
 from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data
 from rdkit.sping.colors import white
 
-
-def create_plot(df, width, height, show_prevalence=False):
+def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
     """Create heatmap plot."""
     data = process_heatmap_data(df)
 
@@ -136,7 +135,7 @@ def create_plot(df, width, height, show_prevalence=False):
         paper_bgcolor='white',
         plot_bgcolor='white',
         xaxis=dict(
-            title=f"",
+            title=axisx,
             title_font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)'),
             showgrid=True,
             gridwidth=1,
@@ -147,7 +146,7 @@ def create_plot(df, width, height, show_prevalence=False):
             tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)')
         ),
         yaxis=dict(
-            title=f"",
+            title=axisy,
             title_font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)'),
             showgrid=True,
             gridwidth=1,
@@ -161,7 +160,7 @@ def create_plot(df, width, height, show_prevalence=False):
     return fig
 
 
-def create_ligand_interactions_plot(df, width, height):
+def create_ligand_interactions_plot(df, width, height, axisx, axisy):
     """Create ligand interactions plot."""
     batched_data = process_prevalence_data(df, 'sel1')
 
@@ -195,7 +194,7 @@ def create_ligand_interactions_plot(df, width, height):
         height=height,
         barmode='overlay',
         xaxis_title=dict(
-            text="<b>Selection 1</b>",
+            text=axisx,
             font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)')
         ),
         yaxis_title=dict(
@@ -243,7 +242,7 @@ def create_ligand_interactions_plot(df, width, height):
     return fig
 
 
-def create_receptor_interactions_plot(df, width, height):
+def create_receptor_interactions_plot(df, width, height, axisx, axisy):
     """Create receptor interactions plot."""
     batched_data = process_prevalence_data(df, 'sel2')
 
@@ -276,7 +275,7 @@ def create_receptor_interactions_plot(df, width, height):
         height=height,
         barmode='overlay',
         xaxis_title=dict(
-            text="<b>Selection 2</b>",
+            text=axisy,
             font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)')
         ),
         yaxis_title=dict(

@@ -59,6 +59,9 @@ def server(input, output, session):
                 topo=top_path
             )
 
+            axisx = master_instance.axisx
+            axisy = master_instance.axisy
+
             csv.set(master_instance)
 
             ui.notification_show(
@@ -92,13 +95,19 @@ def server(input, output, session):
         )
 
         if filtered_idx.get() is not None and csv.get() is not None:
+            master_instance = csv.get()
             filtered_df = csv.get().master.iloc[
                 list(filtered_idx.get())].copy()
+
             if transpose_state.get():
                 filtered_df = transpose(filtered_df)
-            filtered_df = sortby(filtered_df, input.sort_by())
+
+                master_instance.axisx, master_instance.axisy = master_instance.axisy, master_instance.axisx
+
             csv_filtered.set(filtered_df)
             session.send_custom_message("refresh-plots", {})
+
+
 
     @reactive.Effect
     @reactive.event(input.plot_button,
@@ -169,23 +178,17 @@ def server(input, output, session):
             return
 
         try:
-            # Crear una ventana root oculta para el diálogo
             root = tk.Tk()
-            root.withdraw()  # Ocultar la ventana principal
-
-            # Mostrar el diálogo de selección de directorio
+            root.withdraw()
             save_dir = filedialog.askdirectory(
                 title="Select Directory to Save Plot"
             )
 
-            # Si no se seleccionó ningún directorio, salir
             if not save_dir:
                 return
 
-            # Convertir a Path
             save_dir = Path(save_dir)
 
-            # Obtener la pestaña activa y crear timestamp
             active_tab = input.plot_tabs()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -207,7 +210,6 @@ def server(input, output, session):
                 fig.write_html(str(full_path))
 
             elif active_tab == "Prevalence":
-                # Plot de Selection 1
                 fig1 = create_ligand_interactions_plot(csv_filtered.get(),
                                                        input.plot_width(),
                                                        input.plot_height() // 1.5)
@@ -215,7 +217,6 @@ def server(input, output, session):
                 full_path1 = save_dir / filename1
                 fig1.write_html(str(full_path1))
 
-                # Plot de Selection 2
                 fig2 = create_receptor_interactions_plot(csv_filtered.get(),
                                                          input.plot_width(),
                                                          input.plot_height() // 1.5)
@@ -253,7 +254,6 @@ def server(input, output, session):
                 type="error"
             )
         finally:
-            # Destruir la ventana root de tkinter
             if 'root' in locals():
                 root.destroy()
 
@@ -273,10 +273,16 @@ def server(input, output, session):
         if error is not None:
             return error
 
+        master_instance = csv.get()
+        if master_instance is None:
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
+
         plot_args = [
             csv_filtered.get(),
             input.plot_width(),
             input.plot_height() if is_main else input.plot_height() // 1.5,
+            master_instance.axisx,
+            master_instance.axisy
         ]
 
         if is_main:
@@ -348,9 +354,15 @@ def server(input, output, session):
         if error is not None:
             return error
 
+        master_instance = csv.get()
+        if master_instance is None:
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
+
         fig = create_lifetime_plot(csv_filtered.get(),
                                    input.plot_width(),
                                    input.plot_height(),
+                                   master_instance.axisx,
+                                   master_instance.axisy,
                                    input.show_prevalence())
 
         if fig is None:
