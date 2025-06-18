@@ -134,7 +134,7 @@ class CSVFilter:
         except Exception as e:
             raise ValueError(f"Error loading topology file: {str(e)}")
 
-        self.master, self.resolution = self.parse_csv()
+        self.master, self.resolution, self.axisx, self.axisy = self.parse_csv()
         self.long = True if 'timeseries' in self.master.columns else False
         self.prevalences = self.master['prevalence'].astype(float)
 
@@ -153,7 +153,24 @@ class CSVFilter:
         Returns:
             csv (pd.DataFrame): DataFrame containing the InterMap data
         """
-        csv = pd.read_csv(self.csv_path, header=1, na_values=('', ' '))
+        # Primero leemos el archivo completo sin especificar header
+        with open(self.csv_path, 'r') as file:
+            lines = file.readlines()
+            # La segunda línea contiene la información de los ejes
+            axis_line = lines[1].strip()
+            # Dividimos por ',' y limpiamos los espacios
+            axis_parts = [part.strip() for part in axis_line.split(',')]
+
+            # Extraemos la información de los ejes
+            axisx = axis_parts[0]
+            axisy = axis_parts[1]
+
+            # Guardamos la información en el objeto
+            self.axisx = axisx
+            self.axisy = axisy
+
+        # Continuamos con la lectura normal del DataFrame
+        csv = pd.read_csv(self.csv_path, header=2, na_values=('', ' '))
         raw = csv['sel1'][0]
         resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
 
@@ -162,9 +179,8 @@ class CSVFilter:
         idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
         csv['idx1'] = idx_1
         csv['idx2'] = idx_2
-        #csv = compress_wb(csv)
 
-        return csv, resolution
+        return csv, resolution, axisx, axisy
 
     # =========================================================================
     # Static mappings
@@ -313,7 +329,7 @@ class CSVFilter:
 # Funtions to process plots
 # =========================================================================
 
-def process_heatmap_data(df):
+def process_heatmap_data(df):  # Añadimos los parámetros axisx y axisy
     """Process data for heatmap plot."""
     interaction_priority = {
         'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
@@ -514,10 +530,10 @@ def process_time_series_data(df):
 # =============================================================================
 #
 # =============================================================================
-# full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
-# short = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/DrHU-Tails-8k/dna-prot_InterMap_short.csv'
+#full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
+#topo = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/hmr.psf'
 
-# self = CSVFilter(full)
+#self = CSVFilter(full, topo)
 
 # mda_sele, mda_status = self.by_mda('all')
 # prevalence, preval_status = self.by_prevalence(95)

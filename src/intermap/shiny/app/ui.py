@@ -98,7 +98,6 @@ def create_file_input_section():
                 placeholder="e.g., resname ALA or protein",
                 value="", width="100%")))
 
-
 def create_filters_section():
     """Create the filters section of the app."""
     return ui.column(3,
@@ -191,6 +190,8 @@ def create_filters_section():
                             ),
                             ui.hr(),
 
+                            # Input oculto para el directorio seleccionado
+                            ui.div({"id": "directory-picker-container"}),
 
                             ui.tags.style("""
                .transpose-button-container {
@@ -244,27 +245,33 @@ def create_filters_section():
            """),
 
                             ui.tags.script("""
-               $(document).ready(function() {
-                   Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
-                       const button = document.querySelector('.transpose-button');
-                       if (message.active) {
-                           button.classList.add('active');
-                       } else {
-                           button.classList.remove('active');
-                       }
-                   });
+                                $(document).ready(function() {
+                                    // Handlers existentes
+                                    Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
+                                        const button = document.querySelector('.transpose-button');
+                                        if (message.active) {
+                                            button.classList.add('active');
+                                        } else {
+                                            button.classList.remove('active');
+                                        }
+                                    });
 
-                   Shiny.addCustomMessageHandler('refresh-plots', function(message) {
-                       var plotTabs = ['interaction_plot', 'ligand_interactions_plot', 
-                                     'receptor_interactions_plot', 'interactions_over_time_plot'];
-                       plotTabs.forEach(function(plotId) {
-                           if (Shiny.shinyapp.$bindings[plotId]) {
-                               Shiny.shinyapp.$bindings[plotId].invalidate();
-                           }
-                       });
-                   });
-               });
-           """),
+                                    Shiny.addCustomMessageHandler('refresh-plots', function(message) {
+                                        var plotTabs = ['interaction_plot', 'ligand_interactions_plot', 
+                                                      'receptor_interactions_plot', 'interactions_over_time_plot'];
+                                        plotTabs.forEach(function(plotId) {
+                                            if (Shiny.shinyapp.$bindings[plotId]) {
+                                                Shiny.shinyapp.$bindings[plotId].invalidate();
+                                            }
+                                        });
+                                    });
+
+                                    // Manejar el botón de descarga
+                                    document.getElementById('download_plot_button').addEventListener('click', function() {
+                                        Shiny.setInputValue('save_plot_trigger', Date.now());
+                                    });
+                                });
+                            """),
 
                             ui.div(
                                 {"style": """
@@ -317,8 +324,6 @@ def create_filters_section():
                                     }
                                 """),
                             )))
-
-
 
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""

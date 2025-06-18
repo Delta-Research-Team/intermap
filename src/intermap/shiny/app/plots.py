@@ -113,6 +113,7 @@ def create_plot(df, width, height, show_prevalence=False):
             legendgroup=interaction
         ))
 
+    # Modificamos el layout para usar axisx y axisy
     fig.update_layout(
         width=width,
         height=height,
@@ -135,7 +136,7 @@ def create_plot(df, width, height, show_prevalence=False):
         paper_bgcolor='white',
         plot_bgcolor='white',
         xaxis=dict(
-            title="<b>Selection 1</b>",
+            title=f"",
             title_font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)'),
             showgrid=True,
             gridwidth=1,
@@ -146,7 +147,7 @@ def create_plot(df, width, height, show_prevalence=False):
             tickfont=dict(family="Roboto", size=14, color='rgb(26, 26, 26)')
         ),
         yaxis=dict(
-            title="<b>Selection 2</b>",
+            title=f"",
             title_font=dict(family="Roboto", size=16, color='rgb(26, 26, 26)'),
             showgrid=True,
             gridwidth=1,

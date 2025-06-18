@@ -8,7 +8,8 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-
+from tkinter import filedialog
+import tkinter as tk
 from shiny import App, reactive, render, ui
 
 from .css import ERROR_MESSAGES
@@ -156,9 +157,9 @@ def server(input, output, session):
             csv_filtered.set(None)
 
     @reactive.Effect
-    @reactive.event(input.download_plot_button)
+    @reactive.event(input.save_plot_trigger)
     def handle_download():
-        """Handle the plot download when the download button is clicked."""
+        """Handle saving the current plot."""
         if csv_filtered.get() is None:
             ui.notification_show(
                 "No plot to save. Please generate a plot first.",
@@ -168,43 +169,62 @@ def server(input, output, session):
             return
 
         try:
-            # Determinar qué pestaña está activa
-            active_tab = input.plot_tabs()
+            # Crear una ventana root oculta para el diálogo
+            root = tk.Tk()
+            root.withdraw()  # Ocultar la ventana principal
 
-            # Obtener el plot correspondiente manteniendo el mismo formato que en la aplicación
+            # Mostrar el diálogo de selección de directorio
+            save_dir = filedialog.askdirectory(
+                title="Select Directory to Save Plot"
+            )
+
+            # Si no se seleccionó ningún directorio, salir
+            if not save_dir:
+                return
+
+            # Convertir a Path
+            save_dir = Path(save_dir)
+
+            # Obtener la pestaña activa y crear timestamp
+            active_tab = input.plot_tabs()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             if active_tab == "Life Time":
                 fig = create_lifetime_plot(csv_filtered.get(),
                                            input.plot_width(),
                                            input.plot_height())
+                filename = f"lifetime_plot_{timestamp}.html"
+                full_path = save_dir / filename
+                fig.write_html(str(full_path))
 
             elif active_tab == "Sele1 vs Sele2":
-                fig = create_plot(csv_filtered.get(), input.plot_width(),
-                                  input.plot_height(), input.show_prevalence())
-            elif active_tab == "Prevalence":
-                # Guardar los dos plots por separado
-                timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+                fig = create_plot(csv_filtered.get(),
+                                  input.plot_width(),
+                                  input.plot_height(),
+                                  input.show_prevalence())
+                filename = f"sele1_vs_sele2_plot_{timestamp}.html"
+                full_path = save_dir / filename
+                fig.write_html(str(full_path))
 
+            elif active_tab == "Prevalence":
                 # Plot de Selection 1
                 fig1 = create_ligand_interactions_plot(csv_filtered.get(),
                                                        input.plot_width(),
                                                        input.plot_height() // 1.5)
-                filename1 = f"plot_selection1_prevalence_{timestamp}.html"
-                save_dir = Path("saved_plots")
-                save_dir.mkdir(exist_ok=True)
-                filepath1 = save_dir / filename1
-                fig1.write_html(filepath1)
+                filename1 = f"selection1_prevalence_{timestamp}.html"
+                full_path1 = save_dir / filename1
+                fig1.write_html(str(full_path1))
 
                 # Plot de Selection 2
                 fig2 = create_receptor_interactions_plot(csv_filtered.get(),
                                                          input.plot_width(),
                                                          input.plot_height() // 1.5)
-                filename2 = f"plot_selection2_prevalence_{timestamp}.html"
-                filepath2 = save_dir / filename2
-                fig2.write_html(filepath2)
+                filename2 = f"selection2_prevalence_{timestamp}.html"
+                full_path2 = save_dir / filename2
+                fig2.write_html(str(full_path2))
 
                 ui.notification_show(
-                    f"Plots saved as '{filename1}' and '{filename2}' in 'saved_plots' directory",
+                    f"Plots saved as:\n{filename1}\n{filename2}",
                     duration=5000,
                     type="message"
                 )
@@ -214,34 +234,30 @@ def server(input, output, session):
                 fig = create_interactions_over_time_plot(csv_filtered.get(),
                                                          input.plot_width(),
                                                          input.plot_height())
+                filename = f"time_series_plot_{timestamp}.html"
+                full_path = save_dir / filename
+                fig.write_html(str(full_path))
 
-            # Para los tabs que no son "Prevalence"
-            timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
-            filename = f"plot_{active_tab.lower().replace(' ', '_')}_{timestamp}.html"
-
-            # Crear directorio 'saved_plots' si no existe
-            save_dir = Path("saved_plots")
-            save_dir.mkdir(exist_ok=True)
-
-            # Ruta completa del archivo
-            filepath = save_dir / filename
-
-            # Guardar el plot como HTML
-            fig.write_html(filepath)
-
-            if active_tab != "Prevalence":  # Ya mostramos la notificación para Prevalence arriba
+            if active_tab != "Prevalence":
                 ui.notification_show(
-                    f"Plot saved successfully as '{filename}' in 'saved_plots' directory",
+                    f"Plot saved as:\n{filename}",
                     duration=5000,
                     type="message"
                 )
 
         except Exception as e:
+            print(f"Error saving plot: {str(e)}")
             ui.notification_show(
                 f"Error saving plot: {str(e)}",
                 duration=5000,
                 type="error"
             )
+        finally:
+            # Destruir la ventana root de tkinter
+            if 'root' in locals():
+                root.destroy()
+
+
     # =========================================================================
     # Rendering helper functions
     # =========================================================================
