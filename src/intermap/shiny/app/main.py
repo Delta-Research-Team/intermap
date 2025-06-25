@@ -84,6 +84,23 @@ def server(input, output, session):
             )
 
     @reactive.Effect
+    @reactive.event(input.sort_by)
+    async def handle_sort():
+        """Handle sorting when sort option changes."""
+        if filtered_idx.get() is not None and csv.get() is not None:
+            master_instance = csv.get()
+            filtered_df = master_instance.master.iloc[
+                list(filtered_idx.get())].copy()
+
+            # Aplicar el nuevo ordenamiento directamente
+            sorted_data = sortby(filtered_df, input.sort_by())
+
+            # Actualizar la visualización
+            # (aquí va tu código para actualizar el plot con sorted_data)
+            await session.send_custom_message("refresh-plots", {})
+
+
+    @reactive.Effect
     @reactive.event(input.transpose_button)
     def handle_transpose():
         """Handle the transpose button click."""
@@ -101,7 +118,6 @@ def server(input, output, session):
 
             if transpose_state.get():
                 filtered_df = transpose(filtered_df)
-
                 master_instance.axisx, master_instance.axisy = master_instance.axisy, master_instance.axisx
 
             csv_filtered.set(filtered_df)
@@ -113,8 +129,7 @@ def server(input, output, session):
     @reactive.event(input.plot_button,
                     input.selected_interactions,
                     input.selected_annotations,
-                    input.prevalence_threshold,
-                    input.sort_by)
+                    input.prevalence_threshold)
     def update_filtered_idx():
         """Update filtered indices based on current UI selections."""
         if csv.get() is None:
@@ -158,7 +173,6 @@ def server(input, output, session):
             filtered_df = master_instance.master.iloc[list(df_idx)].copy()
             if transpose_state.get():
                 filtered_df = transpose(filtered_df)
-            filtered_df = sortby(filtered_df, input.sort_by())
             filtered_idx.set(df_idx)
             csv_filtered.set(filtered_df)
         else:

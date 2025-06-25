@@ -174,6 +174,8 @@ class CSVFilter:
         csv['idx1'] = idx_1
         csv['idx2'] = idx_2
 
+        csv = compress_wb(csv)
+
         return csv, resolution, axisx, axisy
 
     # =========================================================================
@@ -323,14 +325,92 @@ class CSVFilter:
 # Funtions to process plots
 # =========================================================================
 
-def process_heatmap_data(df):
-    """Process data for heatmap plot."""
+"""
+def process_heatmap_data(df, sort_choice=None):
+
     interaction_priority = {
         'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
         'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
         'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
         'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
-        'CloseContact': 16
+        'CloseContact': 16, 'WaterBridge': 17
+    }
+
+    df['priority'] = df['interaction_name'].map(interaction_priority)
+
+    # Primero aplicamos sortby si se especifica
+    if sort_choice is not None:
+        df = sortby(df, sort_choice)
+
+    # Luego procesamos por prioridad y prevalencia
+    priority_df = (df.sort_values(['priority', 'prevalence'],
+                                  ascending=[True, False])
+                   .groupby(['sel1', 'sel2']).first().reset_index())
+
+    # Obtenemos el orden único de sel1 y sel2 del DataFrame ordenado
+    unique_sel1 = df['sel1'].unique()
+    unique_sel2 = df['sel2'].unique()
+
+    # Creamos los pivot_tables manteniendo el orden
+    pivot_interaction = pd.pivot_table(priority_df,
+                                       values='interaction_name',
+                                       index='sel2',
+                                       columns='sel1',
+                                       aggfunc='first',
+                                       fill_value='')
+
+    # Reordenamos explícitamente usando el orden del DataFrame ordenado
+    pivot_interaction = pivot_interaction.reindex(index=unique_sel2,
+                                                  columns=unique_sel1)
+
+    # Hacemos lo mismo para los demás pivots
+    pivot_prevalence = pd.pivot_table(priority_df,
+                                      values='prevalence',
+                                      index='sel2',
+                                      columns='sel1',
+                                      aggfunc='first',
+                                      fill_value="")
+    pivot_prevalence = pivot_prevalence.reindex(index=unique_sel2,
+                                                columns=unique_sel1)
+
+    pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
+
+    pivot_note1 = pd.pivot_table(priority_df,
+                                 values='note1',
+                                 index='sel2',
+                                 columns='sel1',
+                                 aggfunc='first',
+                                 fill_value="")
+    pivot_note1 = pivot_note1.reindex(index=unique_sel2, columns=unique_sel1)
+
+    pivot_note2 = pd.pivot_table(priority_df,
+                                 values='note2',
+                                 index='sel2',
+                                 columns='sel1',
+                                 aggfunc='first',
+                                 fill_value="")
+    pivot_note2 = pivot_note2.reindex(index=unique_sel2, columns=unique_sel1)
+
+    present_interactions = sorted(priority_df['interaction_name'].unique(),
+                                  key=lambda x: interaction_priority[x])
+
+    return {
+        'pivot_interaction': pivot_interaction,
+        'pivot_prevalence': pivot_prevalence,
+        'pivot_prevalence_rounded': pivot_prevalence_rounded,
+        'pivot_note1': pivot_note1,
+        'pivot_note2': pivot_note2,
+        'present_interactions': present_interactions
+    }
+
+"""
+def process_heatmap_data(df):
+    interaction_priority = {
+        'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
+        'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
+        'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
+        'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
+        'CloseContact': 16, 'WaterBridge': 17
     }
 
     df['priority'] = df['interaction_name'].map(interaction_priority)
@@ -475,12 +555,11 @@ def process_prevalence_data2(df, selection_column, sort_by='note'):
     batched_data = batched_df.to_dict(orient='records')
     return batched_data
 
-
 def process_time_series_data(df):
     """Process data for time series plot."""
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
-        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
+        'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
         'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
@@ -521,6 +600,69 @@ def process_time_series_data(df):
         'interaction_colors': interaction_colors
     }
 
+def process_lifetime_data(df):
+    """Process data for lifetime violin plot with frame ranges."""
+    from bitarray import bitarray as ba, util as bu
+    import numpy as np
+
+    # Dictionary for interaction name abbreviations
+    interaction_abbreviations = {
+        'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
+        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
+        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
+        'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
+        'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
+    }
+
+    # Convert DataFrame columns to numpy arrays for faster access
+    sel1_array = df['sel1'].values
+    sel2_array = df['sel2'].values
+    interaction_array = df['interaction_name'].values
+    prevalence_array = df['prevalence'].values
+    timeseries_array = df['timeseries'].values
+
+    data_list = []
+
+    for idx in range(len(df)):
+        array = ba(timeseries_array[idx])
+        intervals = bu.intervals(array)
+        # Filter intervals where contact exists (flag == 1)
+        contact_intervals = [x for x in intervals if x[0] == 1]
+
+        if contact_intervals:
+            abbrev = interaction_abbreviations.get(interaction_array[idx],
+                                                 interaction_array[idx])
+            pair_name = f"{sel1_array[idx]} - {sel2_array[idx]} ({abbrev})"
+
+            # Convert contact_intervals to numpy array for faster operations
+            intervals_array = np.array(contact_intervals)
+
+            # Extract all starts and ends at once
+            starts = intervals_array[:, 1]
+            ends = intervals_array[:, 2]
+            lifetimes = ends - starts
+
+            # Create arrays for repeated values using numpy
+            n_intervals = len(intervals_array)
+            pairs = np.repeat(pair_name, n_intervals)
+            interactions = np.repeat(interaction_array[idx], n_intervals)
+            prevalences = np.repeat(prevalence_array[idx], n_intervals)
+
+            # Add all intervals at once
+            for i in range(n_intervals):
+                data_list.append({
+                    'pair': pairs[i],
+                    'lifetime': lifetimes[i],
+                    'interaction_name': interactions[i],
+                    'prevalence': prevalences[i],
+                    'start_frame': starts[i],
+                    'end_frame': ends[i]
+                })
+
+    return pd.DataFrame(data_list)
+
+
 # =============================================================================
 #
 # =============================================================================
@@ -540,7 +682,8 @@ def process_time_series_data(df):
 # df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
 # df_status = 0 if len(df_idx) > 0 else -1
 # print(df_status)
-# self.master.iloc[260]
+#self.master.iloc[0]
+
 # self.master.iloc[list(mda_sele)].columns
 # self.master.iloc[list(mda_sele)]['sel1']
 # self.master.iloc[list(mda_sele)]['sel2']

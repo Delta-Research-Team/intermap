@@ -10,7 +10,7 @@ from plotly_resampler import FigureResampler
 
 from intermap.shiny.app.css import all_interactions_colors
 
-from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data
+from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data, process_lifetime_data
 from rdkit.sping.colors import white
 
 def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
@@ -323,7 +323,7 @@ def create_receptor_interactions_plot(df, width, height, axisx, axisy):
     return fig
 
 
-def create_interactions_over_time_plot(df, width, height):
+def create_interactions_over_time_plot(df, width, height, axisx, axisy):
     """Create interactions over time plot."""
     data = process_time_series_data(df)
 
@@ -521,70 +521,7 @@ def create_interactions_over_time_plot(df, width, height):
     return fig
 
 
-def process_lifetime_data(df):
-    """Process data for lifetime violin plot with frame ranges."""
-    from bitarray import bitarray as ba, util as bu
-    import numpy as np
-
-    # Dictionary for interaction name abbreviations
-    interaction_abbreviations = {
-        'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
-        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
-        'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
-        'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
-        'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
-    }
-
-    # Convert DataFrame columns to numpy arrays for faster access
-    sel1_array = df['sel1'].values
-    sel2_array = df['sel2'].values
-    interaction_array = df['interaction_name'].values
-    prevalence_array = df['prevalence'].values
-    timeseries_array = df['timeseries'].values
-
-    data_list = []
-
-    for idx in range(len(df)):
-        array = ba(timeseries_array[idx])
-        intervals = bu.intervals(array)
-        # Filter intervals where contact exists (flag == 1)
-        contact_intervals = [x for x in intervals if x[0] == 1]
-
-        if contact_intervals:
-            abbrev = interaction_abbreviations.get(interaction_array[idx],
-                                                 interaction_array[idx])
-            pair_name = f"{sel1_array[idx]} - {sel2_array[idx]} ({abbrev})"
-
-            # Convert contact_intervals to numpy array for faster operations
-            intervals_array = np.array(contact_intervals)
-
-            # Extract all starts and ends at once
-            starts = intervals_array[:, 1]
-            ends = intervals_array[:, 2]
-            lifetimes = ends - starts
-
-            # Create arrays for repeated values using numpy
-            n_intervals = len(intervals_array)
-            pairs = np.repeat(pair_name, n_intervals)
-            interactions = np.repeat(interaction_array[idx], n_intervals)
-            prevalences = np.repeat(prevalence_array[idx], n_intervals)
-
-            # Add all intervals at once
-            for i in range(n_intervals):
-                data_list.append({
-                    'pair': pairs[i],
-                    'lifetime': lifetimes[i],
-                    'interaction_name': interactions[i],
-                    'prevalence': prevalences[i],
-                    'start_frame': starts[i],
-                    'end_frame': ends[i]
-                })
-
-    return pd.DataFrame(data_list)
-
-
-def create_lifetime_plot(df, width, height, show_prevalence=False):
+def create_lifetime_plot(df, width, height, axisx, axisy, show_prevalence=False):
     """Create fully vectorized violin plot for interaction lifetimes."""
     # Process data
     processed_df = process_lifetime_data(df)

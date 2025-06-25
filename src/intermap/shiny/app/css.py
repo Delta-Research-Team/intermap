@@ -27,36 +27,23 @@ all_interactions_colors = {
 """
 
 all_interactions_colors = {
-    # Interacciones de puente de hidrógeno - Rojo y Azul complementarios
-    'HBDonor': '#FF6B6B',  # Rojo cálido - donador de protones
-    'HBAcceptor': '#4ECDC4',  # Turquesa - aceptor de protones
-
-    # Interacciones iónicas - Azul y Naranja complementarios
-    'Cationic': '#2B95FF',  # Azul brillante - carga positiva
-    'Anionic': '#FF8F40',  # Naranja cálido - carga negativa
-
-    # Interacciones de agua - Tonos azules suaves
-    'Water Bridge': '#87CEEB',  # Azul cielo - representa agua
-
-    # Interacciones Pi - Tonos morados y rosados
-    'PiStacking': '#9B6B9E',  # Morado medio - apilamiento π-π
-    'PiCation': '#BE79BE',  # Morado-rosa - interacción π-catión
-    'CationPi': '#D4A5D4',  # Lila suave - interacción catión-π
-    'FaceToFace': '#845B87',  # Morado oscuro - apilamiento cara a cara
-    'EdgeToFace': '#AA8BAD',  # Morado grisáceo - apilamiento borde a cara
-
-    # Interacciones metálicas - Tonos metálicos
-    'MetalDonor': '#B8B8B8',  # Gris plateado - donador metálico
-    'MetalAcceptor': '#D4AF37',  # Dorado suave - aceptor metálico
-
-    # Interacciones débiles - Tonos suaves y grises
-    'VdWContact': '#D3D3D3',  # Gris claro - fuerzas de Van der Waals
-    'CloseContact': '#E6E6E6',  # Gris muy claro - contactos cercanos
-    'Hydrophobic': '#90A4AE',  # Gris azulado - interacciones hidrofóbicas
-
-    # Interacciones de halógeno - Verde azulados complementarios
-    'XBAcceptor': '#66CDAA',  # Verde mar medio - aceptor de halógeno
-    'XBDonor': '#20B2AA'  # Verde mar claro - donador de halógeno
+    'HBDonor': '#FF6B6B',
+    'HBAcceptor': '#4ECDC4',
+    'Cationic': '#2B95FF',
+    'Anionic': '#FF8F40',
+    'WaterBridge': '#87CEEB',
+    'PiStacking': '#9B6B9E',
+    'PiCation': '#BE79BE',
+    'CationPi': '#D4A5D4',
+    'FaceToFace': '#845B87',
+    'EdgeToFace': '#AA8BAD',
+    'MetalDonor': '#B8B8B8',
+    'MetalAcceptor': '#D4AF37',
+    'VdWContact': '#D3D3D3',
+    'CloseContact': '#E6E6E6',
+    'Hydrophobic': '#90A4AE',
+    'XBAcceptor': '#66CDAA',
+    'XBDonor': '#20B2AA'
 }
 
 # Error messages dictionary

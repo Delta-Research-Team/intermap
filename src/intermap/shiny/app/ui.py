@@ -171,7 +171,7 @@ def create_filters_section():
                                     "number": "Number",
                                     "annotation": "Annotation"
                                 },
-                                selected="name",
+                                selected="number",
                                 inline=True,
                             ),
 
@@ -190,7 +190,6 @@ def create_filters_section():
                             ),
                             ui.hr(),
 
-                            # Input oculto para el directorio seleccionado
                             ui.div({"id": "directory-picker-container"}),
 
                             ui.tags.style("""
