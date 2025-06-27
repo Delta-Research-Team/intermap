@@ -164,11 +164,11 @@ def workflow(args):
     # 7. Save the interactions
     # =========================================================================
     out_name1 = f"{basename(args.job_name)}_InterMap_full"
-    # out_name2 = f"{basename(args.job_name)}_InterMap_short"
-    csv_path1 = join(args.output_dir, f'{out_name1}.pickle')
-    # csv_path2 = join(args.output_dir, f'{out_name2}.csv')
-    # self.save(csv_path1, csv_path2)
-    self.writebin(csv_path1)
+    out_name2 = f"{basename(args.job_name)}_InterMap_short"
+    csv_path1 = join(args.output_dir, f'{out_name1}.csv')
+    csv_path2 = join(args.output_dir, f'{out_name2}.csv')
+    self.save(csv_path1, csv_path2)
+    self.writebin(csv_path1.replace('.csv', '.pickle'))
 
     # %%=======================================================================
     # 8. Normal termination
@@ -182,7 +182,7 @@ def workflow(args):
         f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
         f" Elapsed time: {tot} s")
-    print('Testing v0.0.1')
+    print('Testing v0.0.2')
 
     return None
 
