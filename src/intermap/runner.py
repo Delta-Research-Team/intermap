@@ -9,6 +9,7 @@ from os.path import basename, join
 
 import numpy as np
 from numba import set_num_threads
+from rgpack import generals as gnl
 from tqdm import tqdm
 
 from intermap import commons as cmn
@@ -163,12 +164,10 @@ def workflow(args):
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    out_name1 = f"{basename(args.job_name)}_InterMap_full"
-    out_name2 = f"{basename(args.job_name)}_InterMap_short"
-    csv_path1 = join(args.output_dir, f'{out_name1}.csv')
-    csv_path2 = join(args.output_dir, f'{out_name2}.csv')
-    self.save(csv_path1, csv_path2)
-    self.writebin(csv_path1.replace('.csv', '.pickle'))
+    self.rename()
+    base_name = f"{basename(args.job_name)}_InterMap.pickle"
+    out_name = join(args.output_dir, base_name)
+    gnl.pickle_to_file(self.dict, out_name)
 
     # %%=======================================================================
     # 8. Normal termination
@@ -177,13 +176,12 @@ def workflow(args):
     ldict = len(self.dict)
     pair_type = 'atom' if atomic else 'residue'
     logger.info(
-        f"Normal termination of InterMap job '{basename(args.job_name)}'\n\n"
-        # f" Interactions saved in {csv_path1} (long) and {csv_path2} (short)\n"
+        f" Normal termination of InterMap job '{basename(args.job_name)}'\n"
         f" Total number of unique {pair_type} pairs detected: {ldict}\n"
         f" Total number of interactions detected: {total_inters}\n"
+        f" Interactions saved in {out_name} (binary format)\n"
         f" Elapsed time: {tot} s")
-    print('Testing v0.0.2')
-
+    print('Testing v0.0.3')
     return None
 
 

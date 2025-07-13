@@ -1,10 +1,8 @@
 # Created by rglez at 12/29/24
 
 from collections import defaultdict
-from os.path import basename
 
 import numpy as np
-import rgpack.generals as gnl
 from bitarray import util as bu
 from numba import njit, types
 from numba.typed import List
@@ -126,6 +124,24 @@ def groupby_wb(ijfw):
     return indices_as_array
 
 
+def is_compressed(dict):
+    """
+    Check if the dictionary is compressed
+
+    Args:
+        dict: dict of bitarrays
+
+    Returns:
+        bool: True if the dictionary is compressed, False otherwise
+    """
+    seed = next(iter(dict.values()))
+    try:
+        bu.sc_decode(seed)
+        return True
+    except ValueError:
+        return False
+
+
 class ContainerManager:
     """
     A dictionary to store InterMap interactions
@@ -175,11 +191,12 @@ class ContainerManager:
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
-        self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
-        # self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
-
-        # Detect water bridges ?
         self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
+        if self.detect_wb:
+            self.dict = defaultdict(
+                lambda: bu.sc_encode(bu.zeros(self.n_frames)))
+        else:
+            self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
     # @profile
     def fill(self, ijfs, inters):
@@ -195,11 +212,16 @@ class ContainerManager:
                 to_assign = transform(ijfs, inters)
             else:
                 to_assign = transform_wb(ijfs)
-            for key, value in to_assign.items():
-                decoded = bu.sc_decode(self.dict[key])
-                decoded[value.tolist()] = True
-                self.dict[key] = bu.sc_encode(decoded)
-                # self.dict[key][value.tolist()] = True
+
+            # Adopt a compressed representation only if detect_wb is True
+            if self.detect_wb:
+                for key, value in to_assign.items():
+                    decoded = bu.sc_decode(self.dict[key])
+                    decoded[value.tolist()] = True
+                    self.dict[key] = bu.sc_encode(decoded)
+            else:
+                for key, value in to_assign.items():
+                    self.dict[key][value.tolist()] = True
 
     def get_line_elements(self, dict_key):
         """
@@ -237,93 +259,37 @@ class ContainerManager:
         s2_name = self.names[s2]
         s2_note = self.anotations.get(s2, '')
         s3_name = self.names[wat] if wat else ''
-        time = bu.sc_decode(self.dict[dict_key])
-        # time = self.dict[dict_key]
-        prevalence = round(time.count() / self.n_frames * 100, 2)
-        return s1_name, s1_note, s2_name, s2_note, s3_name, inter_name, prevalence, time
+        return s1_name, s1_note, s2_name, s2_note, s3_name, inter_name
 
-    def generate_lines(self):
+    def rename(self):
         """
-        Generate the lines to be written in the csv file
-
-        Yields:
-            full_line: str
-                The full line to be written in the full csv file
-            short_line: str
-                The short line to be written in the short csv file
+        Rename the keys of the dictionary to a readable format
         """
         shared = self.iman.shared_idx
+        new_dict = {}
+        compressed = is_compressed(self.dict)
 
-        for key in self.dict:
+        for key, value in self.dict.items():
+            # Compress the time series to a bitarray if not already done
+            time = bu.sc_encode(value) if not compressed else value
+
             # Get the selections and interaction name from the key
             s1, s2 = key[0], key[1]
-            (s1_name, s1_note, s2_name, s2_note, s3_name, inter_name,
-             prevalence, time) = self.get_line_elements(key)
+            (s1_name, s1_note, s2_name, s2_note, s3_name,
+             inter_name) = self.get_line_elements(key)
+            standard_line = (s1_name, s1_note, s2_name, s2_note, s3_name,
+                             inter_name)
 
-            # Create the full and short lines
-            full_line = (
-                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
-                f'{inter_name},{prevalence},{time.to01()}\n')
-            short_line = (
-                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
-                f'{inter_name},{prevalence}\n')
-
-            # Yield each line as a generator
-            # yield full_line, short_line
             both_shared = (s1 in shared) and (s2 in shared)
             if not both_shared:
-                yield full_line, short_line
+                new_dict[standard_line] = time
             else:
-                full_line_swap = (
-                    f'{s2_name}, {s2_note}, {s1_name}, {s1_note}, {s3_name},'
-                    f'{self.swap_inters[inter_name]},{prevalence},{time.to01()}\n')
-                short_line_swap = (
-                    f'{s2_name}, {s2_note}, {s1_name}, {s1_note}, {s3_name},'
-                    f'{self.swap_inters[inter_name]},{prevalence}\n')
-                yield full_line_swap, short_line_swap, full_line, short_line
+                swap_line = (s2_name, s2_note, s1_name, s1_note, s3_name,
+                             self.swap_inters[inter_name])
+                new_dict[swap_line] = time
+                new_dict[standard_line] = time
+        self.dict = new_dict
 
-    def writebin(self, path):
-        """
-        Write the dictionary to a binary file
-
-        Args:
-            path (str): The path to the binary file
-        """
-        key = list(self.dict.keys())[0]
-        value = self.dict[key]
-        try:
-            bu.sc_decode(value)
-        except TypeError:
-            self.dict = {key: bu.sc_encode(self.dict[key]) for key in
-                         self.dict}
-        gnl.pickle_to_file(dict(self.dict), path)
-
-    def save(self, path1, path2):
-        """
-        Save the dictionary to a csv file
-        """
-        with open(path1, 'w') as file1, open(path2, 'w') as file2:
-            file1.write(f'# {basename(self.args.topology)}\n')
-            file1.write(
-                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
-
-            file2.write(f'# {basename(self.args.topology)}\n')
-            file2.write(
-                f'# sel1: {self.args.selection_1}, sel2:{self.args.selection_2}\n')
-
-            file1.write(
-                'sel1,note1,sel2,note2,water,interaction_name,prevalence,timeseries\n')
-            file2.write(
-                'sel1,note1,sel2,note2,water,interaction_name,prevalence\n')
-            for x in self.generate_lines():
-                if len(x) == 2:
-                    file1.write(x[0])
-                    file2.write(x[1])
-                else:
-                    file1.write(x[0])
-                    file2.write(x[1])
-                    file1.write(x[2])
-                    file2.write(x[3])
 
     def get_inter_names(self):
         """
