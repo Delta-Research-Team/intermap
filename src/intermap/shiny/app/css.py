@@ -519,6 +519,36 @@ CSS_STYLES = {
             width: 100%;
             margin-bottom: 20px;
         }
+        
+        .control-group {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .control-group h5 {
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-group label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .slider-container {
+            padding: 0 10px;
+        }
+        
+        .custom-checkbox {
+            margin-bottom: 8px;
+        }
         """
 
 }

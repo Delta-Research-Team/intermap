@@ -327,63 +327,145 @@ def create_filters_section():
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""
     return ui.column(9,
-        ui.div({"style": "display: flex; flex-direction: column; "
-                         "align-items: center; width: 100%;"},
+        ui.div({"style": "display: flex; flex-direction: column; align-items: center; width: 100%;"},
             ui.div({"class": "custom-tabs-container"},
                 ui.navset_tab(
                     # Tab 1: Interaction Heatmap
                     ui.nav_panel("Sele1 vs Sele2",
-                        ui.div({"style": "width: 100%; max-width: 90%; "
-                                         "margin: 20px auto;"},
+                        ui.div({"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
                             ui.output_ui("interaction_plot"),),),
 
-                    # Tab 2:
+                    # Tab 2: Prevalence
                     ui.nav_panel("Prevalence",
+                        ui.div(
+                            {"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.div(
+                                {"style": "display: flex; flex-direction: column; gap: 60px;"},
+                                ui.div(
+                                    {"style": "width: 100%; display: flex; flex-direction: column;"},
+                                    ui.h3("", {"style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
+                                    ui.div(
+                                        {"style": "width: 100%; min-height: 450px;"},
+                                        ui.output_ui("ligand_interactions_plot"),
+                                    ),
+                                ),
+                                ui.div(
+                                    {"style": "width: 100%; display: flex; flex-direction: column;"},
+                                    ui.h3("", {"style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
+                                    ui.div(
+                                        {"style": "width: 100%; min-height: 450px;"},
+                                        ui.output_ui("receptor_interactions_plot"),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+
+                    # Tab 3: Life Time
+                    ui.nav_panel("Life Time",
+                        ui.div({"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("lifetime_plot"),
+                        ),
+                    ),
+
+                    # Tab 4: Time Series
+                    ui.nav_panel("Time Series",
+                        ui.div({"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("interactions_over_time_plot"),),),
+
+                    # Tab 5: Network
+                    ui.nav_panel("Network",
+                        ui.div(
+                            {"style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                            ui.output_ui("network_plot")
+                        )
+                    ),
+
+                    # Tab 6: 3D View with improved controls
+                    ui.nav_panel("3D View",
                                  ui.div(
                                      {
-                                         "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
+                                         "style": "display: flex; flex-direction: row; width: 100%; gap: 20px; margin: 20px auto;"},
+                                     # Control panel
                                      ui.div(
                                          {
-                                             "style": "display: flex; flex-direction: column; gap: 60px;"},
+                                             "style": "flex: 0 0 250px; padding: 15px; background: #f5f5f5; border-radius: 8px;"},
+                                         ui.h4("Visualization Controls", {
+                                             "style": "margin-bottom: 15px; color: #333;"}),
                                          ui.div(
                                              {
-                                                 "style": "width: 100%; display: flex; flex-direction: column;"},
-                                             ui.h3("",
-                                                   {
-                                                       "style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
+                                                 "style": "display: flex; flex-direction: column; gap: 15px;"},
+                                             # Display controls
                                              ui.div(
-                                                 {
-                                                     "style": "width: 100%; min-height: 450px;"},
-                                                 ui.output_ui(
-                                                     "ligand_interactions_plot"),
+                                                 {"class": "control-group"},
+                                                 ui.h5("Display Options", {
+                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                 ui.input_checkbox(
+                                                     "show_protein",
+                                                     "Show Protein",
+                                                     value=True
+                                                 ),
+                                                 ui.input_checkbox(
+                                                     "show_interactions",
+                                                     "Show Interactions",
+                                                     value=True
+                                                 ),
+                                             ),
+                                             # Style controls
+                                             ui.div(
+                                                 {"class": "control-group"},
+                                                 ui.h5("Style Options", {
+                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                 ui.input_select(
+                                                     "molecule_style",
+                                                     "Molecule Style",
+                                                     choices={
+                                                         "stick": "Stick",
+                                                         "ball_and_stick": "Ball and Stick",
+                                                         "sphere": "Sphere",
+                                                         "cartoon": "Cartoon",
+                                                         "cartoon_and_stick": "Cartoon and Stick"
+                                                     },
+                                                     selected="cartoon"
+                                                 ),
+                                             ),
+                                             # Size controls
+                                             ui.div(
+                                                 {"class": "control-group"},
+                                                 ui.h5("Size Options", {
+                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                 ui.input_slider(
+                                                     "interaction_sphere_size",
+                                                     "Interaction Sphere Size",
+                                                     min=0.1,
+                                                     max=2.0,
+                                                     value=0.5
+                                                 ),
+                                                 ui.input_slider(
+                                                     "interaction_line_width",
+                                                     "Interaction Line Width",
+                                                     min=0.05,
+                                                     max=0.5,
+                                                     value=0.15
+                                                 ),
                                              ),
                                          ),
-                                         ui.div(
-                                             {
-                                                 "style": "width: 100%; display: flex; flex-direction: column;"},
-                                             ui.h3("",
-                                                   {
-                                                       "style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
-                                             ui.div(
-                                                 {
-                                                     "style": "width: 100%; min-height: 450px;"},
-                                                 ui.output_ui(
-                                                     "receptor_interactions_plot"),
-                                                          ),),),),),
-
-                    ui.nav_panel("Life Time",
-                                 ui.div({
-                                            "style": "width: 100%; max-width: 90%; margin: 20px auto;"},
-                                        ui.output_ui("lifetime_plot"),
-                                        ),
+                                     ),
+                                     # Viewer panel
+                                     ui.div(
+                                         {
+                                             "style": "flex: 1; min-height: 600px; background: white; border-radius: 8px; overflow: hidden;"},
+                                         ui.output_ui("molecule_3d_view")
+                                     ),
                                  ),
-                    # Tab 4: Interactions Over Time
-                    ui.nav_panel("Time Series",
-                        ui.div({"style": "width: 100%; max-width: 90%; "
-                                         "margin: 20px auto;"},
-                            ui.output_ui("interactions_over_time_plot"),),),
+                                 ),
+
                     id="plot_tabs",
-                    selected="Interaction Matrix",),),),)
+                    selected="Interaction Matrix",
+                ),
+            ),
+        ),
+    )
 
 
 def create_footer():
@@ -421,7 +503,7 @@ def create_footer():
                         font-size: 18px;
                     """
                 },
-                ui.tags.i({"class": "fas fa-fingerprint"}),  # Fingerprint icon
+                ui.tags.i({"class": "fas fa-fingerprint"}),
                 "Intervis Tutorials",
             ),
             href="https://rglez.github.io/intermap/tutorials",

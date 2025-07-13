@@ -12,6 +12,9 @@ from intermap.shiny.app.css import all_interactions_colors
 
 from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data, process_lifetime_data
 from rdkit.sping.colors import white
+import networkx as nx
+from pyvis.network import Network
+
 
 def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
     """Create heatmap plot."""
@@ -645,3 +648,227 @@ def create_lifetime_plot(df, width, height, axisx, axisy, show_prevalence=False)
     fig.update_layout(layout_config)
 
     return fig
+
+
+def process_network_data(df):
+    """Process data for network visualization."""
+    G = nx.Graph()
+
+    G.clear()
+
+    ligand_nodes = df['sel1'].unique()
+    G.add_nodes_from(ligand_nodes, group='ligand')
+
+    receptor_nodes = df['sel2'].unique()
+    G.add_nodes_from(receptor_nodes, group='receptor')
+
+
+    for _, row in df.iterrows():
+
+        edge_length = 400 - (row['prevalence'] * 2.5)
+        edge_length = max(50, min(400, edge_length))
+
+        G.add_edge(
+            row['sel1'],
+            row['sel2'],
+            interaction=row['interaction_name'],
+            color=all_interactions_colors[row['interaction_name']],
+            prevalence=row['prevalence'],
+            length=edge_length
+        )
+
+    return G
+
+
+def create_network_plot(df, width, height, axisx, axisy):
+    """Create interactive network visualization."""
+    if df.empty:
+        return None
+
+
+    G = process_network_data(df)
+
+
+    net = Network(
+        height=f"{height}px",
+        width="100%",
+        bgcolor='#ffffff',
+        font_color='black'
+    )
+
+    net.set_options("""
+    {
+        "nodes": {
+            "font": {"size": 12}
+        },
+        "edges": {
+            "font": {"size": 12},
+            "smooth": {"type": "continuous"}
+        },
+        "physics": {
+            "enabled": true,
+            "forceAtlas2Based": {
+                "gravitationalConstant": -50,
+                "centralGravity": 0.005,
+                "springLength": 200,
+                "springConstant": 0.08,
+                "avoidOverlap": 0.5
+            },
+            "solver": "forceAtlas2Based",
+            "minVelocity": 0.75,
+            "stabilization": {
+                "enabled": true,
+                "iterations": 1000
+            }
+        },
+        "interaction": {
+            "hover": true,
+            "tooltipDelay": 100
+        }
+    }
+    """)
+
+
+    for node in G.nodes():
+
+        if 'WAT' in node or 'HOH' in node:
+            node_color = all_interactions_colors.get('WaterBridge',
+                                                     '#00BFFF')
+        else:
+            node_color = '#4051b5' if G.nodes[node][
+                                          'group'] == 'ligand' else '#ff5555'
+
+        net.add_node(
+            node,
+            label=node,
+            color=node_color
+        )
+
+
+    for edge in G.edges(data=True):
+        net.add_edge(
+            edge[0],
+            edge[1],
+            color=edge[2]['color'],
+            label=f"{edge[2]['interaction']} ({edge[2]['prevalence']:.1f}%)",
+            length=edge[2]['length'],
+            title=(f"Interaction: {edge[2]['interaction']}\n"
+                   f"Prevalence: {edge[2]['prevalence']:.1f}%")
+        )
+
+    return net
+
+
+def create_3d_view(df, universe, width=900, height=760, show_protein=True,
+                   show_interactions=True, molecule_style="cartoon",
+                   sphere_size=0.5, line_width=0.15):
+    try:
+        import py3Dmol
+        print("Successfully imported py3Dmol")
+
+        # Create viewer
+        viewer = py3Dmol.view(width=width, height=height)
+        print("Created viewer")
+
+
+
+        try:
+            with open(universe.filename, 'r') as f:
+                pdb_content = f.read()
+            print(f"Read PDB file: {universe.filename}")
+        except Exception as e:
+            print(f"Error reading PDB file: {e}")
+            return None
+
+        try:
+            # Add model to viewer
+            viewer.addModel(pdb_content, "pdb")
+            print("Added model to viewer")
+
+            # Clear any existing styles
+            viewer.setStyle({}, {})
+
+            # Apply protein visualization based on show_protein
+            if show_protein:
+                style = {}
+                if molecule_style == "cartoon":
+                    style["cartoon"] = {"color": "spectrum"}
+                elif molecule_style == "stick":
+                    style["stick"] = {"radius": 0.2}
+                elif molecule_style == "sphere":
+                    style["sphere"] = {"radius": 0.5}
+                elif molecule_style == "ball_and_stick":
+                    style["stick"] = {"radius": 0.2}
+                    style["sphere"] = {"radius": 0.3}
+                elif molecule_style == "cartoon_and_stick":
+                    style["cartoon"] = {"color": "spectrum"}
+                    style["stick"] = {"radius": 0.2}
+
+                viewer.setStyle({'model': -1}, style)
+
+            # Add interactions visualization if show_interactions is True and df is provided
+            if show_interactions and df is not None:
+                for _, row in df.iterrows():
+                    # Get atom positions for both selections
+                    sel1_atoms = universe.select_atoms(f"resid {row['idx1']}")
+                    sel2_atoms = universe.select_atoms(f"resid {row['idx2']}")
+
+                    if len(sel1_atoms) > 0 and len(sel2_atoms) > 0:
+                        # Calculate center positions
+                        pos1 = sel1_atoms.center_of_mass()
+                        pos2 = sel2_atoms.center_of_mass()
+
+                        viewer.addSphere({
+                            'center': {'x': pos1[0], 'y': pos1[1],
+                                       'z': pos1[2]},
+                            'radius': sphere_size,
+                            'color': all_interactions_colors[
+                                row['interaction_name']],
+                            'alpha': 0.7
+                        })
+
+                        viewer.addSphere({
+                            'center': {'x': pos2[0], 'y': pos2[1],
+                                       'z': pos2[2]},
+                            'radius': sphere_size,
+                            'color': all_interactions_colors[
+                                row['interaction_name']],
+                            'alpha': 0.7
+                        })
+
+
+                        viewer.addLine({
+                            'start': {'x': pos1[0], 'y': pos1[1],
+                                      'z': pos1[2]},
+                            'end': {'x': pos2[0], 'y': pos2[1], 'z': pos2[2]},
+                            'color': all_interactions_colors[
+                                row['interaction_name']],
+                            'width': line_width
+                        })
+
+
+                        viewer.addLine({
+                            'start': {'x': pos1[0], 'y': pos1[1],
+                                      'z': pos1[2]},
+                            'end': {'x': pos2[0], 'y': pos2[1], 'z': pos2[2]},
+                            'color': all_interactions_colors[
+                                row['interaction_name']],
+                            'width': line_width
+                        })
+
+            # Set background and other properties
+            viewer.setBackgroundColor('white')
+            viewer.zoomTo()
+            print("Configured viewer settings")
+
+            return viewer
+
+        except Exception as e:
+            print(f"Error setting up viewer: {e}")
+            return None
+
+    except Exception as e:
+        print(f"General error in create_3d_view: {e}")
+        import traceback
+        traceback.print_exc()
+        return None

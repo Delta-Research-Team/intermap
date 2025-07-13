@@ -17,8 +17,9 @@ from .icsv import CSVFilter, sortby, transpose
 from .plots import (create_interactions_over_time_plot,
                     create_ligand_interactions_plot, create_plot,
                     create_receptor_interactions_plot,
-                    create_lifetime_plot)
+                    create_lifetime_plot, create_network_plot, create_3d_view)
 from .ui import app_ui
+
 
 
 def server(input, output, session):
@@ -92,13 +93,11 @@ def server(input, output, session):
             filtered_df = master_instance.master.iloc[
                 list(filtered_idx.get())].copy()
 
-            # Aplicar el nuevo ordenamiento directamente
+            # Apply new sorting directly
             sorted_data = sortby(filtered_df, input.sort_by())
 
-            # Actualizar la visualización
-            # (aquí va tu código para actualizar el plot con sorted_data)
+            # Update visualization
             await session.send_custom_message("refresh-plots", {})
-
 
     @reactive.Effect
     @reactive.event(input.transpose_button)
@@ -123,8 +122,6 @@ def server(input, output, session):
             csv_filtered.set(filtered_df)
             session.send_custom_message("refresh-plots", {})
 
-
-
     @reactive.Effect
     @reactive.event(input.plot_button,
                     input.selected_interactions,
@@ -139,45 +136,60 @@ def server(input, output, session):
 
         master_instance = csv.get()
 
-        # Obtain idx's using CSVFilter
-        mda_idx, mda_status = master_instance.by_mda(
-            input.mda_selection() if input.mda_selection() else 'all')
-        prev_idx, prev_status = master_instance.by_prevalence(
-            input.prevalence_threshold())
-        inter_idx, inter_status = master_instance.by_inters(tuple(
-            input.selected_interactions()) if input.selected_interactions() else input.selected_interactions())
-        annot_idx, notes_status = master_instance.by_notes(tuple(
-            input.selected_annotations()) if input.selected_annotations() else input.selected_annotations())
+        try:
+            # Obtener idx's usando CSVFilter
+            mda_idx, mda_status = master_instance.by_mda(
+                input.mda_selection() if input.mda_selection() else 'all')
+            prev_idx, prev_status = master_instance.by_prevalence(
+                input.prevalence_threshold())
+            inter_idx, inter_status = master_instance.by_inters(tuple(
+                input.selected_interactions()) if input.selected_interactions() else input.selected_interactions())
+            annot_idx, annot_status = master_instance.by_notes(tuple(
+                input.selected_annotations()) if input.selected_annotations() else input.selected_annotations())
 
-        # Status section
-        if mda_status == -1:
-            ui.notification_show(
-                "There is not information for this MDAnalysis selection"
-                , type="message", duration=5)
-        elif prev_status == -1:
-            ui.notification_show(
-                "There are no interactions with this prevalence or higher."
-                , type="message", duration=5)
-        elif inter_status == -1:
-            ui.notification_show(
-                "There is not information for this Interaction selection"
-                , type="message", duration=5)
-        elif notes_status == -1:
-            ui.notification_show(
-                "There is not information for this Annotation selection"
-                , type="message", duration=5)
+            # Status section
+            if mda_status == -1:
+                ui.notification_show(
+                    "There is not information for this MDAnalysis selection"
+                    , type="message", duration=5)
+            elif prev_status == -1:
+                ui.notification_show(
+                    "There are no interactions with this prevalence or higher."
+                    , type="message", duration=5)
+            elif inter_status == -1:
+                ui.notification_show(
+                    "There is not information for this Interaction selection"
+                    , type="message", duration=5)
+            elif annot_status == -1:
+                ui.notification_show(
+                    "There is not information for this Annotation selection"
+                    , type="message", duration=5)
 
-        # Update reactive states
-        df_idx = set.intersection(mda_idx, prev_idx, inter_idx, annot_idx)
-        if df_idx:
-            filtered_df = master_instance.master.iloc[list(df_idx)].copy()
-            if transpose_state.get():
-                filtered_df = transpose(filtered_df)
-            filtered_idx.set(df_idx)
-            csv_filtered.set(filtered_df)
-        else:
+            # Update reactive states
+            df_idx = set.intersection(mda_idx, prev_idx, inter_idx, annot_idx)
+
+            if df_idx:
+                filtered_df = master_instance.master.iloc[list(df_idx)].copy()
+                if transpose_state.get():
+                    filtered_df = transpose(filtered_df)
+
+                filtered_idx.set(df_idx)
+                csv_filtered.set(filtered_df)
+
+                session.send_custom_message("refresh-plots", {})
+            else:
+                filtered_idx.set(None)
+                csv_filtered.set(None)
+
+        except Exception as e:
+            print(f"Error in update_filtered_idx: {str(e)}")
             filtered_idx.set(None)
             csv_filtered.set(None)
+            ui.notification_show(
+                f"Error updating filters: {str(e)}",
+                duration=5000,
+                type="error"
+            )
 
     @reactive.Effect
     @reactive.event(input.save_plot_trigger)
@@ -206,10 +218,15 @@ def server(input, output, session):
             active_tab = input.plot_tabs()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+            master_instance = csv.get()
+
             if active_tab == "Life Time":
                 fig = create_lifetime_plot(csv_filtered.get(),
                                            input.plot_width(),
-                                           input.plot_height())
+                                           input.plot_height(),
+                                           master_instance.axisx,
+                                           master_instance.axisy,
+                                           input.show_prevalence())
                 filename = f"lifetime_plot_{timestamp}.html"
                 full_path = save_dir / filename
                 fig.write_html(str(full_path))
@@ -218,6 +235,8 @@ def server(input, output, session):
                 fig = create_plot(csv_filtered.get(),
                                   input.plot_width(),
                                   input.plot_height(),
+                                  master_instance.axisx,
+                                  master_instance.axisy,
                                   input.show_prevalence())
                 filename = f"sele1_vs_sele2_plot_{timestamp}.html"
                 full_path = save_dir / filename
@@ -226,14 +245,18 @@ def server(input, output, session):
             elif active_tab == "Prevalence":
                 fig1 = create_ligand_interactions_plot(csv_filtered.get(),
                                                        input.plot_width(),
-                                                       input.plot_height() // 1.5)
+                                                       input.plot_height() // 1.5,
+                                                       master_instance.axisx,
+                                                       master_instance.axisy)
                 filename1 = f"selection1_prevalence_{timestamp}.html"
                 full_path1 = save_dir / filename1
                 fig1.write_html(str(full_path1))
 
                 fig2 = create_receptor_interactions_plot(csv_filtered.get(),
                                                          input.plot_width(),
-                                                         input.plot_height() // 1.5)
+                                                         input.plot_height() // 1.5,
+                                                         master_instance.axisx,
+                                                         master_instance.axisy)
                 filename2 = f"selection2_prevalence_{timestamp}.html"
                 full_path2 = save_dir / filename2
                 fig2.write_html(str(full_path2))
@@ -248,14 +271,34 @@ def server(input, output, session):
             elif active_tab == "Time Series":
                 fig = create_interactions_over_time_plot(csv_filtered.get(),
                                                          input.plot_width(),
-                                                         input.plot_height())
+                                                         input.plot_height(),
+                                                         master_instance.axisx,
+                                                         master_instance.axisy)
                 filename = f"time_series_plot_{timestamp}.html"
                 full_path = save_dir / filename
                 fig.write_html(str(full_path))
 
-            if active_tab != "Prevalence":
+            elif active_tab == "Network":
+                net = create_network_plot(
+                    csv_filtered.get(),
+                    input.plot_width(),
+                    input.plot_height(),
+                    master_instance.axisx,
+                    master_instance.axisy
+                )
+                filename = f"network_plot_{timestamp}.html"
+                full_path = save_dir / filename
+                net.save_graph(str(full_path))
+
+            if active_tab not in ["Prevalence", "Network"]:
                 ui.notification_show(
                     f"Plot saved as:\n{filename}",
+                    duration=5000,
+                    type="message"
+                )
+            elif active_tab == "Network":
+                ui.notification_show(
+                    f"Network saved as:\n{filename}",
                     duration=5000,
                     type="message"
                 )
@@ -271,7 +314,6 @@ def server(input, output, session):
             if 'root' in locals():
                 root.destroy()
 
-
     # =========================================================================
     # Rendering helper functions
     # =========================================================================
@@ -281,7 +323,7 @@ def server(input, output, session):
             return ui.p(ERROR_MESSAGES["nothing_selected"])
         return None
 
-    def render_plot(create_plot_func, is_main=False):
+    def render_plot(create_plot_func, is_main=False, is_network=False):
         """Helper function to render plots with common logic."""
         error = check_data()
         if error is not None:
@@ -294,7 +336,7 @@ def server(input, output, session):
         plot_args = [
             csv_filtered.get(),
             input.plot_width(),
-            input.plot_height() if is_main else input.plot_height() // 1.5,
+            input.plot_height() if (is_main or is_network) else input.plot_height() // 1.5,
             master_instance.axisx,
             master_instance.axisy
         ]
@@ -302,23 +344,61 @@ def server(input, output, session):
         if is_main:
             plot_args.append(input.show_prevalence())
 
-        fig = create_plot_func(*plot_args)
+        if is_network:
+            net = create_plot_func(*plot_args)
+            if net is None:
+                return ui.p(ERROR_MESSAGES["nothing_selected"])
 
-        if fig is None:
-            return ui.p(ERROR_MESSAGES["nothing_selected"])
+            unique_id = f"network_{hash(str(csv_filtered.get()))}"
+            temp_file = os.path.join(tempfile.gettempdir(),
+                                     f"{unique_id}.html")
 
-        plot_html = fig.to_html(
-            include_plotlyjs="cdn",
-            full_html=False,
-            config={"responsive": True}
-        )
+            net.save_graph(temp_file)
 
-        style = (
-            "width:100%; height:800px; border:1px solid white; margin: 10px 0;"
-            if is_main else
-            f"width:100%; height:{input.plot_height() // 2}px;")
+            with open(temp_file, 'r', encoding='utf-8') as f:
+                html_content = f.read()
 
-        return ui.tags.div(ui.HTML(plot_html), style=style)
+            enhanced_content = html_content.replace('</head>',
+                                                    """
+                                                    <script>
+                                                    document.addEventListener('DOMContentLoaded', function() {
+                                                        setTimeout(function() {
+                                                            if (typeof network !== 'undefined') {
+                                                                network.fit();
+                                                                network.redraw();
+                                                            }
+                                                        }, 100);
+                                                    });
+                                                    </script>
+                                                    </head>
+                                                    """)
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+
+            return ui.tags.div(
+                ui.HTML(enhanced_content),
+                id=unique_id,
+                style=f"width: 100%; height: {input.plot_height()}px; border: none;"
+            )
+        else:
+            fig = create_plot_func(*plot_args)
+            if fig is None:
+                return ui.p(ERROR_MESSAGES["nothing_selected"])
+
+            plot_html = fig.to_html(
+                include_plotlyjs="cdn",
+                full_html=False,
+                config={"responsive": True}
+            )
+
+            style = (
+                "width:100%; height:800px; border:1px solid white; margin: 10px 0;"
+                if is_main else
+                f"width:100%; height:{input.plot_height() // 2}px;")
+
+            return ui.tags.div(ui.HTML(plot_html), style=style)
 
     def create_checkbox_group(input_id, data_keys_getter):
         """Helper function to create checkbox groups."""
@@ -392,6 +472,62 @@ def server(input, output, session):
             ui.HTML(plot_html),
             style=f"width:100%; height:{input.plot_height()}px;"
         )
+
+    @output
+    @render.ui
+    @reactive.event(input.plot_button)
+    def network_plot():
+        """Render the network visualization plot."""
+        return render_plot(create_network_plot, is_network=True)
+
+    @output
+    @render.ui
+    @reactive.event(input.plot_button, input.show_protein,
+                    input.show_interactions,
+                    input.molecule_style, input.interaction_sphere_size,
+                    input.interaction_line_width)
+    def molecule_3d_view():
+        """Render the 3D molecular visualization."""
+        try:
+            print("\n=== Starting 3D visualization ===")
+
+            master_instance = csv.get()
+            if master_instance is None:
+                return ui.p("No data loaded")
+
+            print("Creating viewer...")
+            view = create_3d_view(
+                csv_filtered.get(),
+                master_instance.universe,
+                width=900,
+                height=760,
+                show_protein=input.show_protein(),
+                show_interactions=input.show_interactions(),
+                molecule_style=input.molecule_style(),
+                sphere_size=input.interaction_sphere_size(),
+                line_width=input.interaction_line_width()
+            )
+
+            if view is None:
+                return ui.p("Failed to create visualization")
+
+            try:
+                html_content = f"""
+                <div id="3dmol-viewer" style="width: 800px; height: 600px; position: relative;">
+                    <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+                    {view._make_html()}
+                </div>
+                """
+                return ui.HTML(html_content)
+
+            except Exception as e:
+                print(f"Error creating HTML: {e}")
+                return ui.p(f"Error rendering visualization: {str(e)}")
+
+        except Exception as e:
+            print(f"Error in molecule_3d_view: {e}")
+            return ui.p(f"Error: {str(e)}")
+
     # =========================================================================
     # Checkbox Rendering
     # =========================================================================
@@ -434,6 +570,7 @@ def server(input, output, session):
             ui.update_checkbox_group("selected_annotations", selected=choices)
         else:
             ui.update_checkbox_group("selected_annotations", selected=[])
+
 
 
 app = App(app_ui, server)

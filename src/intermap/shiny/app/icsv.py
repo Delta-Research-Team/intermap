@@ -600,64 +600,61 @@ def process_time_series_data(df):
         'interaction_colors': interaction_colors
     }
 
+
 def process_lifetime_data(df):
     """Process data for lifetime violin plot with frame ranges."""
-    from bitarray import bitarray as ba, util as bu
     import numpy as np
 
-    # Dictionary for interaction name abbreviations
+    # Diccionario de abreviaciones
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
-        'Anionic': 'Ani', 'Water Bridge': 'WB', 'PiStacking': 'πS',
+        'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
         'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
     }
 
-    # Convert DataFrame columns to numpy arrays for faster access
-    sel1_array = df['sel1'].values
-    sel2_array = df['sel2'].values
-    interaction_array = df['interaction_name'].values
-    prevalence_array = df['prevalence'].values
-    timeseries_array = df['timeseries'].values
-
     data_list = []
 
-    for idx in range(len(df)):
-        array = ba(timeseries_array[idx])
-        intervals = bu.intervals(array)
-        # Filter intervals where contact exists (flag == 1)
-        contact_intervals = [x for x in intervals if x[0] == 1]
+    for idx, row in df.iterrows():
+        ts = row['timeseries']
 
-        if contact_intervals:
-            abbrev = interaction_abbreviations.get(interaction_array[idx],
-                                                 interaction_array[idx])
-            pair_name = f"{sel1_array[idx]} - {sel2_array[idx]} ({abbrev})"
+        if isinstance(ts, tuple):
+            bit_array = np.array(ts, dtype=int)
 
-            # Convert contact_intervals to numpy array for faster operations
-            intervals_array = np.array(contact_intervals)
+        elif isinstance(ts, (list, np.ndarray)):
+            bit_array = np.array(ts, dtype=int)
 
-            # Extract all starts and ends at once
-            starts = intervals_array[:, 1]
-            ends = intervals_array[:, 2]
-            lifetimes = ends - starts
+        elif isinstance(ts, str) and set(ts.strip()) <= {'0', '1'}:
+            bit_array = np.array([int(x) for x in ts.strip()])
+        else:
 
-            # Create arrays for repeated values using numpy
-            n_intervals = len(intervals_array)
-            pairs = np.repeat(pair_name, n_intervals)
-            interactions = np.repeat(interaction_array[idx], n_intervals)
-            prevalences = np.repeat(prevalence_array[idx], n_intervals)
+            print(f"Formato no soportado en fila {idx}: {type(ts)} -> {ts}")
+            continue
 
-            # Add all intervals at once
-            for i in range(n_intervals):
+        one_indices = np.where(bit_array == 1)[0]
+        if len(one_indices) > 0:
+            intervals = []
+            start = one_indices[0]
+            prev = start
+            for current in one_indices[1:]:
+                if current != prev + 1:
+                    intervals.append((start, prev + 1))
+                    start = current
+                prev = current
+            intervals.append((start, prev + 1))
+
+            abbrev = interaction_abbreviations.get(row['interaction_name'], row['interaction_name'])
+            pair_name = f"{row['sel1']} - {row['sel2']} ({abbrev})"
+            for start, end in intervals:
                 data_list.append({
-                    'pair': pairs[i],
-                    'lifetime': lifetimes[i],
-                    'interaction_name': interactions[i],
-                    'prevalence': prevalences[i],
-                    'start_frame': starts[i],
-                    'end_frame': ends[i]
+                    'pair': pair_name,
+                    'lifetime': end - start,
+                    'interaction_name': row['interaction_name'],
+                    'prevalence': row['prevalence'],
+                    'start_frame': start,
+                    'end_frame': end
                 })
 
     return pd.DataFrame(data_list)
