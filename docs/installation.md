@@ -33,8 +33,8 @@ This command will:
 - Install the specified Python version and packages
 
 !!! note "Environment Creation Time"
-The environment creation process may take several minutes depending on your internet connection and system performance,
-as conda needs to download and install all the required packages.
+
+    The environment creation process may take several minutes depending on your internet connection and system performance, as conda needs to download and install all the required packages.
 
 ## 3. Activate the Environment
 
@@ -64,5 +64,5 @@ conda env update -f environment.yml
 ```
 
 !!! warning "Environment Updates"
-When updating, the `environment.yml` file may have changed. Always run `conda env update -f environment.yml` after
-pulling updates to ensure you have the latest dependencies.
+
+    When updating, the `environment.yml` file may have changed. Always run `conda env update -f environment.yml` after pulling updates to ensure you have the latest dependencies.

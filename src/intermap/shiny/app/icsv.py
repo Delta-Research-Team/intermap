@@ -1,4 +1,5 @@
 # Created by rglez at 4/20/25
+import configparser
 from collections import defaultdict
 from os.path import dirname
 
@@ -6,7 +7,7 @@ import MDAnalysis as mda
 import numpy as np
 import pandas as pd
 import rgpack.generals as gnl
-from bitarray import bitarray as ba
+from bitarray import bitarray as ba, util as bu
 
 from intermap.shiny.app.css import all_interactions_colors
 
@@ -97,6 +98,66 @@ def sortby(df, choice):
     return sorted_df
 
 
+def parse_pickle(pickle):
+    """
+    Parse the InterMap output pickle file
+
+    Args:
+        pickle (str): path to the InterMap output pickle file
+
+    Returns:
+        bit_dict (dict): dictionary containing the interactions
+    """
+
+    # Create the DataFrame from the pickle file
+    pickle_path = gnl.check_path(pickle)
+    bit_dict = gnl.unpickle_from_file(pickle_path)
+    df = pd.DataFrame(bit_dict.keys(), columns=[
+        'sel1', 'note1', 'sel2', 'note2', 'water', 'interaction_name'])
+
+    # Extract the indices from the selections
+    raw = df['sel1'][0]
+    resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
+    N = 2 if resolution == 'residue' else 4
+    idx_1 = df['sel1'].str.split('_', expand=True)[N].astype(int)
+    idx_2 = df['sel2'].str.split('_', expand=True)[N].astype(int)
+    df['idx1'] = idx_1
+    df['idx2'] = idx_2
+
+    # Add the timeseries and the prevalence column
+    df['timeseries'] = bit_dict.values()
+    df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+    df['prevalence'] = df['timeseries'].apply(
+        lambda x: x.count() / len(x) * 100)
+    df['timeseries'] = df['timeseries'].apply(ba.to01)
+
+    return df, resolution
+
+
+def parse_cfg(cfg):
+    """
+    Parse the InterMap configuration file
+
+    Args:
+        cfg (str): path to the InterMap configuration file
+
+    Returns:
+        config_obj (configparser.ConfigParser): ConfigParser object with the
+            configuration settings
+    """
+    config_obj = configparser.ConfigParser(allow_no_value=True,
+                                           inline_comment_prefixes='#')
+    config_obj.optionxform = str
+    config_obj.read(cfg)
+    config_dict = {section: dict(config_obj.items(section))
+                   for section in config_obj.sections()}
+
+    axisx = config_dict['interactions']['selection_1']
+    axisy = config_dict['interactions']['selection_2']
+
+    return config_dict, axisx, axisy
+
+
 class CSVFilter:
     """
     A class to filter the InterMap CSV file before loading it with Shiny
@@ -106,39 +167,23 @@ class CSVFilter:
         'dms', 'tpr', 'itp', 'mol2', 'data', 'lammpsdump', 'xyz', 'txyz',
         'arc', 'gms', 'log', 'config', 'history', 'xml', 'gsd', 'mmtf', 'in')
 
-    def __init__(self, csv, topo):
+    def __init__(self, pickle, cfg):
         """
         Initialize the CSVFilter class
 
         Args:
-            csv (str): path to the InterMap CSV file
-            topo (str): path to the topology file
+            pickle (str): path to the InterMap output pickle file
+            cfg (str): path to the InterMap configuration file
         """
-        # Parse arguments
-        self.csv_path = gnl.check_path(csv)
-        if self.csv_path.split('.')[-1] != 'csv':
-            raise ValueError('CSV file must have a .csv extension')
 
-        # Validate topology file
-        self.topo_path = gnl.check_path(topo)
-        if self.topo_path.split('.')[-1] not in self.mda_topols:
-            raise ValueError(
-                'Topology file must be in a format compatible with MDAnalysis.'
-                f' The following are supported: {self.mda_topols}')
-
-        self.root_dir = dirname(self.csv_path)
-
-        # Load the main objects
-        try:
-            self.universe = mda.Universe(self.topo_path)
-        except Exception as e:
-            raise ValueError(f"Error loading topology file: {str(e)}")
-
-        self.master, self.resolution, self.axisx, self.axisy = self.parse_csv()
-        self.long = True if 'timeseries' in self.master.columns else False
-        self.prevalences = self.master['prevalence'].astype(float)
+        # Parse the objects from arguments
+        self.root_dir = dirname(pickle)
+        self.master, self.resolution = parse_pickle(pickle)
+        self.cfg, self.axisx, self.axisy = parse_cfg(cfg)
+        self.prevalences = self.master['prevalence']
 
         # Map the indices
+        self.universe = self.load_universe()
         self.at_idx = self.universe.atoms.indices
         self.res_idx = self.universe.atoms.resindices
         self.at2res = self.at2res()
@@ -146,37 +191,18 @@ class CSVFilter:
         self.notes2df = self.notes2df()
         self.inters2df = self.inters2df()
 
-    def parse_csv(self):
+    def load_universe(self):
         """
-        Parse the InterMap CSV file
+        Load the MDAnalysis Universe from the configuration file
 
         Returns:
-            csv (pd.DataFrame): DataFrame containing the InterMap data
+            universe (MDAnalysis.Universe): Universe object containing the
+             topology and trajectory data
         """
-        with open(self.csv_path, 'r') as file:
-            lines = file.readlines()
-            axis_line = lines[1].strip()
-            axis_parts = [part.strip() for part in axis_line.split(',')]
-
-            axisx = axis_parts[0]
-            axisy = axis_parts[1]
-
-            self.axisx = axisx
-            self.axisy = axisy
-
-        csv = pd.read_csv(self.csv_path, header=2, na_values=('', ' '))
-        raw = csv['sel1'][0]
-        resolution = 'residue' if len(raw.split('_')) == 3 else 'atom'
-
-        N = 2 if resolution == 'residue' else 4
-        idx_1 = csv['sel1'].str.split('_', expand=True)[N].astype(int)
-        idx_2 = csv['sel2'].str.split('_', expand=True)[N].astype(int)
-        csv['idx1'] = idx_1
-        csv['idx2'] = idx_2
-
-        csv = compress_wb(csv)
-
-        return csv, resolution, axisx, axisy
+        topo = self.cfg['topo-traj']['topology']
+        traj = self.cfg['topo-traj']['trajectory']
+        universe = mda.Universe(topo, traj)
+        return universe
 
     # =========================================================================
     # Static mappings
@@ -404,6 +430,8 @@ def process_heatmap_data(df, sort_choice=None):
     }
 
 """
+
+
 def process_heatmap_data(df):
     interaction_priority = {
         'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
@@ -416,29 +444,29 @@ def process_heatmap_data(df):
     df['priority'] = df['interaction_name'].map(interaction_priority)
 
     priority_df = (df.sort_values(['sel1', 'sel2', 'priority', 'prevalence'],
-                                 ascending=[True, True, True, False])
-                  .groupby(['sel1', 'sel2']).first().reset_index())
+                                  ascending=[True, True, True, False])
+                   .groupby(['sel1', 'sel2']).first().reset_index())
 
     pivot_interaction = pd.pivot_table(priority_df, values='interaction_name',
-                                     index='sel2', columns='sel1',
-                                     aggfunc='first', fill_value='')
+                                       index='sel2', columns='sel1',
+                                       aggfunc='first', fill_value='')
 
     pivot_prevalence = pd.pivot_table(priority_df, values='prevalence',
-                                    index='sel2', columns='sel1',
-                                    aggfunc='first', fill_value="")
+                                      index='sel2', columns='sel1',
+                                      aggfunc='first', fill_value="")
 
     pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
 
     pivot_note1 = pd.pivot_table(priority_df, values='note1',
-                               index='sel2', columns='sel1',
-                               aggfunc='first', fill_value="")
+                                 index='sel2', columns='sel1',
+                                 aggfunc='first', fill_value="")
 
     pivot_note2 = pd.pivot_table(priority_df, values='note2',
-                               index='sel2', columns='sel1',
-                               aggfunc='first', fill_value="")
+                                 index='sel2', columns='sel1',
+                                 aggfunc='first', fill_value="")
 
     present_interactions = sorted(priority_df['interaction_name'].unique(),
-                                key=lambda x: interaction_priority[x])
+                                  key=lambda x: interaction_priority[x])
 
     return {
         'pivot_interaction': pivot_interaction,
@@ -493,6 +521,7 @@ def process_prevalence_data(df, selection_column, batch_size=250):
             })
 
     return batched_data
+
 
 def process_prevalence_data2(df, selection_column, sort_by='note'):
     """Process data for interaction plots.
@@ -554,6 +583,7 @@ def process_prevalence_data2(df, selection_column, sort_by='note'):
                             'show_legend', 'color', 'annotation']]
     batched_data = batched_df.to_dict(orient='records')
     return batched_data
+
 
 def process_time_series_data(df):
     """Process data for time series plot."""
@@ -645,7 +675,8 @@ def process_lifetime_data(df):
                 prev = current
             intervals.append((start, prev + 1))
 
-            abbrev = interaction_abbreviations.get(row['interaction_name'], row['interaction_name'])
+            abbrev = interaction_abbreviations.get(row['interaction_name'],
+                                                   row['interaction_name'])
             pair_name = f"{row['sel1']} - {row['sel2']} ({abbrev})"
             for start, end in intervals:
                 data_list.append({
@@ -663,25 +694,8 @@ def process_lifetime_data(df):
 # =============================================================================
 #
 # =============================================================================
-#full = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/dna-prot_InterMap_full.csv'
-#topo = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/DrHU-Tails-8k/hmr.psf'
-
-#self = CSVFilter(full, topo)
-
-#axisx = self.axisx
-#axisy = self.axisy
-
-# mda_sele, mda_status = self.by_mda('all')
-# prevalence, preval_status = self.by_prevalence(95)
-# interactions, inters_status = self.by_inters('all')
-# annotations, notes_status = self.by_notes('all')
-
-# df_idx = set.intersection(mda_sele, prevalence, interactions, annotations)
-# df_status = 0 if len(df_idx) > 0 else -1
-# print(df_status)
-#self.master.iloc[0]
-
-# self.master.iloc[list(mda_sele)].columns
-# self.master.iloc[list(mda_sele)]['sel1']
-# self.master.iloc[list(mda_sele)]['sel2']
-# self.master.iloc[prevalence]['prevalence']
+pickle = '/home/rglez/RoyHub/intermap/data/testing/output/prot-dna_InterMap.pickle'
+cfg = '/home/rglez/RoyHub/intermap/data/testing/output/InterMap-job.cfg'
+self = CSVFilter(pickle, cfg)
+self.universe
+self.master.head()
