@@ -172,7 +172,6 @@ class ContainerManager:
 
         # Parse arguments from args
         self.args = args
-        self.format = self.args.format
         self.min_prevalence = self.args.min_prevalence
 
         # Parse arguments from cuts

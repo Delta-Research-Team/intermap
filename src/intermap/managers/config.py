@@ -194,10 +194,11 @@ class Config:
             'selection_2': {'dtype': str, 'values': None},
             'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
             'interactions': {'dtype': str, 'values': None},
-            'export_csv': {'dtype': str, 'values': {'True', 'False'}},
+            # 'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
             'annotations': {'dtype': str, 'values': None},
-            'format': {'dtype': str, 'values': {'simple', 'extended'}}},
+            # 'format': {'dtype': str, 'values': {'simple', 'extended'}}
+        },
 
         # ____ cutoffs
         'cutoffs': None
@@ -355,7 +356,6 @@ class ConfigManager(Config):
             f"\n Chunk size: {args['chunk_size']}"
             f"\n Number of processors: {args['n_procs']}"
             f"\n Min prevalence: {args['min_prevalence']}"
-            f"\n Report's format: {args['format']}"
             f"\n Resolution: {args['resolution']}\n"
         )
 
@@ -374,7 +374,9 @@ class ConfigManager(Config):
                 f'choose another one, or delete the existing.')
 
         # Write the configuration file for reproducibility
-        config = join(self.config_args['output_dir'], 'InterMap-job.cfg')
+        job_name = basename(self.config_args['job_name'])
+        config = join(self.config_args['output_dir'],
+                      f'{job_name}_InterMap.cfg')
         with open(config, 'wt') as ini:
             self.config_obj.write(ini)
 
@@ -456,5 +458,5 @@ class ConfigManager(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/gonzalezroy/RoyHub/NUC-STRESS-RGA/data/0A-prelude/DrHU-repliques/second_step/imap.cfg'
+# config_path = '/home/rglez/RoyHub/intermap/data/ERRORS/e2/outputs/InterMap-job.cfg'
 # self = ConfigManager(mode='debug')
