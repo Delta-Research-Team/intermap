@@ -12,19 +12,19 @@
         <link rel="prev" href="installation.html">
       
       
-        <link rel="next" href="arguments-reference.html">
+        <link rel="next" href="intervis.html">
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
     
     
       
-        <title>Basic Usage - InterMap's Docs</title>
+        <title>Usage - InterMap's Docs</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.4af4bdda.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.2afb09e1.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
@@ -73,6 +73,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#1-preparing-the-configuration-file" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -85,7 +90,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="InterMap&#39;s Docs" class="md-header__button md-logo" aria-label="InterMap's Docs" data-md-component="logo">
+    <a href="index.html" title="InterMap&#39;s Docs" class="md-header__button md-logo" aria-label="InterMap's Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12 3c-1.97 0-3.85.47-5.56 1.41-.24.13-.54.04-.68-.2a.506.506 0 0 1 .2-.68C7.82 2.5 9.86 2 12 2s4 .47 6.04 1.5c.25.15.34.45.21.69a.48.48 0 0 1-.44.28M3.5 9.72c-.1 0-.2-.03-.29-.09a.517.517 0 0 1-.12-.7c.99-1.4 2.25-2.5 3.75-3.27C10 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.85 3.75 3.25.16.22.1.54-.12.7-.23.16-.54.11-.7-.1a9.26 9.26 0 0 0-3.39-2.96c-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.95-.08.15-.23.22-.39.22m6.25 12.07c-.13 0-.25-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39a.5.5 0 0 1-.5.5.5.5 0 0 1-.5-.5c0-2.42-2.09-4.39-4.66-4.39s-4.66 1.97-4.66 4.39c0 1.44.32 2.77.93 3.84.64 1.16 1.08 1.65 1.85 2.43.19.2.19.51 0 .71-.12.1-.24.15-.37.15m7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39a.5.5 0 0 1 .5-.5.5.5 0 0 1 .5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.54.13.58.41.05.26-.13.53-.41.58-.57.11-1.07.12-1.21.12M14.91 22h-.13c-1.59-.46-2.63-1.05-3.72-2.12a7.28 7.28 0 0 1-2.17-5.22c0-1.62 1.38-2.94 3.08-2.94s3.08 1.32 3.08 2.94c0 1.07.95 1.94 2.08 1.94 1.15 0 2.08-.87 2.08-1.94 0-3.77-3.25-6.83-7.25-6.83-2.84 0-5.46 1.58-6.61 4.03-.39.81-.59 1.76-.59 2.8 0 .78.07 2.01.67 3.61.1.26-.03.55-.29.64a.504.504 0 0 1-.64-.29c-.5-1.31-.73-2.62-.73-3.96 0-1.2.23-2.29.68-3.24 1.33-2.79 4.28-4.6 7.51-4.6 4.54 0 8.25 3.51 8.25 7.83 0 1.62-1.38 2.94-3.08 2.94s-3.08-1.32-3.08-2.94c0-1.07-.93-1.94-2.08-1.94s-2.08.87-2.08 1.94c0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.84.27.08.42.36.35.62-.05.23-.26.38-.47.38"/></svg>
@@ -105,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Basic Usage
+              Usage
             
           </span>
         </div>
@@ -145,13 +150,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/rglez/intermap" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/Delta-Research-Team/intermap" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
   </div>
   <div class="md-source__repository">
-    rglez/intermap
+    InterMap's GitHub Repository
   </div>
 </a>
       </div>
@@ -170,32 +175,13 @@
   
   
     <li class="md-tabs__item">
-      <a href="index.md" class="md-tabs__link">
+      <a href="index.html" class="md-tabs__link">
         
   
   
     
   
   Home
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="how-it-works.html" class="md-tabs__link">
-        
-  
-  
-    
-  
-  How it works
 
       </a>
     </li>
@@ -235,7 +221,7 @@
   
     
   
-  Basic Usage
+  Usage
 
       </a>
     </li>
@@ -248,32 +234,13 @@
   
   
     <li class="md-tabs__item">
-      <a href="arguments-reference.html" class="md-tabs__link">
+      <a href="intervis.html" class="md-tabs__link">
         
   
   
     
   
-  Arguments Reference
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="tutorials.html" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Tutorials
+  Visualizations (InterVis)
 
       </a>
     </li>
@@ -329,7 +296,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="InterMap&#39;s Docs" class="md-nav__button md-logo" aria-label="InterMap's Docs" data-md-component="logo">
+    <a href="index.html" title="InterMap&#39;s Docs" class="md-nav__button md-logo" aria-label="InterMap's Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12 3c-1.97 0-3.85.47-5.56 1.41-.24.13-.54.04-.68-.2a.506.506 0 0 1 .2-.68C7.82 2.5 9.86 2 12 2s4 .47 6.04 1.5c.25.15.34.45.21.69a.48.48 0 0 1-.44.28M3.5 9.72c-.1 0-.2-.03-.29-.09a.517.517 0 0 1-.12-.7c.99-1.4 2.25-2.5 3.75-3.27C10 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.85 3.75 3.25.16.22.1.54-.12.7-.23.16-.54.11-.7-.1a9.26 9.26 0 0 0-3.39-2.96c-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.95-.08.15-.23.22-.39.22m6.25 12.07c-.13 0-.25-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39a.5.5 0 0 1-.5.5.5.5 0 0 1-.5-.5c0-2.42-2.09-4.39-4.66-4.39s-4.66 1.97-4.66 4.39c0 1.44.32 2.77.93 3.84.64 1.16 1.08 1.65 1.85 2.43.19.2.19.51 0 .71-.12.1-.24.15-.37.15m7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39a.5.5 0 0 1 .5-.5.5.5 0 0 1 .5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.54.13.58.41.05.26-.13.53-.41.58-.57.11-1.07.12-1.21.12M14.91 22h-.13c-1.59-.46-2.63-1.05-3.72-2.12a7.28 7.28 0 0 1-2.17-5.22c0-1.62 1.38-2.94 3.08-2.94s3.08 1.32 3.08 2.94c0 1.07.95 1.94 2.08 1.94 1.15 0 2.08-.87 2.08-1.94 0-3.77-3.25-6.83-7.25-6.83-2.84 0-5.46 1.58-6.61 4.03-.39.81-.59 1.76-.59 2.8 0 .78.07 2.01.67 3.61.1.26-.03.55-.29.64a.504.504 0 0 1-.64-.29c-.5-1.31-.73-2.62-.73-3.96 0-1.2.23-2.29.68-3.24 1.33-2.79 4.28-4.6 7.51-4.6 4.54 0 8.25 3.51 8.25 7.83 0 1.62-1.38 2.94-3.08 2.94s-3.08-1.32-3.08-2.94c0-1.07-.93-1.94-2.08-1.94s-2.08.87-2.08 1.94c0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.84.27.08.42.36.35.62-.05.23-.26.38-.47.38"/></svg>
@@ -339,13 +306,13 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/rglez/intermap" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/Delta-Research-Team/intermap" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
   </div>
   <div class="md-source__repository">
-    rglez/intermap
+    InterMap's GitHub Repository
   </div>
 </a>
     </div>
@@ -359,34 +326,12 @@
   
   
     <li class="md-nav__item">
-      <a href="index.md" class="md-nav__link">
+      <a href="index.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     Home
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="how-it-works.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    How it works
     
   </span>
   
@@ -432,17 +377,125 @@
       
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Usage
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="basic-usage.html" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
-    Basic Usage
+    Usage
     
   </span>
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-preparing-the-configuration-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Preparing the configuration file
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Preparing the configuration file">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generals" class="md-nav__link">
+    <span class="md-ellipsis">
+      [generals]
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#topo-traj" class="md-nav__link">
+    <span class="md-ellipsis">
+      [topo-traj]
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      [interactions]
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cutoffs" class="md-nav__link">
+    <span class="md-ellipsis">
+      [cutoffs]
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-running-intermap" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Running InterMap
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-output-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Output Files
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-interconvert" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. InterConvert
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -455,34 +508,12 @@
   
   
     <li class="md-nav__item">
-      <a href="arguments-reference.html" class="md-nav__link">
+      <a href="intervis.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Arguments Reference
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="tutorials.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Tutorials
+    Visualizations (InterVis)
     
   </span>
   
@@ -533,9 +564,454 @@
   
 
 
-  <h1>Basic Usage</h1>
+  <h1>Usage</h1>
 
-
+<h2 id="1-preparing-the-configuration-file">1. Preparing the configuration file<a class="headerlink" href="#1-preparing-the-configuration-file" title="Permanent link">&para;</a></h2>
+<p>To run InterMap, you must prepare a configuration file specifying the parameters for your analysis. The
+configuration file is a text file that contains various sections, each corresponding to different aspects of the setup.
+In the following example, we will go through each entry, explaining its purpose and how to set it up.</p>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[generals]</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">n_procs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">job_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">DrHU-Prot-DNA</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">output_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">./output</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">n_samples</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">n_factor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.5</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">[topo-traj]</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">topology</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">/home/rglez/wrapped-trajs/DrHU-cut-P</span><span class="mi">58</span><span class="n">R-3</span><span class="err">/</span><span class="n">hmr_cionize_ions_solvent_sc150mM_WRAPPED_RENUM</span><span class="p">.</span><span class="n">pdb</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">trajectory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">/home/rglez/wrapped-trajs/DrHU-cut-P</span><span class="mi">58</span><span class="n">R-16</span><span class="err">/</span><span class="n">drhu_cut_p58r_OUT-4_WRAPPED</span><span class="p">.</span><span class="n">dcd</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">last</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">stride</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">chunk_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="k">[interactions]</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="n">selection_1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">protein</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="n">selection_2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">nucleic</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">min_prevalence</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">extended</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="n">resolution</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">residue</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="n">interactions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">all</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="n">export_csv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">True</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="n">annotations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">/home/rglez/wrapped-trajs/DrHU-cut-P</span><span class="mi">58</span><span class="n">R-3</span><span class="err">/</span><span class="n">annotations</span><span class="p">.</span><span class="n">txt</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="k">[cutoffs]</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="n">dist_cut_CloseContact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3.0</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="n">dist_cut_Hydrophobic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.5</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="n">dist_cut_Ionic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.5</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="n">dist_cut_Metalic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.8</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="n">dist_cut_HA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3.5</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="n">dist_cut_DA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3.5</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="n">min_ang_DHA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">130</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="n">max_ang_DHA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">180</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="n">dist_cut_XA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3.5</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="n">dist_cut_XD</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3.5</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="n">min_ang_DXA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="n">max_ang_DXA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">90</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="n">dist_cut_FaceToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5.5</span>
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="n">min_ang_nn_FaceToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="n">max_ang_nn_FaceToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">35</span>
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="n">min_ang_nc_FaceToFace</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="mi">0</span>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="n">max_ang_nc_FaceToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span>
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="n">dist_cut_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">6.5</span>
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a><span class="n">min_ang_nn_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">50</span><span class="err">,</span>
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="n">max_ang_nn_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">90</span><span class="err">,</span>
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a><span class="n">min_ang_nc_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="err">,</span>
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a><span class="n">max_ang_nc_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span><span class="err">,</span>
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a><span class="n">intersect_radius_EdgeToFace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.5</span>
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="n">dist_cut_PiStacking</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5.5</span>
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="n">min_ang_nn_PiStacking</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="n">max_ang_nn_PiStacking</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">90</span>
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="n">min_ang_nc_PiStacking</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="n">max_ang_nc_PiStacking</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span>
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="n">dist_cut_PiCation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.5</span>
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a><span class="n">min_ang_PiCation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a><span class="n">max_ang_PiCation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span>
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a><span class="n">dist_cut_PiAnion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">4.5</span>
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a><span class="n">min_ang_PiAnion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a><span class="n">max_ang_PiAnion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span>
+</span></code></pre></div>
+<p><em>Parameters in the configuration file are internally validated, so if you set a parameter that is not recognized or has an invalid value, InterMap will raise an error and inform you about the issue.</em></p>
+<p><em>The only optional section is <code>[cutoffs]</code>, which allows you to customize the cutoffs for each interaction type. If you do not include this section, InterMap will use the default cutoffs defined in the code.</em></p>
+</div>
+<h3 id="generals"><strong><code>[generals]</code></strong><a class="headerlink" href="#generals" title="Permanent link">&para;</a></h3>
+<details class="note">
+<summary>n_procs</summary>
+<p><strong>Value:</strong> int &gt;= 1</p>
+<p><strong>Description:</strong> The number of processes to use for parallel execution.</p>
+<p><strong>Tip:</strong> Increasing this value can speed up the analysis, especially for large trajectories. However, the performance may not improve significantly beyond a certain point due to the overhead of managing multiple processes. A good starting point is to set it to the number of CPU cores available on your machine.</p>
+</details>
+<details class="note">
+<summary>job_name</summary>
+<p><strong>Value:</strong> str</p>
+<p><strong>Description:</strong> A name for the job will be used as the base name to create output files.</p>
+<p><strong>Tip:</strong> Choose a descriptive name that reflects the system or analysis you are performing. This will help you identify the output files later.</p>
+</details>
+<details class="note">
+<summary>output_dir</summary>
+<p><strong>Value:</strong> valid path</p>
+<p><strong>Description:</strong> The directory where the output files will be saved.</p>
+<p><strong>Tip:</strong> Ensure the specified directory is in a writable location. If it does not exist, InterMap will attempt to create it.</p>
+</details>
+<details class="note">
+<summary>n_samples</summary>
+<p><strong>Value:</strong> int &gt; 0</p>
+<p><strong>Description:</strong> The number of samples in your trajectory that InterMap explores before starting the complete detection stage. This helps infer the maximum number of interactions in your system.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 10. If you encounter memory issues, you can increase it later.</p>
+</details>
+<details class="note">
+<summary>n_factor</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> A factor to scale the maximum number of interactions detected in the <code>n_samples</code> frames. This is used to estimate the memory requirements for the analysis.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to  1.5, which provides a reasonable estimate of memory requirements. If you encounter memory issues, you can increase this value later.</p>
+</details>
+<div class="admonition info">
+<p class="admonition-title">Memory Allocation</p>
+<p>The <code>n_samples</code> and <code>n_factor</code> parameters are used to estimate the memory requirements for the analysis. If you set them too low, InterMap may not be able to handle the whole trajectory, leading to memory errors. If unsure about the values, start with the default (10 and 1.5, respectively) and increase them later upon encountering memory issues.</p>
+</div>
+<h3 id="topo-traj"><strong><code>[topo-traj]</code></strong><a class="headerlink" href="#topo-traj" title="Permanent link">&para;</a></h3>
+<details class="note">
+<summary>topology</summary>
+<p><strong>Value:</strong> valid path</p>
+<p><strong>Description:</strong> The path to the topology file (e.g., PDB or PSF file) that describes the molecular system.</p>
+<p><strong>Tip:</strong> Ensure that the topology file is compatible with the trajectory file you will be using. The topology file should contain the atoms, residues, and connectivity information.</p>
+</details>
+<details class="note">
+<summary>trajectory</summary>
+<p><strong>Value:</strong> valid path</p>
+<p><strong>Description:</strong> The path to the trajectory file (e.g., DCD or XTC file) that contains the molecular dynamics simulation data. You can specify multiple trajectories by separating them with commas if they correspond to the same topology.</p>
+<p><strong>Tip:</strong> Ensure the trajectory file is compatible with the topology file. If you have multiple trajectories, they should all be in the same format and correspond to the same molecular system.</p>
+</details>
+<details class="note">
+<summary>start</summary>
+<p><strong>Value:</strong> int &gt;= 0</p>
+<p><strong>Description:</strong> The starting frame of the trajectory to analyze. If set to 0, it will start from the first frame.</p>
+<p><strong>Tip:</strong> If you want to analyze a specific trajectory portion, you can set this value to the desired starting frame. If you want to analyze the entire trajectory, leave it at 0.</p>
+</details>
+<details class="note">
+<summary>last</summary>
+<p><strong>Value:</strong> int &gt;= -1</p>
+<p><strong>Description:</strong> The last frame of the trajectory to analyze. If set to -1, it will analyze until the last frame of the trajectory.</p>
+<p><strong>Tip:</strong> If you want to analyze a specific trajectory portion, you can set this value to the desired last frame. If you want to analyze the entire trajectory, leave it at -1.</p>
+</details>
+<details class="note">
+<summary>stride</summary>
+<p><strong>Value:</strong> int &gt;= 1</p>
+<p><strong>Description:</strong> The stride for reading frames from the trajectory. If set to 1, it will read every frame; if set to 2, it will read every second frame, and so on.</p>
+<p><strong>Tip:</strong> A larger stride can reduce the number of frames processed, which can speed up the analysis but may also miss some interactions. A good starting point is to set this value to 1.</p>
+</details>
+<details class="note">
+<summary>chunk_size</summary>
+<p><strong>Value:</strong> int &gt; 0</p>
+<p><strong>Description:</strong> The number of frames to read from the trajectory. The greater the chunk size, the more memory will be used, which can speed up the analysis. If you encounter memory issues, you can reduce this value.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to the number of processors available. If you encounter memory issues, you can reduce it to a lower value. If you have enough memory, you can increase it to speed up the analysis.</p>
+</details>
+<div class="admonition info">
+<p class="admonition-title">Supported Molecular Formats</p>
+<p>The formats of the <code>topology</code> and <code>trajectory</code> files should be compatible with those supported by MDAnalysis, the underlying library InterMap uses for trajectory processing. The exhaustive list of supported formats can be found in the <a href="https://userguide.mdanalysis.org/stable/formats/index.html">MDAnalysis documentation</a>.</p>
+</div>
+<h3 id="interactions"><strong><code>[interactions]</code></strong><a class="headerlink" href="#interactions" title="Permanent link">&para;</a></h3>
+<details class="note">
+<summary>selection_1</summary>
+<p><strong>Value:</strong> str</p>
+<p><strong>Description:</strong> The first atomic selection of atoms or residues to analyze. This can be any valid MDAnalysis selection string.</p>
+<p><strong>Tip:</strong> You can use selections like <code>protein</code>, <code>resid 10-20</code>, or <code>name CA</code> to specify the atoms or residues you want to analyze. If you want to analyze interactions within a single selection, you can set both <code>selection_1</code> and <code>selection_2</code> to the same value.</p>
+</details>
+<details class="note">
+<summary>selection_2</summary>
+<p><strong>Value:</strong> str</p>
+<p><strong>Description:</strong> The second atomic selection of atoms or residues to analyze. This can also be any valid MDAnalysis selection string.</p>
+<p><strong>Tip:</strong> You can use selections like <code>protein</code>, <code>resid 10-20</code>, or <code>name CA</code> to specify the atoms or residues you want to analyze. If you want to analyze interactions within a single selection, you can set both <code>selection_1</code> and <code>selection_2</code> to the same value.</p>
+</details>
+<details class="note">
+<summary>min_prevalence</summary>
+<p><strong>Value:</strong> float &gt;= 0</p>
+<p><strong>Description:</strong> The minimum prevalence of interactions to consider. This threshold filters out interactions
+that occur less frequently than the specified value. If set to 0, all interactions will be considered.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 0, including all interactions. If you want to filter out rare interactions, you can increase this value to a percentage (e.g., 10 for 10% prevalence). The valid range is from 1 to 100.</p>
+</details>
+<details class="note">
+<summary>resolution</summary>
+<p><strong>Value:</strong> atom OR residue</p>
+<p><strong>Description:</strong> The resolution of the interaction fingerprints. The available options are <code>atom</code> and <code>residue</code>. The
+<code>atom</code> resolution provides detailed information at the atomic level, while the <code>residue</code> resolution summarizes
+interactions at the residue level.</p>
+<p><strong>Tip:</strong> If you want detailed information about interactions at the atomic level, set this value to <code>atom</code>. If you want a more summarized view at the residue level, set it to <code>residue</code>. The choice depends on the level of detail you need for your analysis. Note that the <code>atom</code> resolution will produce larger interaction fingerprints, which may require more memory and computation time.</p>
+</details>
+<details class="note">
+<summary>interactions</summary>
+<p><strong>Value:</strong> str OR list of interaction OR all</p>
+<p><strong>Description:</strong> The types of interactions to compute. You can specify a single interaction type or a list of
+interaction types separated by commas. You can set this value to <code>all</code> to compute all supported interactions.</p>
+<p>The available interaction types are: <code>CloseContact</code>, <code>VdWContact</code>, <code>Hydrophobic</code>, <code>Anionic</code>, <code>Cationic</code>, <code>MetalDonor</code>, <code>MetalAcceptor</code>, <code>HBAcceptor</code>, <code>HBDonor</code>, <code>XBAcceptor</code>, <code>XBDonor</code>, <code>FaceToFace</code>, <code>EdgeToFace</code>, <code>PiStacking</code>, <code>PiCation</code>, <code>CationPi</code>, <code>PiAnion</code>, and <code>AnionPi</code>.</p>
+<p><strong>Tip:</strong> To compute all interactions, set this value to <code>all</code>. If you are interested in specific interactions, specify them as a comma-separated list (e.g., <code>CloseContact, Hydrophobic, Cationic</code>). The choice of interactions depends on the specific analysis you want to perform. The declaration of the interaction types is case-sensitive, so use the correct capitalization.</p>
+</details>
+<details class="note">
+<summary>annotations</summary>
+<p><strong>Value:</strong> valid path OR False</p>
+<p><strong>Description:</strong> The path to a file containing annotations for the selections. This file is prepared by specifying the corresponding selection string for each arbitrary label representing a particular part of your system. These   InterMap tracks annotations and can be used later to group interactions by labels, which is helpful for
+analyzing interactions between different parts of a complex system that are not defined by conventional chains,
+segments, etc.</p>
+<p><strong>Tip:</strong> If you want to use annotations, create a text file with the format shown below and specify its path here.
+You can set this parameter to False if you do not have annotations. </p>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
+</div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>core-A-U1 = (resnum 1:67)  or (resnum 89:108) and segid PROA
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>hairpin-A-U1 = (resnum 68:88) and segid PROA
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>tail-A-U1 = (resnum -24:0) and segid PROA
+</span></code></pre></div>
+</details>
+<div class="admonition info">
+<p class="admonition-title">Selection Syntax</p>
+<p>The <code>selection_1</code> and <code>selection_2</code> parameters (as well as the declared <code>annotations</code>) can be any valid <a href="https://userguide.mdanalysis.org/stable/selections.html">MDAnalysis selection string</a>. If both selections are equal, InterMap will compute the intra-molecular interactions.</p>
+</div>
+<h3 id="cutoffs"><strong><code>[cutoffs]</code></strong><a class="headerlink" href="#cutoffs" title="Permanent link">&para;</a></h3>
+<div class="admonition info">
+<p class="admonition-title">Interactions Cutoffs</p>
+<p>The <code>[cutoffs]</code> section is optional and allows you to define the cutoffs for each interaction type. InterMap will use the default cutoffs defined in the code if this section is not included.</p>
+<p>The cutoffs are specified in Angstroms (for distances) or Degrees (for angles) and are used to determine whether an interaction occurs between two atoms or residues. The currently available interactions and cutoffs are listed in the <a href="basic-usage.html">configuration file example above</a>.</p>
+</div>
+<details class="note">
+<summary>dist_cut_CloseContact</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the Close Contact interaction type. This is the maximum distance between two atoms to consider them in close contact.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 3.0 Angstroms, a standard threshold for close molecular-system contact.</p>
+</details>
+<details class="note">
+<summary>dist_cut_Hydrophobic</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the Hydrophobic interaction type. This is the maximum distance between two atoms to consider them hydrophobic.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 4.5 Angstroms, a standard threshold for hydrophobic interactions in molecular systems.</p>
+</details>
+<details class="note">
+<summary>dist_cut_Ionic</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the Cationic / Anionic interaction type. This is the maximum distance between two atoms to consider them under a salt bridge.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 4.5 Angstroms, a standard threshold for ionic interactions in molecular systems.</p>
+</details>
+<details class="note">
+<summary>dist_cut_Metalic</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The distance cutoff for the Metallic interaction type. This is the maximum distance between two atoms (one of them a metal) to consider them interacting.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 2.8 Angstroms, a standard threshold for metallic interactions in molecular systems.</p>
+</details>
+<details class="note">
+<summary>dist_cut_HA</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The distance cutoff for the maximum distance between a hydrogen atom and an acceptor atom to consider them in a hydrogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 3.5 Angstroms, a standard threshold for hydrogen-acceptor distances in hydrogen bonding.</p>
+</details>
+<details class="note">
+<summary>dist_cut_DA</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the maximum distance between a donor atom and an acceptor atom to consider them in a hydrogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 3.5 Angstroms, a standard threshold for donor-acceptor distances in hydrogen bonding.</p>
+</details>
+<details class="note">
+<summary>min_ang_DHA</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees for the Donor-Hydrogen-Acceptor (DHA) geometry in hydrogen bonding. This angle determines the directionality of the hydrogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 0 degrees. This allows for flexible hydrogen bond geometries, but you can increase it to restrict the geometry to more linear hydrogen bonds.</p>
+</details>
+<details class="note">
+<summary>max_ang_DHA</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees for the Donor-Hydrogen-Acceptor (DHA) geometry in hydrogen bonding. This angle determines the directionality of the hydrogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 180 degrees, allowing for perfectly linear hydrogen bonds.</p>
+</details>
+<details class="note">
+<summary>dist_cut_XA</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the X-Acceptor (XA) interaction type in halogen bonding. This is the maximum distance between a halogen atom and an acceptor atom.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 3.5 Angstroms, a standard threshold for halogen-acceptor distances in halogen bonding.</p>
+</details>
+<details class="note">
+<summary>dist_cut_XD</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for the X-Donor (XD) interaction type in halogen bonding. This is the maximum distance between a halogen atom and a donor atom.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 3.5 Angstroms, a standard threshold for halogen-donor distances in halogen bonding.</p>
+</details>
+<details class="note">
+<summary>min_ang_DXA</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The minimum angle in degrees for the Donor-X-Acceptor (DXA) geometry in halogen bonding. This angle determines the directionality of the halogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 0 degrees, allowing for flexible halogen bond geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_DXA</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees for the Donor-X-Acceptor (DXA) geometry in halogen bonding. This angle determines the directionality of the halogen bond.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 180 degrees, which restricts halogen bonds to more linear geometries.</p>
+</details>
+<details class="note">
+<summary>dist_cut_FaceToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The distance cutoff for the Face-to-Face π-π interaction type. This is the maximum distance between the centroids of two aromatic rings to consider them in a face-to-face π-π stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 5.5 Angstroms, a standard threshold for face-to-face π-π stacking interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_nn_FaceToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vectors of two aromatic rings for Face-to-Face π-π interactions. This ensures the rings are oriented adequately for stacking.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 0 degrees, allowing for parallel ring orientations.</p>
+</details>
+<details class="note">
+<summary>max_ang_nn_FaceToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees between the normal vectors of two aromatic rings for Face-to-Face π-π interactions. This ensures the rings are oriented adequately for stacking.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 35 degrees, which allows for slightly tilted but still effective π-π stacking.</p>
+</details>
+<details class="note">
+<summary>min_ang_nc_FaceToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vector of one ring and the centroid vector for Face-to-Face π-π interactions. This parameter helps define the geometry of the stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 0 degrees, allowing optimal stacking geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_nc_FaceToFace</summary>
+<p><strong>Value:</strong> float 
+<strong>Description:</strong> The maximum angle in degrees between the normal vector of one ring and the centroid vector for Face-to-Face π-π interactions. This parameter helps define the geometry of the stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 30 degrees, which maintains good stacking geometry while allowing flexibility.</p>
+</details>
+<details class="note">
+<summary>dist_cut_EdgeToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The distance cutoff for the Edge-to-Face π-π interaction type. This is the maximum distance between the centroids of two aromatic rings to consider them in an edge-to-face π-π interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 6.5 Angstroms, a standard threshold for edge-to-face π-π interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_nn_EdgeToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vectors of two aromatic rings for Edge-to-Face π-π interactions. This ensures the rings are oriented adequately for T-shaped interactions.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 50 degrees, which ensures a proper T-shaped geometry.</p>
+</details>
+<details class="note">
+<summary>max_ang_nn_EdgeToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees between the normal vectors of two aromatic rings for Edge-to-Face π-π interactions. This ensures the rings are oriented adequately for T-shaped interactions.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 90 degrees, allowing for perpendicular ring orientations typical of edge-to-face interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_nc_EdgeToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vector of one ring and the centroid vector for Edge-to-Face π-π interactions. This parameter helps define the geometry of the T-shaped interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 0 degrees, allowing optimal edge-to-face geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_nc_EdgeToFace</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees between the normal vector of one ring and the centroid vector for Edge-to-Face π-π interactions. This parameter helps define the geometry of the T-shaped interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 30 degrees, which maintains good T-shaped geometry while allowing flexibility.</p>
+</details>
+<details class="note">
+<summary>intersect_radius_EdgeToFace</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The intersection radius for Edge-to-Face π-π interactions. This parameter defines the radius around the ring centroid used to determine if the rings are properly positioned for an edge-to-face interaction.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 1.5 Angstroms, which provides a reasonable intersection zone for edge-to-face interactions.</p>
+</details>
+<details class="note">
+<summary>dist_cut_PiStacking</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for general π-π stacking interactions. This is the maximum distance between the centroids of two aromatic rings to consider them in a π-π stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 5.5 Angstroms, a standard threshold for π-π stacking interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_nn_PiStacking</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vectors of two aromatic rings for general π-π stacking interactions. This ensures the rings are oriented adequately for stacking.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 0 degrees, allowing for parallel ring orientations.</p>
+</details>
+<details class="note">
+<summary>max_ang_nn_PiStacking</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees between the normal vectors of two aromatic rings for general π-π stacking interactions. This ensures the rings are oriented adequately for stacking.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 90 degrees, allowing for both parallel and perpendicular ring orientations.</p>
+</details>
+<details class="note">
+<summary>min_ang_nc_PiStacking</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees between the normal vector of one ring and the centroid vector for general π-π stacking interactions. This parameter helps define the geometry of the stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 0 degrees, allowing optimal stacking geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_nc_PiStacking</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees between the normal vector of one ring and the centroid vector for general π-π stacking interactions. This parameter helps define the geometry of the stacking interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 30 degrees, which maintains good stacking geometry while allowing flexibility.</p>
+</details>
+<details class="note">
+<summary>dist_cut_PiCation</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for π-cation interactions. This is the maximum distance between the centroid of an aromatic ring and a cation to consider them in a π-cation interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 4.5 Angstroms, a standard threshold for π-cation interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_PiCation</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees for π-cation interactions. This angle is measured between the normal vector of the aromatic ring and the vector from the ring centroid to the cation.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 0 degrees, allowing optimal π-cation geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_PiCation</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees for π-cation interactions. This angle is measured between the normal vector of the aromatic ring and the vector from the ring centroid to the cation.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 30 degrees, which maintains good π-cation geometry while allowing flexibility.</p>
+</details>
+<details class="note">
+<summary>dist_cut_PiAnion</summary>
+<p><strong>Value:</strong> float</p>
+<p><strong>Description:</strong> The distance cutoff for π-anion interactions. This is the maximum distance between the centroid of an aromatic ring and an anion to consider them in a π-anion interaction.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 4.5 Angstroms, a standard threshold for π-anion interactions.</p>
+</details>
+<details class="note">
+<summary>min_ang_PiAnion</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The minimum angle in degrees for π-anion interactions. This angle is measured between the normal vector of the aromatic ring and the vector from the ring centroid to the anion.</p>
+<p><strong>Tip:</strong> A good starting point is to set this value to 0 degrees, allowing for optimal π-anion geometries.</p>
+</details>
+<details class="note">
+<summary>max_ang_PiAnion</summary>
+<p><strong>Value:</strong> float </p>
+<p><strong>Description:</strong> The maximum angle in degrees for π-anion interactions. This angle is measured between the normal vector of the aromatic ring and the vector from the ring centroid to the anion.</p>
+<p><strong>Tip:</strong> A good starting point is setting this value to 30 degrees, which maintains good π-anion geometry while allowing flexibility.</p>
+</details>
+<h2 id="2-running-intermap">2. Running InterMap<a class="headerlink" href="#2-running-intermap" title="Permanent link">&para;</a></h2>
+<p>To run InterMap, you need to have a conda environment set up with InterMap installed. If you have not done this yet,
+please refer to the <a href="installation.html">installation guide</a> for instructions on installing InterMap using conda.</p>
+<p>Once you have activated the InterMap's conda environment, execute the following command in your terminal.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>intermap<span class="w"> </span>&lt;path_to_your_config_file&gt;
+</span></code></pre></div>
+<h2 id="3-output-files">3. Output Files<a class="headerlink" href="#3-output-files" title="Permanent link">&para;</a></h2>
+<p>Upon successful execution, InterMap will generate the following output files in the specified <code>output_dir</code>.</p>
+<ul>
+<li>
+<p><code>{job_name}_InterMap.log</code>: A log file containing information about the execution of InterMap, including any warnings
+  Alternatively, errors encountered during the analysis.</p>
+</li>
+<li>
+<p><code>{job_name}_InterMap.cfg</code>: A copy of the configuration file used for the analysis, which can be helpful for reference
+  or reproducibility.</p>
+</li>
+<li>
+<p><code>{job_name}_InterMap.pickle</code>: A pickle file containing the analysis results. This file can be loaded later for
+  further analysis or visualization with <a href="intervis.html">InterVis</a>. Also, you can use the <a href="#4-interconvert">
+  <code>interconvert</code></a> command to convert this file into a CSV file.</p>
+</li>
+</ul>
+<h2 id="4-interconvert">4. InterConvert<a class="headerlink" href="#4-interconvert" title="Permanent link">&para;</a></h2>
+<p>To convert the output of InterMap into a CSV file, you can use the <code>interconvert</code> command. This command allows you to
+convert the pickle file generated by InterMap into a CSV format that can be easily read and analyzed.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>interconvert<span class="w"> </span>&lt;path_to_intermap_pickle_output_file&gt;<span class="w">  </span>&lt;path_to_your_new_csv_file&gt;
+</span></code></pre></div>
 
 
 
