@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#1-how-to-use-the-shiny-app" class="md-skip">
+        <a href="#1-how-to-launch-the-app" class="md-skip">
           Skip to content
         </a>
       
@@ -438,64 +438,115 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-how-to-use-the-shiny-app" class="md-nav__link">
+  <a href="#1-how-to-launch-the-app" class="md-nav__link">
     <span class="md-ellipsis">
-      1. How to Use the Shiny App
+      1. How to Launch the App
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-app-components" class="md-nav__link">
+  <a href="#2-app-interface-components" class="md-nav__link">
     <span class="md-ellipsis">
-      2. App Components
+      2. App Interface Components
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-app-analyses" class="md-nav__link">
+  <a href="#3-using-the-app" class="md-nav__link">
     <span class="md-ellipsis">
-      3. App Analyses
+      3. Using the App
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3. App Analyses">
+    <nav class="md-nav" aria-label="3. Using the App">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#31-tab-1" class="md-nav__link">
+  <a href="#31-upload-your-data" class="md-nav__link">
     <span class="md-ellipsis">
-      3.1. Tab 1
+      3.1. Upload Your Data
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#32-tab-2" class="md-nav__link">
+  <a href="#32-filter-options" class="md-nav__link">
     <span class="md-ellipsis">
-      3.2. Tab 2
+      3.2. Filter Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-tabs-and-visualizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Tabs and Visualizations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Tabs and Visualizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-tab-1-sele1-vs-sele2" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.1. Tab 1: Sele1 vs Sele2
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#33-tab-3" class="md-nav__link">
+  <a href="#42-tab-2-prevalence" class="md-nav__link">
     <span class="md-ellipsis">
-      3.3. Tab 3
+      4.2. Tab 2 : Prevalence
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#34-tab-4" class="md-nav__link">
+  <a href="#43-tab-3-life-time" class="md-nav__link">
     <span class="md-ellipsis">
-      3.4. Tab 4
+      4.3. Tab 3: Life Time
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-tab-4-time-series" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.4. Tab 4: Time Series
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-tab-5-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.5. Tab 5: Network
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-tab-6-3d-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.6. Tab 6: 3D View
     </span>
   </a>
   
@@ -557,16 +608,272 @@
 
   <h1>Visualizations (InterVis)</h1>
 
-<p>InterMap comes with a Shiny app that allows you to visualize the interaction fingerprints computed by the tool. This app
-provides an interactive interface to explore the interaction data, making it easier to analyze and interpret the
-results.</p>
-<h2 id="1-how-to-use-the-shiny-app">1. How to Use the Shiny App<a class="headerlink" href="#1-how-to-use-the-shiny-app" title="Permanent link">&para;</a></h2>
-<h2 id="2-app-components">2. App Components<a class="headerlink" href="#2-app-components" title="Permanent link">&para;</a></h2>
-<h2 id="3-app-analyses">3. App Analyses<a class="headerlink" href="#3-app-analyses" title="Permanent link">&para;</a></h2>
-<h3 id="31-tab-1">3.1. Tab 1<a class="headerlink" href="#31-tab-1" title="Permanent link">&para;</a></h3>
-<h3 id="32-tab-2">3.2. Tab 2<a class="headerlink" href="#32-tab-2" title="Permanent link">&para;</a></h3>
-<h3 id="33-tab-3">3.3. Tab 3<a class="headerlink" href="#33-tab-3" title="Permanent link">&para;</a></h3>
-<h3 id="34-tab-4">3.4. Tab 4<a class="headerlink" href="#34-tab-4" title="Permanent link">&para;</a></h3>
+<p><strong>InterMap</strong> comes with an interactive Shiny application named <strong>InterVis</strong>, which allows users to explore the interaction fingerprints computed by the tool. This user-friendly web interface simplifies the analysis and interpretation of molecular interaction data.</p>
+<h2 id="1-how-to-launch-the-app">1. How to Launch the App<a class="headerlink" href="#1-how-to-launch-the-app" title="Permanent link">&para;</a></h2>
+<p>Once InterMap is installed and your virtual environment is activated, run the following command from the terminal:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>intervis
+</span></code></pre></div>
+<p>This will automatically launch the InterVis server and open your default web browser with the app's interface.</p>
+<p><img alt="Interaction Network" src="assets/global_panel.png" width="100%" /></p>
+<div class="admonition warning">
+<p class="admonition-title">No need to manually configure ports or set paths, everything is designed for immediate use.</p>
+</div>
+<h2 id="2-app-interface-components">2. App Interface Components<a class="headerlink" href="#2-app-interface-components" title="Permanent link">&para;</a></h2>
+<p>The InterVis interface consists of three main areas:</p>
+<details class="note">
+<summary>Control Panel (Right Side)</summary>
+<ul>
+<li>Contains tools for loading data and configuring visualizations.</li>
+<li>Always visible for quick access.</li>
+</ul>
+</details>
+<details class="note">
+<summary>Visualization Panel (Left Side)</summary>
+<ul>
+<li>Displays different types of visualizations.</li>
+<li>Organized into tabs for smooth navigation.</li>
+</ul>
+</details>
+<details class="note">
+<summary>Footer (Bottom Bar)</summary>
+<ul>
+<li>Provides direct links to the repository, scientific paper, and official documentation.</li>
+</ul>
+</details>
+<h2 id="3-using-the-app">3. Using the App<a class="headerlink" href="#3-using-the-app" title="Permanent link">&para;</a></h2>
+<h3 id="31-upload-your-data">3.1. Upload Your Data<a class="headerlink" href="#31-upload-your-data" title="Permanent link">&para;</a></h3>
+<details class="note">
+<summary>Upload InterMap CSV File</summary>
+<ul>
+<li>Click on <strong>"Browse CSV"</strong></li>
+<li>Select the interaction fingerprint file generated by InterMap</li>
+</ul>
+</details>
+<details class="note">
+<summary>Upload Topology File</summary>
+<ul>
+<li>Click on <strong>"Browse Topology"</strong></li>
+<li>Supported formats: .pdb, .gro, .psf, etc.</li>
+</ul>
+</details>
+<details class="note">
+<summary>Atom/Residue Selection (Optional)</summary>
+<ul>
+<li>Filter interactions using MDAnalysis selection syntax</li>
+</ul>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
+</div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>- &quot;resname ALA&quot;
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>- &quot;protein&quot;
+</span></code></pre></div>
+</details>
+<h3 id="32-filter-options">3.2. Filter Options<a class="headerlink" href="#32-filter-options" title="Permanent link">&para;</a></h3>
+<details class="note">
+<summary>Interaction Filter</summary>
+<ul>
+<li>Use the <strong>Interaction Selector</strong> to list all detected interaction types</li>
+<li>Select one or multiple types</li>
+<li>Click <strong>"Select All"</strong> to toggle all options</li>
+</ul>
+</details>
+<details class="note">
+<summary>Annotation Filter</summary>
+<ul>
+<li>Filter interactions based on custom annotations</li>
+<li>Useful for focusing on specific regions or labels</li>
+<li>Can be combined with other filters</li>
+</ul>
+</details>
+<details class="note">
+<summary>Prevalence Threshold</summary>
+<ul>
+<li>Adjust minimum prevalence (0–100%)</li>
+<li>Affects all visualizations simultaneously</li>
+<li>Option to show/hide numeric values on plots</li>
+</ul>
+</details>
+<h2 id="4-tabs-and-visualizations">4. Tabs and Visualizations<a class="headerlink" href="#4-tabs-and-visualizations" title="Permanent link">&para;</a></h2>
+<h3 id="41-tab-1-sele1-vs-sele2">4.1. Tab 1: Sele1 vs Sele2<a class="headerlink" href="#41-tab-1-sele1-vs-sele2" title="Permanent link">&para;</a></h3>
+<p>Overview of all interaction pairs between two selections.</p>
+<p><img alt="Interaction Network" src="assets/Tab_1.png" width="100%" /></p>
+<p><strong><code>Interpretation Guide:</code></strong></p>
+<ol>
+<li><strong>Axes</strong><ul>
+<li><strong>X-axis</strong>: Selection 1 (from config file)</li>
+<li><strong>Y-axis</strong>: Selection 2 (from config file)</li>
+</ul>
+</li>
+<li><strong>Colored Cells</strong><ul>
+<li><strong>Color</strong>: Interaction type</li>
+<li><strong>Number</strong>: (Optional) Interaction prevalence</li>
+<li><strong>Layout</strong>: Uses an interaction priority system — if multiple interactions occur, the most relevant is shown</li>
+</ul>
+</li>
+</ol>
+<p><strong><code>Advanced Features:</code></strong></p>
+<div class="admonition info">
+<p class="admonition-title">Hover</p>
+<ul>
+<li>Sel1: Residue/Atom 1</li>
+<li>Note1: Annotation 1</li>
+<li>Sel2: Residue/Atom 2</li>
+<li>Note2: Annotation 2</li>
+<li>Interaction: Type</li>
+<li>Prevalence: XX.X%</li>
+</ul>
+</div>
+<ul>
+<li><strong>Transpose Button</strong> to swap X/Y axes — useful for alternate views</li>
+</ul>
+<h3 id="42-tab-2-prevalence">4.2. Tab 2 : Prevalence<a class="headerlink" href="#42-tab-2-prevalence" title="Permanent link">&para;</a></h3>
+<p>Bar plots showing interaction prevalence for each component.</p>
+<p><img alt="Interaction Network" src="assets/Tab_2.png" width="100%" /></p>
+<p><strong><code>Top Panel (Selection 1):</code></strong></p>
+<ul>
+<li><strong>X-axis</strong>: Components from Selection 1</li>
+<li><strong>Y-axis</strong>: Prevalence (%)</li>
+<li><strong>Bars</strong>:<ul>
+<li><strong>Color</strong>: Interaction type</li>
+<li><strong>Height</strong>: Relative prevalence</li>
+</ul>
+</li>
+</ul>
+<p><strong><code>Bottom Panel (Selection 2):</code></strong></p>
+<ul>
+<li>Same structure as the top panel</li>
+<li>Focused on Selection 2 components</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Hover</p>
+<ul>
+<li>Selection_1: Component 1</li>
+<li>Selection_2: Component 2</li>
+<li>Interaction: Type</li>
+<li>Prevalence: XX.X%</li>
+<li>Annotation: Specific label</li>
+</ul>
+</div>
+<h3 id="43-tab-3-life-time">4.3. Tab 3: Life Time<a class="headerlink" href="#43-tab-3-life-time" title="Permanent link">&para;</a></h3>
+<p>Violin plots representing the distribution of interaction lifetimes.</p>
+<p><img alt="Interaction Network" src="assets/Tab_3.png" width="100%" /></p>
+<p><strong><code>Plot Elements:</code></strong></p>
+<ul>
+<li><strong>Violin Shape</strong>: Distribution of durations</li>
+<li><strong>Width</strong>: Relative frequency</li>
+<li><strong>Color</strong>: Interaction type</li>
+</ul>
+<p><strong><code>Internal Markers:</code></strong></p>
+<ul>
+<li><strong>Center line</strong>: Median</li>
+<li><strong>Box</strong>: Interquartile range</li>
+<li><strong>Dots</strong>: Outliers</li>
+</ul>
+<p><strong><code>Interpretation:</code></strong></p>
+<ul>
+<li>Wide violins = variable interactions</li>
+<li>Narrow violins = stable interactions</li>
+<li>Outliers = rare yet stable periods</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Hover</p>
+<ul>
+<li>Pair: Selection 1 – Selection 2</li>
+<li>Interaction: Type</li>
+<li>Prevalence: XX.X%</li>
+<li>Lifetime: Frames</li>
+<li>Frame Range: Start–End</li>
+</ul>
+</div>
+<h3 id="44-tab-4-time-series">4.4. Tab 4: Time Series<a class="headerlink" href="#44-tab-4-time-series" title="Permanent link">&para;</a></h3>
+<p>Tracks the occurrence of interactions over time.</p>
+<p><img alt="Interaction Network" src="assets/Tab_4.png" width="100%" /></p>
+<p><strong><code>Components:</code></strong></p>
+<ol>
+<li><strong>Main Panel</strong><ul>
+<li><strong>X-axis</strong>: Frame number</li>
+<li><strong>Y-axis</strong>: Interaction pairs</li>
+<li><strong>Dots</strong>: Interaction present</li>
+</ul>
+</li>
+<li><strong>Top Histogram</strong><ul>
+<li>Number of interactions per frame</li>
+</ul>
+</li>
+<li><strong>Side Histogram</strong><ul>
+<li>Total prevalence per pair</li>
+</ul>
+</li>
+</ol>
+<p><strong><code>Interpretation:</code></strong></p>
+<ul>
+<li>Identify synchronous events</li>
+<li>Track stable vs. transient interactions</li>
+<li>Reveal dynamic behavior</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Hover</p>
+<ul>
+<li>Frame: Frame number</li>
+<li>Selection Pair: Interacting residues</li>
+<li>Interaction: Type</li>
+<li>Prevalence: Global %</li>
+</ul>
+</div>
+<h3 id="45-tab-5-network">4.5. Tab 5: Network<a class="headerlink" href="#45-tab-5-network" title="Permanent link">&para;</a></h3>
+<p>Interactive molecular network view.</p>
+<p><img alt="Interaction Network" src="assets/Tab_5.png" width="100%" /></p>
+<p><strong><code>Elements:</code></strong></p>
+<ul>
+<li><strong>Nodes</strong>:<ul>
+<li>🔵 Blue = Selection 1 components</li>
+<li>🔴 Red = Selection 2 components</li>
+</ul>
+</li>
+<li><strong>Links</strong>:<ul>
+<li><strong>Color</strong>: Interaction type</li>
+<li><strong>Number</strong>: Prevalence</li>
+<li><strong>Length</strong>: Inversely related to prevalence</li>
+</ul>
+</li>
+</ul>
+<p><strong><code>Features:</code></strong></p>
+<ul>
+<li>Drag &amp; rearrange nodes</li>
+<li>Zoom and pan</li>
+<li>Hover to reveal details</li>
+<li>Automatic layout adjustments</li>
+</ul>
+<h3 id="46-tab-6-3d-view">4.6. Tab 6: 3D View<a class="headerlink" href="#46-tab-6-3d-view" title="Permanent link">&para;</a></h3>
+<p>3D structure and interaction display.</p>
+<p><img alt="Interaction Network" src="assets/Tab_6.png" width="100%" /></p>
+<p><strong><code>Main Controls:</code></strong></p>
+<ol>
+<li><strong>Visibility Options</strong><ul>
+<li>Show/Hide structure</li>
+<li>Show/Hide interactions</li>
+</ul>
+</li>
+<li><strong>Molecular Styles</strong><ul>
+<li><strong>Cartoon</strong>: Ribbon-style</li>
+<li><strong>Stick</strong>: Lines for bonds</li>
+<li><strong>Ball and Stick</strong>: Atoms + bonds</li>
+<li><strong>Sphere</strong>: Atom-centered spheres</li>
+<li><strong>Cartoon and Stick</strong>: Combined mode</li>
+</ul>
+</li>
+<li><strong>Visualization Settings</strong><ul>
+<li><strong>Sphere Size</strong>: Interaction marker size</li>
+<li><strong>Line Width</strong>: Thickness of interaction edges</li>
+</ul>
+</li>
+</ol>
+<p><strong><code>Structural Analysis:</code></strong></p>
+<ul>
+<li>Contextualize interactions</li>
+<li>Visualize spatial proximity</li>
+<li>Identify structural patterns</li>
+</ul>
 
 
 
