@@ -162,7 +162,6 @@ def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
 
     return fig
 
-
 def create_ligand_interactions_plot(df, width, height, axisx, axisy):
     """Create ligand interactions plot."""
     batched_data = process_prevalence_data(df, 'sel1')
@@ -244,7 +243,6 @@ def create_ligand_interactions_plot(df, width, height, axisx, axisy):
 
     return fig
 
-
 def create_receptor_interactions_plot(df, width, height, axisx, axisy):
     """Create receptor interactions plot."""
     batched_data = process_prevalence_data(df, 'sel2')
@@ -324,7 +322,6 @@ def create_receptor_interactions_plot(df, width, height, axisx, axisy):
     )
 
     return fig
-
 
 def create_interactions_over_time_plot(df, width, height, axisx, axisy):
     """Create interactions over time plot."""
@@ -523,7 +520,6 @@ def create_interactions_over_time_plot(df, width, height, axisx, axisy):
 
     return fig
 
-
 def create_lifetime_plot(df, width, height, axisx, axisy, show_prevalence=False):
     """Create fully vectorized violin plot for interaction lifetimes."""
     # Process data
@@ -649,7 +645,6 @@ def create_lifetime_plot(df, width, height, axisx, axisy, show_prevalence=False)
 
     return fig
 
-
 def process_network_data(df):
     """Process data for network visualization."""
     G = nx.Graph()
@@ -679,7 +674,6 @@ def process_network_data(df):
 
     return G
 
-
 def create_network_plot(df, width, height, axisx, axisy):
     """Create interactive network visualization."""
     if df.empty:
@@ -708,7 +702,7 @@ def create_network_plot(df, width, height, axisx, axisy):
         "physics": {
             "enabled": true,
             "forceAtlas2Based": {
-                "gravitationalConstant": -50,
+                "gravitationalConstant": -100,
                 "centralGravity": 0.005,
                 "springLength": 200,
                 "springConstant": 0.08,
@@ -759,116 +753,523 @@ def create_network_plot(df, width, height, axisx, axisy):
     return net
 
 
-def create_3d_view(df, universe, width=900, height=760, show_protein=True,
-                   show_interactions=True, molecule_style="cartoon",
-                   sphere_size=0.5, line_width=0.15):
+###############################################################################
+# 3D AREA
+###############################################################################
+
+import MDAnalysis as mda
+from MDAnalysis.coordinates.PDB import PDBWriter
+import tempfile
+import os
+
+class InteractiveVisualization:
+    def __init__(self, df, universe):
+        self.df = df
+        self.universe = universe
+        self.current_frame = 0
+        self.viewer = None
+        self.max_frames = self.get_max_frames()
+
+    def get_max_frames(self):
+        if self.df.empty:
+            return 0
+
+        max_len = 0
+        for _, row in self.df.iterrows():
+            timeseries = row['timeseries']
+            if isinstance(timeseries, str):
+                max_len = max(max_len, len(timeseries))
+
+        return max_len - 1 if max_len > 0 else 0
+
+    def update_frame(self, frame_index):
+        if frame_index < 0 or frame_index > self.max_frames:
+            print(f"Frame {frame_index} fuera de rango (0-{self.max_frames})")
+            return
+
+        self.current_frame = frame_index
+
+        df_filtered = filter_interactions_by_frame(self.df, frame_index)
+
+        self.viewer = create_3d_view(
+            df_filtered, self.universe,
+            width=900, height=700,
+            show_protein=True,
+            show_interactions=True,
+            molecule_style="cartoon",
+            sphere_size=0.8,
+            line_width=0.15,
+            frame_index=frame_index
+        )
+
+        return self.viewer
+
+
+def create_aligned_pdb_from_trajectory(universe, frame_index=0):
+    """
+    Crear PDB alineado con las coordenadas actuales del trajectory
+
+    Args:
+        universe: Universo MDAnalysis
+        frame_index: Frame de la trayectoria a usar (0 = primer frame)
+
+    Returns:
+        str: Contenido PDB alineado
+    """
     try:
-        import py3Dmol
-        print("Successfully imported py3Dmol")
+        universe.trajectory[frame_index]
 
-        # Create viewer
-        viewer = py3Dmol.view(width=width, height=height)
-        print("Created viewer")
-
-
-
-        try:
-            with open(universe.filename, 'r') as f:
-                pdb_content = f.read()
-            print(f"Read PDB file: {universe.filename}")
-        except Exception as e:
-            print(f"Error reading PDB file: {e}")
-            return None
-
-        try:
-            # Add model to viewer
-            viewer.addModel(pdb_content, "pdb")
-            print("Added model to viewer")
-
-            # Clear any existing styles
-            viewer.setStyle({}, {})
-
-            # Apply protein visualization based on show_protein
-            if show_protein:
-                style = {}
-                if molecule_style == "cartoon":
-                    style["cartoon"] = {"color": "spectrum"}
-                elif molecule_style == "stick":
-                    style["stick"] = {"radius": 0.2}
-                elif molecule_style == "sphere":
-                    style["sphere"] = {"radius": 0.5}
-                elif molecule_style == "ball_and_stick":
-                    style["stick"] = {"radius": 0.2}
-                    style["sphere"] = {"radius": 0.3}
-                elif molecule_style == "cartoon_and_stick":
-                    style["cartoon"] = {"color": "spectrum"}
-                    style["stick"] = {"radius": 0.2}
-
-                viewer.setStyle({'model': -1}, style)
-
-            # Add interactions visualization if show_interactions is True and df is provided
-            if show_interactions and df is not None:
-                for _, row in df.iterrows():
-                    # Get atom positions for both selections
-                    sel1_atoms = universe.select_atoms(f"resid {row['idx1']}")
-                    sel2_atoms = universe.select_atoms(f"resid {row['idx2']}")
-
-                    if len(sel1_atoms) > 0 and len(sel2_atoms) > 0:
-                        # Calculate center positions
-                        pos1 = sel1_atoms.center_of_mass()
-                        pos2 = sel2_atoms.center_of_mass()
-
-                        viewer.addSphere({
-                            'center': {'x': pos1[0], 'y': pos1[1],
-                                       'z': pos1[2]},
-                            'radius': sphere_size,
-                            'color': all_interactions_colors[
-                                row['interaction_name']],
-                            'alpha': 0.7
-                        })
-
-                        viewer.addSphere({
-                            'center': {'x': pos2[0], 'y': pos2[1],
-                                       'z': pos2[2]},
-                            'radius': sphere_size,
-                            'color': all_interactions_colors[
-                                row['interaction_name']],
-                            'alpha': 0.7
-                        })
-
-
-                        viewer.addLine({
-                            'start': {'x': pos1[0], 'y': pos1[1],
-                                      'z': pos1[2]},
-                            'end': {'x': pos2[0], 'y': pos2[1], 'z': pos2[2]},
-                            'color': all_interactions_colors[
-                                row['interaction_name']],
-                            'width': line_width
-                        })
-
-
-                        viewer.addLine({
-                            'start': {'x': pos1[0], 'y': pos1[1],
-                                      'z': pos1[2]},
-                            'end': {'x': pos2[0], 'y': pos2[1], 'z': pos2[2]},
-                            'color': all_interactions_colors[
-                                row['interaction_name']],
-                            'width': line_width
-                        })
-
-            # Set background and other properties
-            viewer.setBackgroundColor('white')
-            viewer.zoomTo()
-            print("Configured viewer settings")
-
-            return viewer
-
-        except Exception as e:
-            print(f"Error setting up viewer: {e}")
-            return None
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.pdb',
+                                                delete=False)
+        temp_filename = temp_file.name
+        temp_file.close()
+        with PDBWriter(temp_filename) as writer:
+            writer.write(universe.atoms)
+        with open(temp_filename, 'r') as f:
+            pdb_content = f.read()
+        os.unlink(temp_filename)
+        return pdb_content
 
     except Exception as e:
-        print(f"General error in create_3d_view: {e}")
-        import traceback
-        traceback.print_exc()
         return None
+
+
+def verify_coordinates_alignment(universe, pdb_content):
+    """
+    Verificar que las coordenadas estén alineadas
+
+    Args:
+        universe: Universo MDAnalysis
+        pdb_content: Contenido PDB generado
+
+    Returns:
+        bool: True si están alineadas
+    """
+    try:
+        lines = pdb_content.split('\n')
+        atom_lines = [line for line in lines if line.startswith('ATOM')]
+
+        if len(atom_lines) == 0:
+            return False
+
+        first_atom_line = atom_lines[0]
+        pdb_x = float(first_atom_line[30:38])
+        pdb_y = float(first_atom_line[38:46])
+        pdb_z = float(first_atom_line[46:54])
+
+        mda_pos = universe.atoms[0].position
+
+        diff = np.linalg.norm(
+            [pdb_x - mda_pos[0], pdb_y - mda_pos[1], pdb_z - mda_pos[2]])
+
+        print(f"Diferencia de coordenadas: {diff:.4f} Å")
+
+        if diff < 0.01:
+            print("Coordenadas perfectamente alineadas")
+            return True
+        else:
+            print("Coordenadas no alineadas")
+            return False
+
+    except Exception as e:
+        print(f"Error verificando alineación: {e}")
+        return False
+
+
+def create_3d_view(df, universe, width=900, height=760, show_protein=True,
+                   show_interactions=True, molecule_style="cartoon",
+                   sphere_size=0.5, line_width=0.15, frame_index=0,
+                   apply_transparency=False):
+    """
+    Crear visualización 3D con control de transparencia opcional
+    """
+    try:
+        import py3Dmol
+
+        viewer = py3Dmol.view(width=width, height=height)
+        viewer.setBackgroundColor('white')
+
+        pdb_content = create_aligned_pdb_from_trajectory(universe, frame_index)
+        if not pdb_content:
+            return None
+
+        viewer.addModel(pdb_content, "pdb")
+        viewer.setStyle({}, {})
+
+        if show_protein:
+            style = get_protein_style(molecule_style)
+            viewer.setStyle({'model': -1}, style)
+            print(f"✅ Estilo aplicado: {molecule_style}")
+
+        interaction_atoms = set()
+        if show_interactions and df is not None and not df.empty:
+            interaction_atoms = add_interactions_with_dashed_lines(
+                viewer, df, universe, sphere_size, line_width
+            )
+
+        if apply_transparency and show_protein and interaction_atoms:
+            apply_atom_transparency(viewer, interaction_atoms, molecule_style)
+
+        add_hover_labels(viewer, universe)
+
+        viewer.zoomTo()
+        viewer.render()
+
+        print("Visualización creada")
+        return viewer
+
+    except Exception as e:
+        print(f"Error en create_3d_view: {e}")
+        return None
+
+def get_protein_style(molecule_style):
+    """
+    Obtener estilo de proteína - verificar que funcione correctamente
+    """
+    styles = {
+        "cartoon": {"cartoon": {"color": "spectrum"}},
+        "stick": {"stick": {"radius": 0.2, "color": "spectrum"}},
+        "sphere": {"sphere": {"radius": 0.5, "color": "spectrum"}},
+        "ball_and_stick": {
+            "stick": {"radius": 0.2, "color": "spectrum"},
+            "sphere": {"radius": 0.3, "color": "spectrum"}
+        },
+        "cartoon_and_stick": {
+            "cartoon": {"color": "spectrum"},
+            "stick": {"radius": 0.2, "color": "spectrum"}
+        }
+    }
+
+    selected_style = styles.get(molecule_style,
+                                {"cartoon": {"color": "spectrum"}})
+    print(f"Estilo seleccionado: {molecule_style} -> {selected_style}")
+
+    return selected_style
+
+def add_interactions_with_dashed_lines(viewer, df, universe, sphere_size,
+                                       line_width):
+    """
+    Añadir interacciones y recopilar átomos participantes
+    """
+    print(f"🔗 Procesando {len(df)} interacciones...")
+
+    added_count = 0
+    interaction_atoms = set()  # Para rastrear átomos participantes
+
+    for idx, row in df.iterrows():
+        try:
+            sel1_info = parse_selection_info(row['sel1'])
+            sel2_info = parse_selection_info(row['sel2'])
+
+            if not sel1_info or not sel2_info:
+                continue
+
+            atoms1 = get_atoms_from_selection(universe, sel1_info)
+            atoms2 = get_atoms_from_selection(universe, sel2_info)
+
+            if len(atoms1) == 0 or len(atoms2) == 0:
+                continue
+
+            # Encontrar átomos más cercanos
+            min_distance = float('inf')
+            closest_pair = None
+
+            for atom1 in atoms1:
+                for atom2 in atoms2:
+                    distance = np.linalg.norm(atom1.position - atom2.position)
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_pair = (atom1, atom2)
+
+            if closest_pair and min_distance < 15.0:
+                atom1, atom2 = closest_pair
+                color = all_interactions_colors.get(row['interaction_name'],
+                                                    '#888888')
+
+                # Agregar átomos a la lista de participantes
+                interaction_atoms.add(atom1.index)
+                interaction_atoms.add(atom2.index)
+
+                # Añadir línea discontinua
+                add_dashed_line_segments(
+                    viewer, atom1.position, atom2.position,
+                    color, line_width, segments=8,
+                    interaction_name=row['interaction_name'],
+                    prevalence=row.get('prevalence', 0.0)
+                )
+
+                # Añadir esferas
+                add_interaction_spheres(
+                    viewer, atom1, atom2, color, sphere_size,
+                    row['interaction_name'], row.get('prevalence', 0.0)
+                )
+
+                added_count += 1
+
+        except Exception as e:
+            print(f"⚠️ Error procesando interacción {idx}: {e}")
+            continue
+
+    print(f"✅ {added_count} interacciones procesadas")
+    return interaction_atoms
+
+def add_dashed_line_segments(viewer, pos1, pos2, color, line_width,
+                             segments=8, interaction_name=None, prevalence=0.0):
+    """
+    Crear línea discontinua con datos de interacción para hover
+    """
+    try:
+        start = np.array(pos1)
+        end = np.array(pos2)
+        direction = end - start
+        total_length = np.linalg.norm(direction)
+
+        if total_length == 0:
+            return
+
+        direction = direction / total_length
+        segment_length = total_length / segments
+        dash_length = segment_length * 0.6
+
+        interaction_id = f"interaction_{abs(hash(f'{interaction_name}_{pos1[0]}_{pos2[0]}'))}"
+
+        for i in range(segments):
+            if i % 2 == 0:
+                segment_start = start + direction * (i * segment_length)
+                segment_end = start + direction * (i * segment_length + dash_length)
+
+                viewer.addCylinder({
+                    'start': {
+                        'x': float(segment_start[0]),
+                        'y': float(segment_start[1]),
+                        'z': float(segment_start[2])
+                    },
+                    'end': {
+                        'x': float(segment_end[0]),
+                        'y': float(segment_end[1]),
+                        'z': float(segment_end[2])
+                    },
+                    'radius': line_width,
+                    'color': color,
+                    'alpha': 0.8,
+                    'interaction_name': interaction_name,
+                    'prevalence': prevalence,
+                    'interaction_id': interaction_id,
+                    'is_interaction': True
+                })
+
+    except Exception as e:
+        print(f"Error creando línea discontinua: {e}")
+
+def add_interaction_spheres(viewer, atom1, atom2, color, sphere_size, interaction_name, prevalence=0.0):
+    """
+    Añadir esferas de interacción simplificadas
+    """
+    try:
+        interaction_id = f"interaction_{abs(hash(f'{atom1.index}_{atom2.index}'))}"
+
+        viewer.addSphere({
+            'center': {
+                'x': float(atom1.position[0]),
+                'y': float(atom1.position[1]),
+                'z': float(atom1.position[2])
+            },
+            'radius': sphere_size,
+            'color': color,
+            'alpha': 0.8,
+            'interaction_name': interaction_name,
+            'prevalence': prevalence,
+            'interaction_id': interaction_id,
+            'is_interaction': True
+        })
+
+        viewer.addSphere({
+            'center': {
+                'x': float(atom2.position[0]),
+                'y': float(atom2.position[1]),
+                'z': float(atom2.position[2])
+            },
+            'radius': sphere_size,
+            'color': color,
+            'alpha': 0.8,
+            'interaction_name': interaction_name,
+            'prevalence': prevalence,
+            'interaction_id': interaction_id,
+            'is_interaction': True
+        })
+
+    except Exception as e:
+        print(f"Error añadiendo esferas: {e}")
+
+def add_hover_labels(viewer, universe):
+    """
+    Hover labels simplificados y eficientes
+    """
+    try:
+        viewer.setHoverable({}, True, """
+        function(atom, viewer, event, container) {
+            if (!atom) return;
+
+            // Limpiar tooltips existentes
+            const existing = container.querySelectorAll('.hover-tooltip');
+            existing.forEach(tip => tip.remove());
+
+            let info = '';
+            let backgroundColor = 'rgba(0,0,0,0.85)';
+
+            // Verificar si es una interacción
+            if (atom.is_interaction && atom.interaction_name) {
+                info = `🔗 ${atom.interaction_name} (${atom.prevalence}%)`;
+                backgroundColor = 'rgba(64, 81, 181, 0.9)';
+            } else {
+                info = `${atom.atom || 'N/A'} - ${atom.resn || 'N/A'}${atom.resi || ''}`;
+                backgroundColor = 'rgba(0,0,0,0.85)';
+            }
+
+            // Crear tooltip simple
+            const tooltip = document.createElement('div');
+            tooltip.className = 'hover-tooltip';
+            tooltip.innerHTML = info;
+            tooltip.style.cssText = `
+                position: absolute;
+                background: ${backgroundColor};
+                color: white;
+                padding: 6px 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-family: 'Roboto', sans-serif;
+                z-index: 10000;
+                pointer-events: none;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                white-space: nowrap;
+            `;
+
+            // Posicionar tooltip
+            const rect = container.getBoundingClientRect();
+            tooltip.style.left = (event.clientX - rect.left + 10) + 'px';
+            tooltip.style.top = (event.clientY - rect.top - 5) + 'px';
+
+            container.appendChild(tooltip);
+
+            // Remover después de 2 segundos
+            setTimeout(() => {
+                if (tooltip.parentNode) {
+                    tooltip.parentNode.removeChild(tooltip);
+                }
+            }, 2000);
+        }
+        """)
+
+        print("Hover labels simplificados configurados")
+
+    except Exception as e:
+        print(f"Error configurando hover labels: {e}")
+
+def parse_selection_info(selection_string):
+    """
+    Parsear información de selección desde el string
+
+    Args:
+        selection_string: String como 'TYR_92_234_CG_4473'
+
+    Returns:
+        dict: Información parseada o None si hay error
+    """
+    try:
+        parts = selection_string.split('_')
+        if len(parts) >= 3:
+            return {
+                'resname': parts[0],
+                'resid': int(parts[1]),
+                'atom_name': parts[3] if len(parts) > 3 else None,
+                'atom_id': int(parts[4]) if len(parts) > 4 else None
+            }
+        return None
+    except Exception as e:
+        print(f"Error parseando selección {selection_string}: {e}")
+        return None
+
+def get_atoms_from_selection(universe, sel_info):
+    """
+    Obtener átomos de MDAnalysis basado en información de selección
+
+    Args:
+        universe: Universo MDAnalysis
+        sel_info: Información de selección parseada
+
+    Returns:
+        list: Lista de átomos
+    """
+    try:
+        selection = f"resname {sel_info['resname']} and resid {sel_info['resid']}"
+
+        if sel_info['atom_name']:
+            selection += f" and name {sel_info['atom_name']}"
+
+        atoms = universe.select_atoms(selection)
+        return atoms
+
+    except Exception as e:
+        print(f"Error obteniendo átomos: {e}")
+        return []
+
+def filter_interactions_by_frame(df, frame_index):
+    """
+    Filtrar interacciones que ocurren en un frame específico
+    """
+    filtered_rows = []
+
+    for idx, row in df.iterrows():
+        timeseries = row['timeseries']
+        if isinstance(timeseries, str) and len(timeseries) > frame_index:
+            if timeseries[frame_index] == '1':
+                filtered_rows.append(row)
+
+    return pd.DataFrame(filtered_rows) if filtered_rows else pd.DataFrame()
+
+
+def apply_atom_transparency(viewer, interaction_atoms,
+                            molecule_style="cartoon"):
+    """
+    Aplicar transparencia respetando el estilo de visualización seleccionado
+    """
+    try:
+        if molecule_style == "cartoon":
+            transparent_style = {'cartoon': {'opacity': 0.4}}
+            opaque_style = {'cartoon': {'opacity': 1.0}}
+        elif molecule_style == "stick":
+            transparent_style = {'stick': {'opacity': 0.4}}
+            opaque_style = {'stick': {'opacity': 1.0}}
+        elif molecule_style == "sphere":
+            transparent_style = {'sphere': {'opacity': 0.4}}
+            opaque_style = {'sphere': {'opacity': 1.0}}
+        elif molecule_style == "ball_and_stick":
+            transparent_style = {
+                'stick': {'opacity': 0.4},
+                'sphere': {'opacity': 0.4}
+            }
+            opaque_style = {
+                'stick': {'opacity': 1.0},
+                'sphere': {'opacity': 1.0}
+            }
+        elif molecule_style == "cartoon_and_stick":
+            transparent_style = {
+                'cartoon': {'opacity': 0.4},
+                'stick': {'opacity': 0.4}
+            }
+            opaque_style = {
+                'cartoon': {'opacity': 1.0},
+                'stick': {'opacity': 1.0}
+            }
+        else:
+            transparent_style = {'cartoon': {'opacity': 0.4}}
+            opaque_style = {'cartoon': {'opacity': 1.0}}
+
+        viewer.setStyle({}, transparent_style)
+
+        for atom_index in interaction_atoms:
+            viewer.setStyle({'index': atom_index}, opaque_style)
+
+
+    except Exception as e:
+        print(f"Error aplicando transparencia: {e}")

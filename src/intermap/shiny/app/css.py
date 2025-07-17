@@ -34,6 +34,7 @@ all_interactions_colors = {
     'WaterBridge': '#87CEEB',
     'PiStacking': '#9B6B9E',
     'PiCation': '#BE79BE',
+    'PiAnion': '#418641',
     'CationPi': '#D4A5D4',
     'FaceToFace': '#845B87',
     'EdgeToFace': '#AA8BAD',
@@ -49,13 +50,13 @@ all_interactions_colors = {
 # Error messages dictionary
 ERROR_MESSAGES = {
     'nothing_selected': "Change your filters, your selection is empty",
-    'no_file': "Please upload a CSV file.",
-    'invalid_file': "Invalid file format. Please upload a CSV file.",
+    'no_file': "Please upload a pickle file.",
+    'invalid_file': "Invalid file format. Please upload a pickle file.",
     'no_data': "No data available for plotting.",
     'processing_error': "Error processing file: {}",
     'no_interactions': "No interactions found with current filters.",
     'plot_error': "Error generating plot: {}",
-    'no_topology': "No topology file found in directory.",
+    'no_topology': "No configuration file found in directory.",
     'invalid_sele': "Invalid MDAnalysis selection: {}"
 }
 

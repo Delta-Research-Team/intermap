@@ -126,12 +126,13 @@ def parse_pickle(pickle):
 
     # Add the timeseries and the prevalence column
     df['timeseries'] = bit_dict.values()
-    df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+    #df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
     df['prevalence'] = df['timeseries'].apply(
         lambda x: x.count() / len(x) * 100)
     df['timeseries'] = df['timeseries'].apply(ba.to01)
 
     return df, resolution
+
 
 
 def parse_cfg(cfg):
@@ -436,9 +437,9 @@ def process_heatmap_data(df):
     interaction_priority = {
         'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
         'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
-        'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
-        'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
-        'CloseContact': 16, 'WaterBridge': 17
+        'PiAnion': 9, 'PiStacking': 10, 'FaceToFace': 11, 'EdgeToFace': 12,
+        'XBDonor': 13, 'XBAcceptor': 14, 'Hydrophobic': 15, 'VdWContact': 16,
+        'CloseContact': 17, 'WaterBridge': 18
     }
 
     df['priority'] = df['interaction_name'].map(interaction_priority)
@@ -590,7 +591,7 @@ def process_time_series_data(df):
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'CationPi': 'Cπ', 'PiAnion': 'πA', 'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -639,7 +640,7 @@ def process_lifetime_data(df):
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -694,8 +695,8 @@ def process_lifetime_data(df):
 # =============================================================================
 #
 # =============================================================================
-pickle = '/home/rglez/RoyHub/intermap/data/testing/output/prot-dna_InterMap.pickle'
-cfg = '/home/rglez/RoyHub/intermap/data/testing/output/InterMap-job.cfg'
-self = CSVFilter(pickle, cfg)
-self.universe
-self.master.head()
+#pickle = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/hmr_pickle/prot-dna_InterMap.pickle'
+#cfg = '/home/fajardo01/03_Fajardo_Hub/02_InterMap/visualizations/data/last_version/hmr_pickle/prot-dna_InterMap.cfg'
+#self = CSVFilter(pickle, cfg)
+#self.universe
+#self.master.head()

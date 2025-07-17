@@ -44,9 +44,12 @@ def create_app_ui():
             ui.tags.title("InterVis"),
             ui.tags.link(rel="icon", type="image/png", href=favicon_path),
             ui.tags.link(rel="stylesheet",
-                href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
-            ),
+                         href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
+                         ),
             ui.tags.script(src="https://cdn.plot.ly/plotly-latest.min.js"),
+            ui.tags.script(src="https://3dmol.org/build/3Dmol-min.js"),
+            ui.tags.script(
+                src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"),
             ui.tags.style("\n".join(CSS_STYLES.values())),
         ),
         create_welcome_section(),
@@ -79,18 +82,16 @@ def create_file_input_section():
     """Create the file input section."""
     return ui.div({"class": "file-input-container"},
         ui.div({"class": "file-browse-container"},
-            # CSV file input
-            ui.input_file("csv_file", "Upload CSV file",
-                accept=[".csv"],
-                button_label="Browse CSV",
-                placeholder="No CSV file selected"),
-            # Topology file input
-            ui.input_file("top_file", "Upload Topology file",
-                accept=['.psf', '.pdb', '.ent', '.pqr', '.pdbqt', '.gro', 'top', '.prmtop', '.parm7',
-                        '.dms', '.tpr', '.itp', '.mol2', '.data', '.lammpsdump', '.xyz', '.txyz',
-                        '.arc', '.gms', '.log', '.config', '.history', '.xml', '.gsd', '.mmtf', '.in'],
-                button_label="Browse Topology",
-                placeholder="No topology file selected"),
+            # Pickle file input
+            ui.input_file("pickle_file", "Upload Pickle file",
+                accept=[".pickle"],
+                button_label="Browse Pickle",
+                placeholder="No pickle file selected"),
+            # Config file input
+            ui.input_file("config_file", "Upload Config file",
+                accept=[".cfg"],
+                button_label="Browse Config",
+                placeholder="No config file selected"),
             ),
         ui.hr(),
         ui.div({"class": "mda-selection-container"},
@@ -381,25 +382,55 @@ def create_plots_section():
                         )
                     ),
 
-                    # Tab 6: 3D View with improved controls
+                    # Tab 6: 3D View with frame selector
                     ui.nav_panel("3D View",
                                  ui.div(
                                      {
-                                         "style": "display: flex; flex-direction: row; width: 100%; gap: 20px; margin: 20px auto;"},
+                                         "style": "display: flex; flex-direction: row; width: 100%; gap: 20px; margin: 20px auto;"
+                                     },
                                      # Control panel
                                      ui.div(
                                          {
-                                             "style": "flex: 0 0 250px; padding: 15px; background: #f5f5f5; border-radius: 8px;"},
+                                             "style": "flex: 0 0 250px; padding: 15px; background: #f5f5f5; border-radius: 8px;"
+                                         },
                                          ui.h4("Visualization Controls", {
-                                             "style": "margin-bottom: 15px; color: #333;"}),
+                                             "style": "margin-bottom: 15px; color: #333;"
+                                         }),
                                          ui.div(
                                              {
-                                                 "style": "display: flex; flex-direction: column; gap: 15px;"},
+                                                 "style": "display: flex; flex-direction: column; gap: 15px;"
+                                             },
+                                             # Frame selector
+                                             ui.div(
+                                                 {"class": "control-group"},
+                                                 ui.h5("Frame Selection", {
+                                                     "style": "margin-bottom: 10px; color: #666;"
+                                                 }),
+                                                 ui.input_numeric(
+                                                     "frame_number",
+                                                     "Frame Number:",
+                                                     value=0,
+                                                     min=0,
+                                                     max=999,
+                                                     step=1
+                                                 ),
+                                                 ui.input_action_button(
+                                                     "update_frame_button",
+                                                     "Update Frame",
+                                                     style="margin-top: 10px; width: 100%;"
+                                                 ),
+                                                 ui.div(
+                                                     id="frame_info",
+                                                     style="margin-top: 10px; font-size: 0.9em; color: #666;"
+                                                 )
+                                             ),
+                                             ui.hr(),
                                              # Display controls
                                              ui.div(
                                                  {"class": "control-group"},
                                                  ui.h5("Display Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                     "style": "margin-bottom: 10px; color: #666;"
+                                                 }),
                                                  ui.input_checkbox(
                                                      "show_protein",
                                                      "Show Protein",
@@ -415,7 +446,8 @@ def create_plots_section():
                                              ui.div(
                                                  {"class": "control-group"},
                                                  ui.h5("Style Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                     "style": "margin-bottom: 10px; color: #666;"
+                                                 }),
                                                  ui.input_select(
                                                      "molecule_style",
                                                      "Molecule Style",
@@ -433,17 +465,18 @@ def create_plots_section():
                                              ui.div(
                                                  {"class": "control-group"},
                                                  ui.h5("Size Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"}),
+                                                     "style": "margin-bottom: 10px; color: #666;"
+                                                 }),
                                                  ui.input_slider(
                                                      "interaction_sphere_size",
-                                                     "Interaction Sphere Size",
+                                                     "Sphere Size",
                                                      min=0.1,
                                                      max=2.0,
                                                      value=0.5
                                                  ),
                                                  ui.input_slider(
                                                      "interaction_line_width",
-                                                     "Interaction Line Width",
+                                                     "Line Width",
                                                      min=0.05,
                                                      max=0.5,
                                                      value=0.15
@@ -454,7 +487,8 @@ def create_plots_section():
                                      # Viewer panel
                                      ui.div(
                                          {
-                                             "style": "flex: 1; min-height: 600px; background: white; border-radius: 8px; overflow: hidden;"},
+                                             "style": "flex: 1; min-height: 600px; background: white; border-radius: 8px; overflow: hidden;"
+                                         },
                                          ui.output_ui("molecule_3d_view")
                                      ),
                                  ),

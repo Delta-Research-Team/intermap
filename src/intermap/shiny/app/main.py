@@ -17,9 +17,9 @@ from .icsv import CSVFilter, sortby, transpose
 from .plots import (create_interactions_over_time_plot,
                     create_ligand_interactions_plot, create_plot,
                     create_receptor_interactions_plot,
-                    create_lifetime_plot, create_network_plot, create_3d_view)
+                    create_lifetime_plot, create_network_plot, create_3d_view,
+                    InteractiveVisualization, filter_interactions_by_frame)
 from .ui import app_ui
-
 
 
 def server(input, output, session):
@@ -32,16 +32,17 @@ def server(input, output, session):
     filtered_idx = reactive.Value(None)
     csv_filtered = reactive.Value(None)
     transpose_state = reactive.Value(False)
+    frame_visualization = reactive.Value(None)
 
     @reactive.Effect
-    @reactive.event(input.csv_file, input.top_file)
+    @reactive.event(input.pickle_file, input.config_file)
     def initialize_filter():
         """Initialize CSVFilter when both files are uploaded."""
         try:
-            csv_infos = input.csv_file()
-            top_infos = input.top_file()
+            pickle_infos = input.pickle_file()
+            config_infos = input.config_file()
 
-            if not csv_infos or not top_infos:
+            if not pickle_infos or not config_infos:
                 csv.set(None)
                 filtered_idx.set(None)
                 csv_filtered.set(None)
@@ -49,29 +50,31 @@ def server(input, output, session):
 
             temp_dir = tempfile.mkdtemp()
 
-            csv_path = os.path.join(temp_dir, csv_infos[0]["name"])
-            top_path = os.path.join(temp_dir, top_infos[0]["name"])
+            pickle_path = os.path.join(temp_dir, pickle_infos[0]["name"])
+            config_path = os.path.join(temp_dir, config_infos[0]["name"])
 
-            shutil.copy2(csv_infos[0]["datapath"], csv_path)
-            shutil.copy2(top_infos[0]["datapath"], top_path)
+            shutil.copy2(pickle_infos[0]["datapath"], pickle_path)
+            shutil.copy2(config_infos[0]["datapath"], config_path)
 
-            master_instance = CSVFilter(
-                csv=csv_path,
-                topo=top_path
-            )
+            try:
+                master_instance = CSVFilter(
+                    pickle=pickle_path,
+                    cfg=config_path
+                )
 
-            axisx = master_instance.axisx
-            axisy = master_instance.axisy
+                csv.set(master_instance)
 
-            csv.set(master_instance)
+                ui.notification_show(
+                    "Files loaded successfully!",
+                    duration=3000,
+                    type="message"
+                )
 
-            ui.notification_show(
-                "Files loaded successfully!",
-                duration=3000,
-                type="message"
-            )
+                ui.update_navs("plot_tabs", selected="Sele1 vs Sele2")
 
-            ui.update_navs("plot_tabs", selected="Sele1 vs Sele2")
+            except Exception as e:
+                print(f"Error initializing CSVFilter: {str(e)}")
+                raise e
 
         except Exception as e:
             print(f"Error in initialize_filter: {str(e)}")
@@ -314,6 +317,65 @@ def server(input, output, session):
             if 'root' in locals():
                 root.destroy()
 
+    @reactive.Effect
+    @reactive.event(input.update_frame_button)
+    def update_3d_frame():
+        """Update 3D visualization for specific frame."""
+        if csv_filtered.get() is None or csv.get() is None:
+            ui.notification_show(
+                "No data loaded for 3D visualization",
+                duration=3000,
+                type="warning"
+            )
+            return
+
+        try:
+            master_instance = csv.get()
+            frame_index = input.frame_number()
+
+            # Create or update visualization
+            if frame_visualization.get() is None:
+                viz = InteractiveVisualization(csv_filtered.get(),
+                                               master_instance.universe)
+                frame_visualization.set(viz)
+            else:
+                viz = frame_visualization.get()
+                viz.df = csv_filtered.get()
+
+            # Update max frame in UI
+            max_frames = viz.get_max_frames()
+            ui.update_numeric("frame_number", max=max_frames)
+
+            # Update frame info
+            session.send_custom_message(
+                "update-frame-info",
+                {"current": frame_index, "max": max_frames}
+            )
+
+            # Update visualization
+            viewer = viz.update_frame(frame_index)
+
+            if viewer:
+                ui.notification_show(
+                    f"Frame {frame_index} loaded successfully",
+                    duration=2000,
+                    type="message"
+                )
+            else:
+                ui.notification_show(
+                    f"Error loading frame {frame_index}",
+                    duration=3000,
+                    type="error"
+                )
+
+        except Exception as e:
+            print(f"Error updating 3D frame: {e}")
+            ui.notification_show(
+                f"Error updating frame: {str(e)}",
+                duration=5000,
+                type="error"
+            )
+
     # =========================================================================
     # Rendering helper functions
     # =========================================================================
@@ -483,21 +545,29 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.show_protein,
-                    input.show_interactions,
-                    input.molecule_style, input.interaction_sphere_size,
-                    input.interaction_line_width)
+                    input.show_interactions, input.molecule_style,
+                    input.interaction_sphere_size,
+                    input.interaction_line_width,
+                    input.update_frame_button)
     def molecule_3d_view():
         """Render the 3D molecular visualization."""
         try:
-            print("\n=== Starting 3D visualization ===")
-
             master_instance = csv.get()
             if master_instance is None:
                 return ui.p("No data loaded")
 
-            print("Creating viewer...")
+            # Get current frame
+            frame_index = input.frame_number() if input.frame_number() is not None else 0
+
+            # Filter interactions by frame
+            df_filtered = filter_interactions_by_frame(csv_filtered.get(),
+                                                       frame_index) if csv_filtered.get() is not None else None
+
+            if df_filtered is None or df_filtered.empty:
+                return ui.p(f"No interactions found for frame {frame_index}")
+
             view = create_3d_view(
-                csv_filtered.get(),
+                df_filtered,
                 master_instance.universe,
                 width=900,
                 height=760,
@@ -505,24 +575,20 @@ def server(input, output, session):
                 show_interactions=input.show_interactions(),
                 molecule_style=input.molecule_style(),
                 sphere_size=input.interaction_sphere_size(),
-                line_width=input.interaction_line_width()
+                line_width=input.interaction_line_width(),
+                frame_index=frame_index
             )
 
             if view is None:
                 return ui.p("Failed to create visualization")
 
-            try:
-                html_content = f"""
-                <div id="3dmol-viewer" style="width: 800px; height: 600px; position: relative;">
-                    <script src="https://3dmol.org/build/3Dmol-min.js"></script>
-                    {view._make_html()}
-                </div>
-                """
-                return ui.HTML(html_content)
-
-            except Exception as e:
-                print(f"Error creating HTML: {e}")
-                return ui.p(f"Error rendering visualization: {str(e)}")
+            html_content = f"""
+            <div id="3dmol-viewer-{frame_index}" style="width: 100%; height: 600px; position: relative;">
+                <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+                {view._make_html()}
+            </div>
+            """
+            return ui.HTML(html_content)
 
         except Exception as e:
             print(f"Error in molecule_3d_view: {e}")
