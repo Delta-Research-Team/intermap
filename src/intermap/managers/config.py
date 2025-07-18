@@ -204,16 +204,19 @@ class Config:
         'cutoffs': None
     }
 
-    def __init__(self, mode='production'):
+    def __init__(self, mode='production', cfg_path=None):
 
         # Print the header
         print_colored_ascii()
 
         # Detect config
-        self.config_path = cmn.check_path(detect_config_path(mode=mode))
-        self.legal_params = self.allowed_parameters
+        if cfg_path is not None:
+            self.config_path = cmn.check_path(cfg_path)
+        else:
+            self.config_path = cmn.check_path(detect_config_path(mode=mode))
 
         # Parsing from class args
+        self.legal_params = self.allowed_parameters
         self.config_dir = abspath(dirname(self.config_path))
         self.keyless_sections = self.detect_keyless_sections()
         self.config_obj = self.read_config_file()
