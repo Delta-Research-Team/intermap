@@ -15,6 +15,8 @@ from rdkit.sping.colors import white
 import networkx as nx
 from pyvis.network import Network
 
+from intermap.shiny.app.graph import InterNetwork
+
 
 def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
     """Create heatmap plot."""
@@ -645,112 +647,20 @@ def create_lifetime_plot(df, width, height, axisx, axisy, show_prevalence=False)
 
     return fig
 
-def process_network_data(df):
-    """Process data for network visualization."""
-    G = nx.Graph()
-
-    G.clear()
-
-    ligand_nodes = df['sel1'].unique()
-    G.add_nodes_from(ligand_nodes, group='ligand')
-
-    receptor_nodes = df['sel2'].unique()
-    G.add_nodes_from(receptor_nodes, group='receptor')
-
-
-    for _, row in df.iterrows():
-
-        edge_length = 400 - (row['prevalence'] * 2.5)
-        edge_length = max(50, min(400, edge_length))
-
-        G.add_edge(
-            row['sel1'],
-            row['sel2'],
-            interaction=row['interaction_name'],
-            color=all_interactions_colors[row['interaction_name']],
-            prevalence=row['prevalence'],
-            length=edge_length
-        )
-
-    return G
 
 def create_network_plot(df, width, height, axisx, axisy):
-    """Create interactive network visualization."""
+    """Create interactive network visualization using InterNetwork class."""
     if df.empty:
         return None
 
+    network = InterNetwork(
+        master_df=df,
+        plot_size=(width, height),
+        node_sizes=(20, 50),
+        edge_widths=(5, 15))
 
-    G = process_network_data(df)
+    return network.create_network_plot()
 
-
-    net = Network(
-        height=f"{height}px",
-        width="100%",
-        bgcolor='#ffffff',
-        font_color='black'
-    )
-
-    net.set_options("""
-    {
-        "nodes": {
-            "font": {"size": 12}
-        },
-        "edges": {
-            "font": {"size": 12},
-            "smooth": {"type": "continuous"}
-        },
-        "physics": {
-            "enabled": true,
-            "forceAtlas2Based": {
-                "gravitationalConstant": -100,
-                "centralGravity": 0.005,
-                "springLength": 200,
-                "springConstant": 0.08,
-                "avoidOverlap": 0.5
-            },
-            "solver": "forceAtlas2Based",
-            "minVelocity": 0.75,
-            "stabilization": {
-                "enabled": true,
-                "iterations": 1000
-            }
-        },
-        "interaction": {
-            "hover": true,
-            "tooltipDelay": 100
-        }
-    }
-    """)
-
-
-    for node in G.nodes():
-
-        if 'WAT' in node or 'HOH' in node:
-            node_color = all_interactions_colors.get('WaterBridge',
-                                                     '#00BFFF')
-        else:
-            node_color = '#4051b5' if G.nodes[node][
-                                          'group'] == 'ligand' else '#ff5555'
-
-        net.add_node(
-            node,
-            label=node,
-            color=node_color
-        )
-
-
-    for edge in G.edges(data=True):
-        net.add_edge(
-            edge[0],
-            edge[1],
-            color=edge[2]['color'],
-            label=f"{edge[2]['interaction']} ({edge[2]['prevalence']:.1f}%)",
-            length=edge[2]['length'],
-            title=(f"Interaction: {edge[2]['interaction']}\n"
-                   f"Prevalence: {edge[2]['prevalence']:.1f}%")
-        )
-
-    return net
 
 
 ###############################################################################

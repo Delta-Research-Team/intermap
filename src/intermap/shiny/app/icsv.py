@@ -126,7 +126,7 @@ def parse_pickle(pickle):
 
     # Add the timeseries and the prevalence column
     df['timeseries'] = bit_dict.values()
-    df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+    #df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
     df['prevalence'] = df['timeseries'].apply(
         lambda x: x.count() / len(x) * 100)
     df['timeseries'] = df['timeseries'].apply(ba.to01)
