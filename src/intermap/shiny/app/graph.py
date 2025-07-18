@@ -80,6 +80,7 @@ class InterNetwork:
                        interaction=row['interaction_name'],
                        color=inter_colors[row['interaction_name']],
                        prevalence=row['prevalence'],
+                       length=400 - (row['prevalence'] * 2.5)
                        )
 
         # Add nodes size based on prevalence
@@ -153,9 +154,11 @@ class InterNetwork:
             if 'WAT' in node or 'HOH' in node:
                 node_color = inter_colors.get('WaterBridge', '#00BFFF')
             else:
-                node_color = '#4051b5' if node[
+                node_color = '#4051b5' if G.nodes[node][
                                               'group'] == 'sel1' else '#ff5555'
-            net.add_node(node, label=node, color=node_color, size=node['size'],
+
+            net.add_node(node, label=node, color=node_color,
+                         size=G.nodes[node]['size'],
                          )
 
         for edge in G.edges(data=True):
