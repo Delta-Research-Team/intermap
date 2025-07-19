@@ -6,19 +6,20 @@ Integrates UI components with server-side logic.
 import os
 import shutil
 import tempfile
+import tkinter as tk
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog
-import tkinter as tk
+
 from shiny import App, reactive, render, ui
 
 from .css import ERROR_MESSAGES
-from .icsv import CSVFilter, sortby, transpose
+from .icsv import CSVFilter, transpose
 from .plots import (create_interactions_over_time_plot,
-                    create_ligand_interactions_plot, create_plot,
-                    create_receptor_interactions_plot,
-                    create_lifetime_plot, create_network_plot, create_3d_view,
-                    InteractiveVisualization, filter_interactions_by_frame)
+                    create_lifetime_plot, create_network_plot, create_plot,
+                    create_sel1_interactions_plot,
+                    create_sel2_interactions_plot)
+
 from .ui import app_ui
 
 
@@ -86,21 +87,6 @@ def server(input, output, session):
                 duration=5000,
                 type="error"
             )
-
-    @reactive.Effect
-    @reactive.event(input.sort_by)
-    async def handle_sort():
-        """Handle sorting when sort option changes."""
-        if filtered_idx.get() is not None and csv.get() is not None:
-            master_instance = csv.get()
-            filtered_df = master_instance.master.iloc[
-                list(filtered_idx.get())].copy()
-
-            # Apply new sorting directly
-            sorted_data = sortby(filtered_df, input.sort_by())
-
-            # Update visualization
-            await session.send_custom_message("refresh-plots", {})
 
     @reactive.Effect
     @reactive.event(input.transpose_button)
@@ -246,20 +232,20 @@ def server(input, output, session):
                 fig.write_html(str(full_path))
 
             elif active_tab == "Prevalence":
-                fig1 = create_ligand_interactions_plot(csv_filtered.get(),
-                                                       input.plot_width(),
-                                                       input.plot_height() // 1.5,
-                                                       master_instance.axisx,
-                                                       master_instance.axisy)
+                fig1 = create_sel1_interactions_plot(csv_filtered.get(),
+                                                     input.plot_width(),
+                                                     input.plot_height() // 1.5,
+                                                     master_instance.axisx,
+                                                     master_instance.axisy)
                 filename1 = f"selection1_prevalence_{timestamp}.html"
                 full_path1 = save_dir / filename1
                 fig1.write_html(str(full_path1))
 
-                fig2 = create_receptor_interactions_plot(csv_filtered.get(),
-                                                         input.plot_width(),
-                                                         input.plot_height() // 1.5,
-                                                         master_instance.axisx,
-                                                         master_instance.axisy)
+                fig2 = create_sel2_interactions_plot(csv_filtered.get(),
+                                                     input.plot_width(),
+                                                     input.plot_height() // 1.5,
+                                                     master_instance.axisx,
+                                                     master_instance.axisy)
                 filename2 = f"selection2_prevalence_{timestamp}.html"
                 full_path2 = save_dir / filename2
                 fig2.write_html(str(full_path2))
@@ -317,64 +303,6 @@ def server(input, output, session):
             if 'root' in locals():
                 root.destroy()
 
-    @reactive.Effect
-    @reactive.event(input.update_frame_button)
-    def update_3d_frame():
-        """Update 3D visualization for specific frame."""
-        if csv_filtered.get() is None or csv.get() is None:
-            ui.notification_show(
-                "No data loaded for 3D visualization",
-                duration=3000,
-                type="warning"
-            )
-            return
-
-        try:
-            master_instance = csv.get()
-            frame_index = input.frame_number()
-
-            # Create or update visualization
-            if frame_visualization.get() is None:
-                viz = InteractiveVisualization(csv_filtered.get(),
-                                               master_instance.universe)
-                frame_visualization.set(viz)
-            else:
-                viz = frame_visualization.get()
-                viz.df = csv_filtered.get()
-
-            # Update max frame in UI
-            max_frames = viz.get_max_frames()
-            ui.update_numeric("frame_number", max=max_frames)
-
-            # Update frame info
-            session.send_custom_message(
-                "update-frame-info",
-                {"current": frame_index, "max": max_frames}
-            )
-
-            # Update visualization
-            viewer = viz.update_frame(frame_index)
-
-            if viewer:
-                ui.notification_show(
-                    f"Frame {frame_index} loaded successfully",
-                    duration=2000,
-                    type="message"
-                )
-            else:
-                ui.notification_show(
-                    f"Error loading frame {frame_index}",
-                    duration=3000,
-                    type="error"
-                )
-
-        except Exception as e:
-            print(f"Error updating 3D frame: {e}")
-            ui.notification_show(
-                f"Error updating frame: {str(e)}",
-                duration=5000,
-                type="error"
-            )
 
     # =========================================================================
     # Rendering helper functions
@@ -398,7 +326,8 @@ def server(input, output, session):
         plot_args = [
             csv_filtered.get(),
             input.plot_width(),
-            input.plot_height() if (is_main or is_network) else input.plot_height() // 1.5,
+            input.plot_height() if (
+                        is_main or is_network) else input.plot_height() // 1.5,
             master_instance.axisx,
             master_instance.axisy
         ]
@@ -483,16 +412,16 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button)
-    def ligand_interactions_plot():
-        """Render the ligand interactions plot."""
-        return render_plot(create_ligand_interactions_plot)
+    def sel1_interactions_plot():
+        """Render the sel1 interactions plot."""
+        return render_plot(create_sel1_interactions_plot)
 
     @output
     @render.ui
     @reactive.event(input.plot_button)
-    def receptor_interactions_plot():
-        """Render the receptor interactions plot."""
-        return render_plot(create_receptor_interactions_plot)
+    def sel2_interactions_plot():
+        """Render the sel2 interactions plot."""
+        return render_plot(create_sel2_interactions_plot)
 
     @output
     @render.ui
@@ -542,57 +471,7 @@ def server(input, output, session):
         """Render the network visualization plot."""
         return render_plot(create_network_plot, is_network=True)
 
-    @output
-    @render.ui
-    @reactive.event(input.plot_button, input.show_protein,
-                    input.show_interactions, input.molecule_style,
-                    input.interaction_sphere_size,
-                    input.interaction_line_width,
-                    input.update_frame_button)
-    def molecule_3d_view():
-        """Render the 3D molecular visualization."""
-        try:
-            master_instance = csv.get()
-            if master_instance is None:
-                return ui.p("No data loaded")
 
-            # Get current frame
-            frame_index = input.frame_number() if input.frame_number() is not None else 0
-
-            # Filter interactions by frame
-            df_filtered = filter_interactions_by_frame(csv_filtered.get(),
-                                                       frame_index) if csv_filtered.get() is not None else None
-
-            if df_filtered is None or df_filtered.empty:
-                return ui.p(f"No interactions found for frame {frame_index}")
-
-            view = create_3d_view(
-                df_filtered,
-                master_instance.universe,
-                width=900,
-                height=760,
-                show_protein=input.show_protein(),
-                show_interactions=input.show_interactions(),
-                molecule_style=input.molecule_style(),
-                sphere_size=input.interaction_sphere_size(),
-                line_width=input.interaction_line_width(),
-                frame_index=frame_index
-            )
-
-            if view is None:
-                return ui.p("Failed to create visualization")
-
-            html_content = f"""
-            <div id="3dmol-viewer-{frame_index}" style="width: 100%; height: 600px; position: relative;">
-                <script src="https://3dmol.org/build/3Dmol-min.js"></script>
-                {view._make_html()}
-            </div>
-            """
-            return ui.HTML(html_content)
-
-        except Exception as e:
-            print(f"Error in molecule_3d_view: {e}")
-            return ui.p(f"Error: {str(e)}")
 
     # =========================================================================
     # Checkbox Rendering
@@ -636,7 +515,6 @@ def server(input, output, session):
             ui.update_checkbox_group("selected_annotations", selected=choices)
         else:
             ui.update_checkbox_group("selected_annotations", selected=[])
-
 
 
 app = App(app_ui, server)
