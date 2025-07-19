@@ -43,6 +43,22 @@ def run(mode='production'):
     workflow(args)
 
 
+def execute(cfg_path, mode='production'):
+    """
+    Run the InterMap workflow.
+
+    Args:
+        cfg_path (str): Path to the configuration file containing parameters.
+        mode (str): Mode of operation. Can be 'debug' or 'production'.
+    """
+    # >>>> Detect args
+    config = ConfigManager(mode=mode, cfg_path=cfg_path)
+    args = Namespace(**config.config_args)
+
+    # >>>> Run the InterMap workflow
+    return workflow(args)
+
+
 def workflow(args):
     """
     Entry point to run the InterMap workflow.
@@ -182,7 +198,7 @@ def workflow(args):
         f" Interactions saved in {out_name} (binary format)\n"
         f" Elapsed time: {tot} s")
     print('Testing v0.0.3')
-    return None
+    return self.dict
 
 
 # =============================================================================
