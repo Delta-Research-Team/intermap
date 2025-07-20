@@ -47,9 +47,6 @@ def create_app_ui():
                          href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
                          ),
             ui.tags.script(src="https://cdn.plot.ly/plotly-latest.min.js"),
-            ui.tags.script(src="https://3dmol.org/build/3Dmol-min.js"),
-            ui.tags.script(
-                src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"),
             ui.tags.style("\n".join(CSS_STYLES.values())),
         ),
         create_welcome_section(),
@@ -162,19 +159,6 @@ def create_filters_section():
                                                  value=personal_height * 0.75), ),
                             ui.hr(),
 
-                            # Add Sort Options
-                            ui.h4("Sort Options"),
-                            ui.input_radio_buttons(
-                                "sort_by",
-                                "",
-                                choices={
-                                    "name": "Name",
-                                    "number": "Number",
-                                    "annotation": "Annotation"
-                                },
-                                selected="number",
-                                inline=True,
-                            ),
 
                             ui.div(
                                 {"class": "transpose-button-container"},
@@ -314,7 +298,6 @@ def create_filters_section():
                                         margin: 10px 0;
                                     """
                                 ),
-                                # Actualizar el CSS
                                 ui.tags.style("""
                                     #plot_button:hover {
                                         background-color: #4051b5ff !important;
@@ -347,7 +330,7 @@ def create_plots_section():
                                     ui.h3("", {"style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
                                     ui.div(
                                         {"style": "width: 100%; min-height: 450px;"},
-                                        ui.output_ui("ligand_interactions_plot"),
+                                        ui.output_ui("sel1_interactions_plot"),
                                     ),
                                 ),
                                 ui.div(
@@ -355,7 +338,7 @@ def create_plots_section():
                                     ui.h3("", {"style": "text-align: center; font-family: Roboto; margin-bottom: 20px;"}),
                                     ui.div(
                                         {"style": "width: 100%; min-height: 450px;"},
-                                        ui.output_ui("receptor_interactions_plot"),
+                                        ui.output_ui("sel2_interactions_plot"),
                                     ),
                                 ),
                             ),
@@ -381,118 +364,6 @@ def create_plots_section():
                             ui.output_ui("network_plot")
                         )
                     ),
-
-                    # Tab 6: 3D View with frame selector
-                    ui.nav_panel("3D View",
-                                 ui.div(
-                                     {
-                                         "style": "display: flex; flex-direction: row; width: 100%; gap: 20px; margin: 20px auto;"
-                                     },
-                                     # Control panel
-                                     ui.div(
-                                         {
-                                             "style": "flex: 0 0 250px; padding: 15px; background: #f5f5f5; border-radius: 8px;"
-                                         },
-                                         ui.h4("Visualization Controls", {
-                                             "style": "margin-bottom: 15px; color: #333;"
-                                         }),
-                                         ui.div(
-                                             {
-                                                 "style": "display: flex; flex-direction: column; gap: 15px;"
-                                             },
-                                             # Frame selector
-                                             ui.div(
-                                                 {"class": "control-group"},
-                                                 ui.h5("Frame Selection", {
-                                                     "style": "margin-bottom: 10px; color: #666;"
-                                                 }),
-                                                 ui.input_numeric(
-                                                     "frame_number",
-                                                     "Frame Number:",
-                                                     value=0,
-                                                     min=0,
-                                                     max=999,
-                                                     step=1
-                                                 ),
-                                                 ui.input_action_button(
-                                                     "update_frame_button",
-                                                     "Update Frame",
-                                                     style="margin-top: 10px; width: 100%;"
-                                                 ),
-                                                 ui.div(
-                                                     id="frame_info",
-                                                     style="margin-top: 10px; font-size: 0.9em; color: #666;"
-                                                 )
-                                             ),
-                                             ui.hr(),
-                                             # Display controls
-                                             ui.div(
-                                                 {"class": "control-group"},
-                                                 ui.h5("Display Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"
-                                                 }),
-                                                 ui.input_checkbox(
-                                                     "show_protein",
-                                                     "Show Protein",
-                                                     value=True
-                                                 ),
-                                                 ui.input_checkbox(
-                                                     "show_interactions",
-                                                     "Show Interactions",
-                                                     value=True
-                                                 ),
-                                             ),
-                                             # Style controls
-                                             ui.div(
-                                                 {"class": "control-group"},
-                                                 ui.h5("Style Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"
-                                                 }),
-                                                 ui.input_select(
-                                                     "molecule_style",
-                                                     "Molecule Style",
-                                                     choices={
-                                                         "stick": "Stick",
-                                                         "ball_and_stick": "Ball and Stick",
-                                                         "sphere": "Sphere",
-                                                         "cartoon": "Cartoon",
-                                                         "cartoon_and_stick": "Cartoon and Stick"
-                                                     },
-                                                     selected="cartoon"
-                                                 ),
-                                             ),
-                                             # Size controls
-                                             ui.div(
-                                                 {"class": "control-group"},
-                                                 ui.h5("Size Options", {
-                                                     "style": "margin-bottom: 10px; color: #666;"
-                                                 }),
-                                                 ui.input_slider(
-                                                     "interaction_sphere_size",
-                                                     "Sphere Size",
-                                                     min=0.1,
-                                                     max=2.0,
-                                                     value=0.5
-                                                 ),
-                                                 ui.input_slider(
-                                                     "interaction_line_width",
-                                                     "Line Width",
-                                                     min=0.05,
-                                                     max=0.5,
-                                                     value=0.15
-                                                 ),
-                                             ),
-                                         ),
-                                     ),
-                                     # Viewer panel
-                                     ui.div(
-                                         {
-                                             "style": "flex: 1; min-height: 600px; background: white; border-radius: 8px; overflow: hidden;"
-                                         },
-                                         ui.output_ui("molecule_3d_view")
-                                     ),
-                                 ),
-                                 ),
 
                     id="plot_tabs",
                     selected="Interaction Matrix",
