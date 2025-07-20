@@ -530,13 +530,33 @@ In the following example, we will go through each entry, explaining its purpose 
 
 ## 2. Running InterMap
 
-To run InterMap, you need to have a conda environment set up with InterMap installed. If you have not done this yet,
-please refer to the [installation guide](installation.md) for instructions on installing InterMap using conda.
+InterMap can be run in two ways: through the command line or as a Python module. The command line interface is the most
+straightforward way to run InterMap, while the Python module allows for integration into larger workflows without
+disrupting the automation process.
+
+### 2.1 Command Line Interface
+
+To run InterMap from the command line, you need to have a conda environment set up with InterMap installed. If you have
+not done this yet, please refer to the [installation guide](installation.md) for instructions on installing InterMap
+using conda.
 
 Once you have activated the InterMap's conda environment, execute the following command in your terminal.
 
 ```bash
 intermap <path_to_your_config_file>
+```
+
+### 2.2 Python Module
+
+To run InterMap as a Python module, you can use the following code snippet in your Python scripts:
+
+```python
+from bitarray.util import sc_decode
+from intermap import runner
+
+cfg_path = 'path_to_your_config_file'
+bit_dict = runner.execute(cfg_path=cfg_path)
+bit_dict = {k: sc_decode(v) for k, v in bit_dict.items()}
 ```
 
 ## 3. Output Files

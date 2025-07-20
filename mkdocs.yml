@@ -65,9 +65,9 @@ extra:
 
 nav:
   - Home: index.md
+  - Interactions: interactions.md
   - Installation: installation.md
   - Usage: basic-usage.md
-  - Visualizations (InterVis): intervis.md
+  - InterVis (Visualizations): intervis.md
   - Citing: citing.md
-#  - Arguments Reference: arguments-reference.md
 #  - How it works: how-it-works.md
