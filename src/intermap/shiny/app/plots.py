@@ -9,13 +9,9 @@ from plotly.subplots import make_subplots
 from plotly_resampler import FigureResampler
 
 from intermap.shiny.app.css import all_interactions_colors
-
-from intermap.shiny.app.icsv import process_heatmap_data, process_prevalence_data, process_time_series_data, process_lifetime_data
-from rdkit.sping.colors import white
-import networkx as nx
-from pyvis.network import Network
-
 from intermap.shiny.app.graph import InterNetwork
+from intermap.shiny.app.icsv import process_heatmap_data, \
+    process_lifetime_data, process_prevalence_data, process_time_series_data
 
 
 def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
@@ -656,8 +652,8 @@ def create_network_plot(df, width, height, axisx, axisy):
     network = InterNetwork(
         master_df=df,
         plot_size=(width, height),
-        node_sizes=(20, 50),
-        edge_widths=(5, 15))
+        node_sizes=(5, 50),
+        edge_widths=(5, 25))
 
     return network.create_network_plot()
 
@@ -667,7 +663,6 @@ def create_network_plot(df, width, height, axisx, axisy):
 # 3D AREA
 ###############################################################################
 
-import MDAnalysis as mda
 from MDAnalysis.coordinates.PDB import PDBWriter
 import tempfile
 import os

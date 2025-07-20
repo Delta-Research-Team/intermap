@@ -121,20 +121,20 @@ class InterNetwork:
         net.set_options("""
         {
             "nodes": {
-                "font": {"size": 12}
+                "font": {"size": 22}
             },
             "edges": {
-                "font": {"size": 12},
+                "font": {"size": 22},
                 "smooth": {"type": "continuous"}
             },
             "physics": {
                 "enabled": true,
                 "forceAtlas2Based": {
-                    "gravitationalConstant": -100,
-                    "centralGravity": 0.001,
+                    "gravitationalConstant": -200,
+                    "centralGravity": 0.005,
                     "springLength": 200,
-                    "springConstant": 0.08,
-                    "avoidOverlap": 0.5
+                    "springConstant": 0.5,
+                    "avoidOverlap": 0.8
                 },
                 "solver": "forceAtlas2Based",
                 "minVelocity": 0.75,

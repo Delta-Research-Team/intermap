@@ -126,7 +126,7 @@ def parse_pickle(pickle):
 
     # Add the timeseries and the prevalence column
     df['timeseries'] = bit_dict.values()
-    #df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+    df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
     df['prevalence'] = df['timeseries'].apply(
         lambda x: x.count() / len(x) * 100)
     df['timeseries'] = df['timeseries'].apply(ba.to01)
@@ -695,8 +695,8 @@ def process_lifetime_data(df):
 # =============================================================================
 #
 # =============================================================================
-# pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
-# cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
-# self = CSVFilter(pickle, cfg)
+pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
+cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
+self = CSVFilter(pickle, cfg)
 #self.universe
 #self.master.head()
