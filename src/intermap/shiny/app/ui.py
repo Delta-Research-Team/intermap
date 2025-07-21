@@ -241,8 +241,9 @@ def create_filters_section():
                                     });
 
                                     Shiny.addCustomMessageHandler('refresh-plots', function(message) {
-                                        var plotTabs = ['interaction_plot', 'ligand_interactions_plot', 
-                                                      'receptor_interactions_plot', 'interactions_over_time_plot'];
+                                        var plotTabs = ['interaction_plot', 'sel1_interactions_plot', 
+                                                        'sel2_interactions_plot', 'interactions_over_time_plot', 
+                                                        'lifetime_plot', 'network_plot'];
                                         plotTabs.forEach(function(plotId) {
                                             if (Shiny.shinyapp.$bindings[plotId]) {
                                                 Shiny.shinyapp.$bindings[plotId].invalidate();
@@ -370,6 +371,16 @@ def create_plots_section():
                 ),
             ),
         ),
+        ui.tags.script("""
+            $(document).ready(function() {
+                $(document).on('click', 'a[data-value="Network"]', function() {
+                    setTimeout(function() {
+                        $("#plot_button").click();
+                }, 100);
+                });
+            });
+        """)
+
     )
 
 
@@ -392,7 +403,7 @@ def create_footer():
                 z-index: 1000;
             """
         },
-        # First section - Intervis Tutorials
+        # First section - Docs & Tutorials
         ui.a(
             ui.div(
                 {
@@ -408,43 +419,17 @@ def create_footer():
                         font-size: 18px;
                     """
                 },
-                ui.tags.i({"class": "fas fa-fingerprint"}),
-                "Intervis Tutorials",
-            ),
-            href="https://rglez.github.io/intermap/tutorials",
-            target="_blank",
-            style="text-decoration: none;",
-        ),
-        # Separator
-        ui.div("|", {"style": "color: white; margin: 0 15px;"}),
-
-        # Second section - Documentation
-        ui.a(
-            ui.div(
-                {
-                    "style": """
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        color: white;
-                        text-decoration: none;
-                        transition: color 0.3s ease;
-                        flex: 1;
-                        justify-content: center;
-                        font-size: 18px;
-                    """
-                },
-                ui.tags.i({"class": "fas fa-book-open"}),  # Open book icon
-                "InterMap's Documentation",
+                ui.tags.i({"class": "fas fa-book-open"}),
+                "Docs & Tutorials",
             ),
             href="https://rglez.github.io/intermap/",
             target="_blank",
             style="text-decoration: none;",
         ),
-        # Separator
+
         ui.div("|", {"style": "color: white; margin: 0 15px;"}),
 
-        # Third section - Intermap Paper
+        # Second section - InterMap's Paper
         ui.a(
             ui.div(
                 {
@@ -460,17 +445,16 @@ def create_footer():
                         font-size: 18px;
                     """
                 },
-                ui.tags.i({"class": "fas fa-scroll"}),  # Paper scroll icon
+                ui.tags.i({"class": "fas fa-scroll"}),
                 "InterMap's Paper",
             ),
             href="https://scholar.google.com/citations?user=kSAc11cAAAAJ&hl=es&oi=ao",
             target="_blank",
             style="text-decoration: none;",
         ),
-        # Separator
         ui.div("|", {"style": "color: white; margin: 0 15px;"}),
 
-        # Fourth section - GitHub
+        # Third section - Delta-Research
         ui.a(
             ui.div(
                 {
@@ -486,14 +470,13 @@ def create_footer():
                         font-size: 18px;
                     """
                 },
-                ui.tags.i({"class": "fab fa-github"}),  # GitHub icon
+                ui.tags.i({"class": "fab fa-github"}),
                 "Delta-Research-Team/intermap",
             ),
             href="https://github.com/Delta-Research-Team/intermap",
             target="_blank",
             style="text-decoration: none;",
         ),
-        # Font Awesome
         ui.tags.link(
             rel="stylesheet",
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
