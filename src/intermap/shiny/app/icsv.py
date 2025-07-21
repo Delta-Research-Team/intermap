@@ -695,8 +695,8 @@ def process_lifetime_data(df):
 # =============================================================================
 #
 # =============================================================================
-pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
-cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
-self = CSVFilter(pickle, cfg)
+# pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
+# cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
+# self = CSVFilter(pickle, cfg)
 #self.universe
 #self.master.head()
