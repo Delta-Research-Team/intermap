@@ -131,14 +131,15 @@ def plot_img(ax, img_path, title):
 # =============================================================================
 #
 # =============================================================================
-user = os.getlogin()
+user = os.getenv('USER')
 img_dir = f'/home/{user}/RoyHub/intermap/scripts/description'
 images = {basename(x): x for x in gnl.recursive_finder('*.png', img_dir)}
-out_dir = f'/home/{user}/RoyHub/intermap/scripts/description'
+out_dir = f'/home/{user}/RoyHub/intermap/scripts/description2'
 
 # =============================================================================
 #
 # =============================================================================
+os.makedirs(out_dir, exist_ok=True)
 import matplotlib.colors as colors
 
 df = pd.DataFrame.from_dict(systems)

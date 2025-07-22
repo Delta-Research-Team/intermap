@@ -12,7 +12,7 @@ intervis
 
 This will automatically launch the InterVis server and open your default web browser with the app's interface.
 
-![Image title](assets/global_panel.png){width="100%"}
+![Image title](assets/global_panel.png){width="75%"}
 
 /// caption
 InterVis interface is composed of three main areas: the **Control Panel** (right side), the **Visualization Panel** (
@@ -31,7 +31,7 @@ The InterVis interface consists of three main areas:
 - The ``Footer`` (bottom bar) provides links to the InterMap's documentation and tutorials, its scientific paper, and
   the GitHub repository.
 
-## 2. Uploading Your Data
+## 2. Uploading Data
 
 InterVis needs two files before attempting to visualize the interactions: the `.PICKLE` file containing the interaction
 data and the `.CFG` file with the configuration parameters used during the InterMap analysis. You can upload these files
@@ -40,7 +40,7 @@ using the ``Control Panel`` on the right side of the interface.
 - Click on `Browse PICKLE` / `Browse Config` to upload these file. Alternatively, you can drag and drop them into the
   designated area.
 
-## 3. Configuring Your Visualizations
+## 3. Configuring Visualizations
 
 Once the files are uploaded, you can configure the visualizations that will render in the different tabs of the
 ``Visualization Panel`` using the following sections under the  ``Control Panel``.
@@ -114,7 +114,7 @@ Once the files are uploaded, you can configure the visualizations that will rend
 
     - **Transpose Button** to swap X/Y axes — useful for alternate views
 
-??? note "**Prevalence**"
+??? note "**Interactions Prevalence**"
 
     In this Tab, the prevalence of interactions is visualized as a bar chart. In the top panel, the interactions of Selection 1 are shown, while the bottom panel focuses on Selection 2.
     
@@ -142,92 +142,86 @@ Once the files are uploaded, you can configure the visualizations that will rend
       - Prevalence: Percentage of frames with this interaction
       - Annotation: Custom annotation for the interaction
 
+??? note "**Interaction Lifetimes**"
 
-### 4.3. Tab 3: Life Time
+    Violin plots representing the distribution of interaction lifetimes.
 
-Violin plots representing the distribution of interaction lifetimes.
+    ![Image title](assets/Tab_3.png){width="100%"}
 
-![Interaction Network](assets/Tab_3.png){ width="100%" }
+    /// caption
+    The Life Time tab presents violin plots displaying the distribution of interaction lifetimes across the trajectory.
+    ///
 
 
-**`Plot Elements:`**
+    **`Interpretation Guide:`**
 
-- **Violin Shape**: Distribution of durations
-- **Width**: Relative frequency
-- **Color**: Interaction type
+    - **X-axis**: Interaction pairs (Selection 1 – Selection 2)
 
-**`Internal Markers:`**
+    - **Y-axis**: Duration of interactions (in frames)
 
-- **Center line**: Median
-- **Box**: Interquartile range
-- **Dots**: Outliers
+    - **Violin Shape**: Distribution of durations
+        - Wider sections indicate more frequent durations
+        - Narrower sections indicate less frequent durations
+    
+    - **Width**: Relative frequency of interaction durations
 
-**`Interpretation:`**
+    - **Color**: Interaction type
 
-- Wide violins = variable interactions
-- Narrow violins = stable interactions
-- Outliers = rare yet stable periods
-
-!!! info "Hover"
-
+    - **Hover**:
     - Pair: Selection 1 – Selection 2
-    - Interaction: Type
-    - Prevalence: XX.X%
-    - Lifetime: Frames
-    - Frame Range: Start–End
+    - Interaction: Type of interaction
+    - Prevalence: Percentage of frames with this interaction
+    - Lifetime: Number of frames the interaction was present
+    - Frame Range: Start and end frames where the interaction was observed
+
+??? note "**Time Series**"
+
+    Time series plot showing interaction presence over time.
+
+    ![Image title](assets/Tab_4.png){width="100%"}
+
+    /// caption
+    The **Time Series** tab displays a time series plot showing the presence of interactions over time.
+    ///
 
 
-### 4.4. Tab 4: Time Series
+    **`Interpretation Guide:`**
 
-Tracks the occurrence of interactions over time.
+    1. **Main Panel**
+        - **X-axis**: Frame number
+        - **Y-axis**: Interaction pairs
+        - **Dots**: Interaction presence
 
-![Interaction Network](assets/Tab_4.png){ width="100%" }
+    2. **Top Histogram**
+        - Number of interactions per frame
 
-**`Components:`**
+    3. **Side Histogram**
+        - Prevalence of interactions across frames
 
-1. **Main Panel**
-    - **X-axis**: Frame number
-    - **Y-axis**: Interaction pairs
-    - **Dots**: Interaction present
-2. **Top Histogram**
-    - Number of interactions per frame
-3. **Side Histogram**
-    - Total prevalence per pair
 
-**`Interpretation:`**
-
-- Identify synchronous events
-- Track stable vs. transient interactions
-- Reveal dynamic behavior
-
-!!! info "Hover"
-
+    **Hover**:
     - Frame: Frame number
     - Selection Pair: Interacting residues
-    - Interaction: Type
-    - Prevalence: Global %
+    - Interaction: Type of interaction
+    - Prevalence: Percentage of frames with this interaction
+
+??? note "**Network**"
+
+    This tab visualizes the interaction network between two selections, where nodes represent components and edges represent interactions.
+
+    ![Image title](assets/Tab_5.png){width="100%"}
+    /// caption
+    The **Network** tab visualizes the interaction network between two selections, where nodes represent components and edges represent interactions.
+    ///
 
 
-### 4.5. Tab 5: Network
+    **`Interpretation Guide:`**
 
-Interactive molecular network view.
+    - **Nodes**:
+        - 🔵 Blue = Selection 1 components
+        - 🔴 Red = Selection 2 components
 
-![Interaction Network](assets/Tab_5.png){ width="100%" }
-
-
-**`Elements:`**
-
-- **Nodes**:
-    - 🔵 Blue = Selection 1 components
-    - 🔴 Red = Selection 2 components
-- **Links**:
-    - **Color**: Interaction type
-    - **Number**: Prevalence
-    - **Length**: Inversely related to prevalence
-
-**`Features:`**
-
-- Drag & rearrange nodes
-- Zoom and pan
-- Hover to reveal details
-- Automatic layout adjustments
+    - **Links**:
+          - **Color**: Interaction type
+          - **Number**: Prevalence
+          - **Length**: Inversely related to prevalence

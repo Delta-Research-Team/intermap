@@ -57,7 +57,7 @@ To update InterMap to the latest version:
 cd intermap
 
 # Pull the latest changes
-git pull origin main
+git pull origin master
 
 # Update the environment if needed
 conda env update -f environment.yml
