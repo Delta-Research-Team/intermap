@@ -134,7 +134,7 @@ def plot_img(ax, img_path, title):
 user = os.getenv('USER')
 img_dir = f'/home/{user}/RoyHub/intermap/scripts/description'
 images = {basename(x): x for x in gnl.recursive_finder('*.png', img_dir)}
-out_dir = f'/home/{user}/RoyHub/intermap/scripts/description2'
+out_dir = f'/home/{user}/RoyHub/intermap/scripts/description'
 
 # =============================================================================
 #
@@ -148,16 +148,17 @@ norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256)
 
 # >>>> Layout
 fig = plt.figure(constrained_layout=False, figsize=(14, 8), dpi=600)
-gs = fig.add_gridspec(2, 4, hspace=0.2, wspace=0, width_ratios=[1, 1, 1, 1],
+gs = fig.add_gridspec(2, 5, hspace=0.2, wspace=0, width_ratios=[1, 1, 1, 1, 1],
                       height_ratios=[1, 1])
 
 mpro = fig.add_subplot(gs[0, 0])
 igg = fig.add_subplot(gs[0, 1], sharey=mpro)
 p53 = fig.add_subplot(gs[0, 2], sharey=mpro)
 nsp13 = fig.add_subplot(gs[0, 3], sharey=mpro)
-pao1 = fig.add_subplot(gs[1, 0])
-spike = fig.add_subplot(gs[1, 1], sharey=pao1)
-ace2 = fig.add_subplot(gs[1, 2], sharey=pao1)
+pao1 = fig.add_subplot(gs[0, 4])
+spike = fig.add_subplot(gs[1, 0], sharey=pao1)
+ace2 = fig.add_subplot(gs[1, 1], sharey=pao1)
+mdlr = fig.add_subplot(gs[1, 2], sharey=mpro)
 nucleosome = fig.add_subplot(gs[1, 3], sharey=pao1)
 
 plot_img(mpro, images['mpro1.png'], 'MPRO')
@@ -167,6 +168,7 @@ plot_img(nsp13, images['nsp13.png'], 'NSP13')
 plot_img(pao1, images['PAO1_prot.png'], 'PAO1')
 plot_img(spike, images['spike.png'], 'Spike')
 plot_img(ace2, images['ACE2.png'], 'ACE2-RBD')
+plot_img(mdlr, images['mdlr.png'], 'Topoiso_I-CPT')
 plot_img(nucleosome, images['nucleosome.png'], 'Nucleosome')
 fig.align_titles()
 # plt.subplots_adjust(left=0, right=1, top=1, bottom=0, hspace=0, wspace=0)
