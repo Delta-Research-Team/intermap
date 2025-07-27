@@ -1,6 +1,6 @@
 """
 Tab 3: Lifetime Plot Implementation
-Contains the LifetimePlot class for creating interaction lifetime violin plots.
+Contains the LifetimePlot class for creating interaction lifetime box plots.
 """
 
 import numpy as np
@@ -11,12 +11,13 @@ from intermap.intervis.app.css import all_interactions_colors
 
 
 def process_lifetime_data(df):
-    """Process data for lifetime violin plot with frame ranges."""
+    """Process data for lifetime box plot with frame ranges."""
     # Diccionario de abreviaciones
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ',
+        'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -67,7 +68,7 @@ def process_lifetime_data(df):
 
 class LifetimePlot:
     """
-    A class to create interactive lifetime violin plots for molecular interactions.
+    A class to create interactive lifetime box plots for molecular interactions.
     """
 
     def __init__(self, df, plot_size=(800, 600), show_prevalence=False):
@@ -95,12 +96,12 @@ class LifetimePlot:
         self.processed_data = process_lifetime_data(self.df)
         return self.processed_data
 
-    def create_violin_traces(self):
+    def create_box_traces(self):
         """
-        Create violin traces for each interaction type.
+        Create box traces for each interaction type.
 
         Returns:
-            list: List of plotly violin traces
+            list: List of plotly box traces
         """
         if self.processed_data is None or self.processed_data.empty:
             return []
@@ -115,44 +116,35 @@ class LifetimePlot:
         start_frames = self.processed_data['start_frame'].values
         end_frames = self.processed_data['end_frame'].values
 
-        # Keep track of shown interactions for legend
         shown_interactions = set()
 
-        # Create violin plot for each interaction type
         unique_interactions = np.unique(interactions)
         for interaction_name in unique_interactions:
-            # Create mask using numpy for better performance
             mask = interactions == interaction_name
             show_legend = interaction_name not in shown_interactions
             shown_interactions.add(interaction_name)
 
-            trace = go.Violin(
+            trace = go.Box(
                 x=pairs[mask],
                 y=lifetimes[mask],
                 name=interaction_name,
-                fillcolor=all_interactions_colors[interaction_name],
-                line=dict(width=2,
-                          color=all_interactions_colors[interaction_name]),
-                meanline=dict(visible=True, color='rgba(0,0,0,0.5)', width=2),
-                points='outliers',
-                pointpos=0,
                 marker=dict(
-                    color='rgba(50,50,50,0.7)',
+                    color=all_interactions_colors[interaction_name],
+                    opacity=0.7,
                     size=4,
-                    symbol='circle'
+                    outliercolor='rgba(50,50,50,0.7)'
                 ),
-                box=dict(visible=True, width=0.1),
-                opacity=0.7,
-                side='both',
-                width=0.7,
-                spanmode='soft',
-                scalemode='width',
-                hoverlabel=dict(
-                    bgcolor=all_interactions_colors[interaction_name],
-                    font_size=14,
-                    font_family="Roboto"
+                line=dict(
+                    color=all_interactions_colors[interaction_name],
+                    width=2
                 ),
-                # Include start and end frames in customdata
+                boxmean=True,
+                notched=False,
+                boxpoints='outliers',
+                jitter=0.3,
+                whiskerwidth=0.7,
+                fillcolor='rgba(255,255,255,0.5)',
+
                 customdata=np.column_stack((
                     prevalences[mask],
                     start_frames[mask],
@@ -167,7 +159,12 @@ class LifetimePlot:
                     "<extra></extra>"
                 ),
                 showlegend=show_legend,
-                legendgroup=interaction_name
+                legendgroup=interaction_name,
+                hoverlabel=dict(
+                    bgcolor=all_interactions_colors[interaction_name],
+                    font_size=14,
+                    font_family="Roboto"
+                ),
             )
             traces.append(trace)
 
@@ -195,7 +192,7 @@ class LifetimePlot:
             'showlegend': True,
             'legend': {
                 'title': {'text': "<b>Interaction Types</b>",
-                         'font': {'family': "Roboto", 'size': 14}},
+                          'font': {'family': "Roboto", 'size': 14}},
                 'yanchor': "top",
                 'y': 0.99,
                 'xanchor': "left",
@@ -206,7 +203,7 @@ class LifetimePlot:
             },
             'paper_bgcolor': 'white',
             'plot_bgcolor': 'white',
-            'violinmode': 'overlay',
+            'boxmode': 'group',
             'margin': {'l': 50, 'r': 150, 't': 50, 'b': 50},
             'xaxis': {
                 'title': "<b>Selection Pairs</b>",
@@ -223,17 +220,19 @@ class LifetimePlot:
                 'title': "<b>Interaction Lifetime (frames)</b>",
                 'title_font': {'family': "Roboto", 'size': 16},
                 'tickfont': {'family': "Roboto", 'size': 14},
-                'showgrid': False,
+                'showgrid': True,
+                'gridcolor': 'rgba(200,200,200,0.2)',
                 'zeroline': False,
                 'linewidth': 1.5,
                 'linecolor': '#d3d3d3',
-                'mirror': True
+                'mirror': True,
+                'range': [0, None]
             }
         }
 
     def create_lifetime_plot(self, axisx, axisy, show_prevalence=False):
         """
-        Create the complete lifetime plot.
+        Create the complete lifetime box plot.
 
         Args:
             axisx (str): X-axis title
@@ -254,9 +253,9 @@ class LifetimePlot:
 
         fig = go.Figure()
 
-        # Add violin traces
-        violin_traces = self.create_violin_traces()
-        for trace in violin_traces:
+        # Add box traces
+        box_traces = self.create_box_traces()
+        for trace in box_traces:
             fig.add_trace(trace)
 
         # Update layout
@@ -264,7 +263,6 @@ class LifetimePlot:
         fig.update_layout(layout)
 
         return fig
-
 
 # =============================================================================
 #

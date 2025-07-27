@@ -41,3 +41,10 @@ class BaseTab:
 # =============================================================================
 #
 # =============================================================================
+
+#pickle = '/home/rglez/RoyHub/intermap/data/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
+#cfg = '/home/rglez/RoyHub/intermap/data/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
+#csv_obj = CSVFilter(pickle, cfg)
+#master_df = csv_obj.master
+
+#self = HeatMap(master_df, width=800, height=600, show_prevalence=True)
