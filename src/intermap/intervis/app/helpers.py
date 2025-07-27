@@ -4,8 +4,9 @@ Helper functions for the InterMap Visualizations app.
 """
 
 import base64
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 
 def find_topology_file(temp_path, original_path):

@@ -4,7 +4,7 @@ from collections import defaultdict
 import networkx as nx
 from pyvis.network import Network
 
-from intermap.shiny.app.css import all_interactions_colors as inter_colors
+from intermap.intervis.app.css import all_interactions_colors as inter_colors
 
 
 def normalize_to_range(values, target_min=0, target_max=1):

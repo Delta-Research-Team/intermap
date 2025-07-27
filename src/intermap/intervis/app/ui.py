@@ -4,8 +4,8 @@ User interface components for the InterMap Visualizations app.
 from screeninfo import get_monitors
 from shiny import ui
 
-from intermap.shiny.app.css import CSS_STYLES
-from intermap.shiny.app.helpers import get_image_base64
+from intermap.intervis.app.css import CSS_STYLES
+from intermap.intervis.app.helpers import get_image_base64
 
 for m in get_monitors():
     personal_width = m.width

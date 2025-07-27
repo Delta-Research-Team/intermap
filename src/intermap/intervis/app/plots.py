@@ -5,11 +5,11 @@ Plotting components for the InterMap Visualizations app.
 import pandas as pd
 import plotly.graph_objects as go
 
-from intermap.shiny.app.Tab_1 import HeatmapPlot
-from intermap.shiny.app.Tab_2 import PrevalencePlot
-from intermap.shiny.app.Tab_3 import LifetimePlot
-from intermap.shiny.app.Tab_4 import TimeSeriesPlot
-from intermap.shiny.app.Tab_5 import InterNetwork
+from intermap.intervis.tabs.Tab_1 import HeatmapPlot
+from intermap.intervis.tabs.Tab_2 import PrevalencePlot
+from intermap.intervis.tabs.Tab_3 import LifetimePlot
+from intermap.intervis.tabs.Tab_4 import TimeSeriesPlot
+from intermap.intervis.tabs.Tab_5 import InterNetwork
 
 
 ###############################################################################

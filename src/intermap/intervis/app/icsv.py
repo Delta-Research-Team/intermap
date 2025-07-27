@@ -9,7 +9,7 @@ import pandas as pd
 import rgpack.generals as gnl
 from bitarray import bitarray as ba, util as bu
 
-from intermap.shiny.app.css import all_interactions_colors
+from intermap.intervis.app.css import all_interactions_colors
 
 pd.options.mode.chained_assignment = None
 
@@ -17,6 +17,14 @@ errors = {
     'noTopo':
         'Topology not found. Please manually copy the topology file used to run '
         'InterMap to the same directory as the csv file being loaded.'}
+
+interaction_priority = {
+    'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
+    'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
+    'PiAnion': 9, 'PiStacking': 10, 'FaceToFace': 11, 'EdgeToFace': 12,
+    'XBDonor': 13, 'XBAcceptor': 14, 'Hydrophobic': 15, 'VdWContact': 16,
+    'CloseContact': 17, 'WaterBridge': 18
+}
 
 
 def transpose(df):
@@ -132,7 +140,6 @@ def parse_pickle(pickle):
     df['timeseries'] = df['timeseries'].apply(ba.to01)
 
     return df, resolution
-
 
 
 def parse_cfg(cfg):
@@ -352,86 +359,6 @@ class CSVFilter:
 # Funtions to process plots
 # =========================================================================
 
-"""
-def process_heatmap_data(df, sort_choice=None):
-
-    interaction_priority = {
-        'Anionic': 1, 'Cationic': 2, 'HBDonor': 3, 'HBAcceptor': 4,
-        'MetalDonor': 5, 'MetalAcceptor': 6, 'PiCation': 7, 'CationPi': 8,
-        'PiStacking': 9, 'FaceToFace': 10, 'EdgeToFace': 11, 'XBDonor': 12,
-        'XBAcceptor': 13, 'Hydrophobic': 14, 'VdWContact': 15,
-        'CloseContact': 16, 'WaterBridge': 17
-    }
-
-    df['priority'] = df['interaction_name'].map(interaction_priority)
-
-    # Primero aplicamos sortby si se especifica
-    if sort_choice is not None:
-        df = sortby(df, sort_choice)
-
-    # Luego procesamos por prioridad y prevalencia
-    priority_df = (df.sort_values(['priority', 'prevalence'],
-                                  ascending=[True, False])
-                   .groupby(['sel1', 'sel2']).first().reset_index())
-
-    # Obtenemos el orden único de sel1 y sel2 del DataFrame ordenado
-    unique_sel1 = df['sel1'].unique()
-    unique_sel2 = df['sel2'].unique()
-
-    # Creamos los pivot_tables manteniendo el orden
-    pivot_interaction = pd.pivot_table(priority_df,
-                                       values='interaction_name',
-                                       index='sel2',
-                                       columns='sel1',
-                                       aggfunc='first',
-                                       fill_value='')
-
-    # Reordenamos explícitamente usando el orden del DataFrame ordenado
-    pivot_interaction = pivot_interaction.reindex(index=unique_sel2,
-                                                  columns=unique_sel1)
-
-    # Hacemos lo mismo para los demás pivots
-    pivot_prevalence = pd.pivot_table(priority_df,
-                                      values='prevalence',
-                                      index='sel2',
-                                      columns='sel1',
-                                      aggfunc='first',
-                                      fill_value="")
-    pivot_prevalence = pivot_prevalence.reindex(index=unique_sel2,
-                                                columns=unique_sel1)
-
-    pivot_prevalence_rounded = pivot_prevalence.round(1).astype(str)
-
-    pivot_note1 = pd.pivot_table(priority_df,
-                                 values='note1',
-                                 index='sel2',
-                                 columns='sel1',
-                                 aggfunc='first',
-                                 fill_value="")
-    pivot_note1 = pivot_note1.reindex(index=unique_sel2, columns=unique_sel1)
-
-    pivot_note2 = pd.pivot_table(priority_df,
-                                 values='note2',
-                                 index='sel2',
-                                 columns='sel1',
-                                 aggfunc='first',
-                                 fill_value="")
-    pivot_note2 = pivot_note2.reindex(index=unique_sel2, columns=unique_sel1)
-
-    present_interactions = sorted(priority_df['interaction_name'].unique(),
-                                  key=lambda x: interaction_priority[x])
-
-    return {
-        'pivot_interaction': pivot_interaction,
-        'pivot_prevalence': pivot_prevalence,
-        'pivot_prevalence_rounded': pivot_prevalence_rounded,
-        'pivot_note1': pivot_note1,
-        'pivot_note2': pivot_note2,
-        'present_interactions': present_interactions
-    }
-
-"""
-
 
 def process_heatmap_data(df):
     interaction_priority = {
@@ -591,7 +518,8 @@ def process_time_series_data(df):
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'CationPi': 'Cπ', 'PiAnion': 'πA', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'CationPi': 'Cπ', 'PiAnion': 'πA',
+        'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -640,7 +568,8 @@ def process_lifetime_data(df):
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ',
+        'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -691,12 +620,11 @@ def process_lifetime_data(df):
 
     return pd.DataFrame(data_list)
 
-
 # =============================================================================
 #
 # =============================================================================
-#pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
-#cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
-#self = CSVFilter(pickle, cfg)
-#self.universe
-#self.master.head()
+# pickle = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.pickle'
+# cfg = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/tutorial-mayank/outputs/ligs-channel_InterMap.cfg'
+# self = CSVFilter(pickle, cfg)
+# self.universe
+# self.master.head()

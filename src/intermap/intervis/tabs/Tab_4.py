@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from plotly_resampler import FigureResampler
 
-from intermap.shiny.app.css import all_interactions_colors
+from intermap.intervis.app.css import all_interactions_colors
 
 
 def process_time_series_data(df):

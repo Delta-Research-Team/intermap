@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from rgpack import generals as gnl
 
-import commonplots as cmp
+from scripts import commonplots as cmp
 
 
 def plot_box(ax, data, positions, color):

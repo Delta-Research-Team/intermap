@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from intermap.shiny.app.css import all_interactions_colors
+from intermap.intervis.app.css import all_interactions_colors
 
 """
 def process_prevalence_data2(df, selection_column, sort_by='note'):

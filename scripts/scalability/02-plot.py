@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from rgpack import generals as gnl
 
-import intermap.commonplots as cmp
+import scripts.commonplots as cmp
 
 
 def parse_performance(txt):
