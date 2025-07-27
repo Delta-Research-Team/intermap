@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from intermap.shiny.app.css import all_interactions_colors
+from intermap.intervis.app.css import all_interactions_colors
 
 
 def process_lifetime_data(df):
@@ -16,7 +16,8 @@ def process_lifetime_data(df):
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
-        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ', 'FaceToFace': 'F2F',
+        'PiCation': 'πC', 'PiAnion': 'πA', 'CationPi': 'Cπ',
+        'FaceToFace': 'F2F',
         'EdgeToFace': 'E2F', 'MetalDonor': 'MD', 'MetalAcceptor': 'MA',
         'VdWContact': 'VdW', 'CloseContact': 'CC', 'Hydrophobic': 'Hyd',
         'XBAcceptor': 'XBA', 'XBDonor': 'XBD'
@@ -115,13 +116,10 @@ class LifetimePlot:
         start_frames = self.processed_data['start_frame'].values
         end_frames = self.processed_data['end_frame'].values
 
-        # Keep track of shown interactions for legend
         shown_interactions = set()
 
-        # Create box plot for each interaction type
         unique_interactions = np.unique(interactions)
         for interaction_name in unique_interactions:
-            # Create mask using numpy for better performance
             mask = interactions == interaction_name
             show_legend = interaction_name not in shown_interactions
             shown_interactions.add(interaction_name)
@@ -140,13 +138,13 @@ class LifetimePlot:
                     color=all_interactions_colors[interaction_name],
                     width=2
                 ),
-                boxmean=True,  # Muestra la media como una línea punteada
-                notched=False,  # Desactiva las muescas en el boxplot
-                boxpoints='outliers',  # Solo muestra outliers como puntos
-                jitter=0.3,  # Añade algo de dispersión para evitar superposiciones
+                boxmean=True,
+                notched=False,
+                boxpoints='outliers',
+                jitter=0.3,
                 whiskerwidth=0.7,
                 fillcolor='rgba(255,255,255,0.5)',
-                # Include start and end frames in customdata
+
                 customdata=np.column_stack((
                     prevalences[mask],
                     start_frames[mask],
@@ -194,7 +192,7 @@ class LifetimePlot:
             'showlegend': True,
             'legend': {
                 'title': {'text': "<b>Interaction Types</b>",
-                         'font': {'family': "Roboto", 'size': 14}},
+                          'font': {'family': "Roboto", 'size': 14}},
                 'yanchor': "top",
                 'y': 0.99,
                 'xanchor': "left",
@@ -205,7 +203,7 @@ class LifetimePlot:
             },
             'paper_bgcolor': 'white',
             'plot_bgcolor': 'white',
-            'boxmode': 'group',  # Agrupa los boxplots por categorías
+            'boxmode': 'group',
             'margin': {'l': 50, 'r': 150, 't': 50, 'b': 50},
             'xaxis': {
                 'title': "<b>Selection Pairs</b>",
@@ -224,11 +222,11 @@ class LifetimePlot:
                 'tickfont': {'family': "Roboto", 'size': 14},
                 'showgrid': True,
                 'gridcolor': 'rgba(200,200,200,0.2)',
-                'zeroline': False,  # No mostrar la línea del cero
+                'zeroline': False,
                 'linewidth': 1.5,
                 'linecolor': '#d3d3d3',
                 'mirror': True,
-                'range': [0, None]  # Forzar que el eje Y comience en 0
+                'range': [0, None]
             }
         }
 
@@ -265,7 +263,6 @@ class LifetimePlot:
         fig.update_layout(layout)
 
         return fig
-
 
 # =============================================================================
 #
