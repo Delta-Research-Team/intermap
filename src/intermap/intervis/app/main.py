@@ -19,7 +19,6 @@ from .plots import (create_interactions_over_time_plot,
                     create_lifetime_plot, create_network_plot, create_plot,
                     create_sel1_interactions_plot,
                     create_sel2_interactions_plot)
-
 from .ui import app_ui
 
 

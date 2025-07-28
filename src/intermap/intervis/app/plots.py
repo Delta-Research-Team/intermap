@@ -5,7 +5,7 @@ Plotting components for the InterMap Visualizations app.
 import pandas as pd
 import plotly.graph_objects as go
 
-from intermap.intervis.tabs.Tab_1 import HeatmapPlot
+from intermap.intervis.tabs.heatmap import HeatMap
 from intermap.intervis.tabs.Tab_2 import PrevalencePlot
 from intermap.intervis.tabs.Tab_3 import LifetimePlot
 from intermap.intervis.tabs.Tab_4 import TimeSeriesPlot
@@ -20,7 +20,7 @@ def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
     if df.empty:
         return None
 
-    heatmap = HeatmapPlot(
+    heatmap = HeatMap(
         df=df,
         plot_size=(width, height),
         show_prevalence=show_prevalence)
