@@ -12,7 +12,6 @@ from intermap.intervis.app.css import all_interactions_colors
 
 def process_lifetime_data(df):
     """Process data for lifetime box plot with frame ranges."""
-    # Diccionario de abreviaciones
     interaction_abbreviations = {
         'HBDonor': 'HBD', 'HBAcceptor': 'HBA', 'Cationic': 'Cat',
         'Anionic': 'Ani', 'WaterBridge': 'WB', 'PiStacking': 'πS',
