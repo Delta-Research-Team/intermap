@@ -78,7 +78,7 @@ def detect_config_path(mode='debug'):
         config_path = sys.argv[1]
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/NUC-STRESS-RGA/paper-imaps/DrHU-full-bigbox/DrHU-full-bigbox.cfg'
+        config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/residue-12-50.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -194,25 +194,29 @@ class Config:
             'selection_2': {'dtype': str, 'values': None},
             'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
             'interactions': {'dtype': str, 'values': None},
-            'export_csv': {'dtype': str, 'values': {'True', 'False'}},
+            # 'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
             'annotations': {'dtype': str, 'values': None},
-            'format': {'dtype': str, 'values': {'simple', 'extended'}}},
+            # 'format': {'dtype': str, 'values': {'simple', 'extended'}}
+        },
 
         # ____ cutoffs
         'cutoffs': None
     }
 
-    def __init__(self, mode='production'):
+    def __init__(self, mode='production', cfg_path=None):
 
         # Print the header
         print_colored_ascii()
 
         # Detect config
-        self.config_path = cmn.check_path(detect_config_path(mode=mode))
-        self.legal_params = self.allowed_parameters
+        if cfg_path is not None:
+            self.config_path = cmn.check_path(cfg_path)
+        else:
+            self.config_path = cmn.check_path(detect_config_path(mode=mode))
 
         # Parsing from class args
+        self.legal_params = self.allowed_parameters
         self.config_dir = abspath(dirname(self.config_path))
         self.keyless_sections = self.detect_keyless_sections()
         self.config_obj = self.read_config_file()
@@ -355,7 +359,6 @@ class ConfigManager(Config):
             f"\n Chunk size: {args['chunk_size']}"
             f"\n Number of processors: {args['n_procs']}"
             f"\n Min prevalence: {args['min_prevalence']}"
-            f"\n Report's format: {args['format']}"
             f"\n Resolution: {args['resolution']}\n"
         )
 
@@ -374,7 +377,9 @@ class ConfigManager(Config):
                 f'choose another one, or delete the existing.')
 
         # Write the configuration file for reproducibility
-        config = join(self.config_args['output_dir'], 'InterMap-job.cfg')
+        job_name = basename(self.config_args['job_name'])
+        config = join(self.config_args['output_dir'],
+                      f'{job_name}_InterMap.cfg')
         with open(config, 'wt') as ini:
             self.config_obj.write(ini)
 
@@ -456,5 +461,5 @@ class ConfigManager(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/gonzalezroy/RoyHub/NUC-STRESS-RGA/data/0A-prelude/DrHU-repliques/second_step/imap.cfg'
+# config_path = '/home/rglez/RoyHub/intermap/data/ERRORS/e2/outputs/InterMap-job.cfg'
 # self = ConfigManager(mode='debug')

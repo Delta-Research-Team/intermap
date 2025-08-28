@@ -1,6 +1,6 @@
 site_name: InterMap's Docs
-repo_url: https://github.com/rglez/intermap
-repo_name: rglez/intermap
+repo_url: https://github.com/Delta-Research-Team/intermap
+repo_name: InterMap's GitHub Repository
 # Theme
 theme:
   name: material
@@ -42,8 +42,20 @@ markdown_extensions:
   - attr_list
   - toc:
       permalink: true
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - attr_list
+  - md_in_html
+  - pymdownx.blocks.caption
+
 
 plugins:
   - offline
@@ -53,9 +65,9 @@ extra:
 
 nav:
   - Home: index.md
-  - How it works: how-it-works.md
+  - Interactions: interactions.md
   - Installation: installation.md
-  - Basic Usage: basic-usage.md
-  - Arguments Reference: arguments-reference.md
-  - Tutorials: tutorials.md
+  - Usage: basic-usage.md
+  - InterVis (Visualizations): intervis.md
   - Citing: citing.md
+#  - How it works: how-it-works.md

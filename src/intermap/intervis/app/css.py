@@ -27,48 +27,36 @@ all_interactions_colors = {
 """
 
 all_interactions_colors = {
-    # Interacciones de puente de hidrógeno - Rojo y Azul complementarios
-    'HBDonor': '#FF6B6B',  # Rojo cálido - donador de protones
-    'HBAcceptor': '#4ECDC4',  # Turquesa - aceptor de protones
-
-    # Interacciones iónicas - Azul y Naranja complementarios
-    'Cationic': '#2B95FF',  # Azul brillante - carga positiva
-    'Anionic': '#FF8F40',  # Naranja cálido - carga negativa
-
-    # Interacciones de agua - Tonos azules suaves
-    'Water Bridge': '#87CEEB',  # Azul cielo - representa agua
-
-    # Interacciones Pi - Tonos morados y rosados
-    'PiStacking': '#9B6B9E',  # Morado medio - apilamiento π-π
-    'PiCation': '#BE79BE',  # Morado-rosa - interacción π-catión
-    'CationPi': '#D4A5D4',  # Lila suave - interacción catión-π
-    'FaceToFace': '#845B87',  # Morado oscuro - apilamiento cara a cara
-    'EdgeToFace': '#AA8BAD',  # Morado grisáceo - apilamiento borde a cara
-
-    # Interacciones metálicas - Tonos metálicos
-    'MetalDonor': '#B8B8B8',  # Gris plateado - donador metálico
-    'MetalAcceptor': '#D4AF37',  # Dorado suave - aceptor metálico
-
-    # Interacciones débiles - Tonos suaves y grises
-    'VdWContact': '#D3D3D3',  # Gris claro - fuerzas de Van der Waals
-    'CloseContact': '#E6E6E6',  # Gris muy claro - contactos cercanos
-    'Hydrophobic': '#90A4AE',  # Gris azulado - interacciones hidrofóbicas
-
-    # Interacciones de halógeno - Verde azulados complementarios
-    'XBAcceptor': '#66CDAA',  # Verde mar medio - aceptor de halógeno
-    'XBDonor': '#20B2AA'  # Verde mar claro - donador de halógeno
+    'HBDonor': '#FF6B6B',
+    'HBAcceptor': '#4ECDC4',
+    'Cationic': '#2B95FF',
+    'Anionic': '#FF8F40',
+    'WaterBridge': '#87CEEB',
+    'PiStacking': '#9B6B9E',
+    'PiCation': '#BE79BE',
+    'PiAnion': '#418641',
+    'CationPi': '#D4A5D4',
+    'FaceToFace': '#845B87',
+    'EdgeToFace': '#AA8BAD',
+    'MetalDonor': '#B8B8B8',
+    'MetalAcceptor': '#D4AF37',
+    'VdWContact': '#D3D3D3',
+    'CloseContact': '#E6E6E6',
+    'Hydrophobic': '#90A4AE',
+    'XBAcceptor': '#66CDAA',
+    'XBDonor': '#20B2AA'
 }
 
 # Error messages dictionary
 ERROR_MESSAGES = {
     'nothing_selected': "Change your filters, your selection is empty",
-    'no_file': "Please upload a CSV file.",
-    'invalid_file': "Invalid file format. Please upload a CSV file.",
+    'no_file': "Please upload a pickle file.",
+    'invalid_file': "Invalid file format. Please upload a pickle file.",
     'no_data': "No data available for plotting.",
     'processing_error': "Error processing file: {}",
     'no_interactions': "No interactions found with current filters.",
     'plot_error': "Error generating plot: {}",
-    'no_topology': "No topology file found in directory.",
+    'no_topology': "No configuration file found in directory.",
     'invalid_sele': "Invalid MDAnalysis selection: {}"
 }
 
@@ -400,15 +388,49 @@ CSS_STYLES = {
     }
     """,
 
-    #'search_container': """
-    #.search-container {
-    #    display: flex;
-    #    align-items: center;
-    #    gap: 10px;
-    #    margin-bottom: 10px;
-    #    font-family: 'Roboto', sans-serif;
-    #}
-    #""",
+    'select_all_checkbox': """
+    .interaction-filter .select-all-container {
+        padding: 4px !important;
+        margin-bottom: 5px !important;
+        background-color: transparent !important;
+        border-radius: 4px !important;
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"] {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        width: 16px !important;
+        height: 16px !important;
+        border: 2px solid #ff5555ff !important; 
+        border-radius: 50% !important;
+        background-color: white !important;
+        cursor: pointer !important;
+        margin-right: 8px !important;
+        position: relative !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"]:checked {
+        background-color: #ff5555ff !important;  
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"]:checked::after {
+        content: '✓' !important;
+        color: white !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-size: 12px !important;
+    }
+
+    .interaction-filter .select-all-container label {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 0.9em !important;
+        color: black !important;  
+    }
+    """,
 
     'plot_container': """
     .plot-container {
@@ -498,81 +520,36 @@ CSS_STYLES = {
             width: 100%;
             margin-bottom: 20px;
         }
-        """,
-
-
-
-
-    'select_all_checkbox': """
-    .select-all-container {
-        padding: 4px;
-        margin-bottom: 5px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .select-all-container input[type="checkbox"] {
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        width: 16px !important;
-        height: 16px !important;
-        border: 2px solid #4051b5ff !important;
-        border-radius: 50% !important;  
-        background-color: #FEFBF6 !important;
-        cursor: pointer !important;
-        margin-right: 8px !important;
-        position: relative !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .select-all-container input[type="checkbox"]:checked {
-        background-color: #4051b5ff !important;
-    }
-
-    .select-all-container input[type="checkbox"]:checked::after {
-        content: '✓' !important;
-        color: #FEFBF6 !important;
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        font-size: 12px !important;
-    }
-
-    .select-all-container label {
-        font-family: 'Roboto', sans-serif !important;
-        font-size: 0.9em !important;
-        color: #383747ff !important;
-    }
-    """,
-
-    'checkbox_group': """
-    .checkbox-group {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: 'Roboto', sans-serif;
-        scrollbar-width: thin;
-        scrollbar-color: #4051b5ff #f0f0f0;
-        margin-top: 5px;  
-    }
-
-    .checkbox-group::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .checkbox-group::-webkit-scrollbar-track {
-        background: #f0f0f0;
-        border-radius: 4px;
-    }
-
-    .checkbox-group::-webkit-scrollbar-thumb {
-        background-color: #4051b5ff;
-        border-radius: 4px;
-    }
-    """
+        
+        .control-group {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .control-group h5 {
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-group label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .slider-container {
+            padding: 0 10px;
+        }
+        
+        .custom-checkbox {
+            margin-bottom: 8px;
+        }
+        """
 
 }

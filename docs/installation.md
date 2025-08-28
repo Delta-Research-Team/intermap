@@ -1,29 +1,68 @@
-**InterMap** can be easily installed using conda. Below are the steps to install on your system using conda.
+This guide will walk you through the process of installing the InterMap package and setting up the required environment.
 
-## Installation Steps
+## 0. Prerequisites
 
-1. **Install conda**: If you haven't already, install [Anaconda](https://www.anaconda.com/products/distribution)
-   or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) on your system.
-2. **Create a new conda environment**: It's a good practice to create a new environment for each project. You can do
-   this by running:
-   ```bash
-   conda create -n intermap python=3.8
-   ```
-   Replace `intermap` with your desired environment name.
-3. **Activate the environment**: Activate the newly created environment:
-   ```bash
-   conda activate intermap
-   ```
-4. **Install InterMap**: You can install InterMap directly from the conda channel:
-   ```bash
-    conda install -c conda-forge intermap
-    ```
-5. **Verify the installation**: After installation, you can verify that InterMap is installed correctly by running:
-6. ```bash
-   intermap --version
-   ```
-   This should display the version of InterMap installed.
-7. **Deactivate the environment**: When you're done using InterMap, you can deactivate the environment by running:
-   ```bash
-   conda deactivate
-   ```
+Before installing InterMap, ensure you have the following prerequisites installed on your system:
+
+- **Git**: Required for cloning the repository
+- **Conda or Miniconda**: Required for managing the Python environment
+
+## 1. Clone the Repository
+
+First, clone the InterMap repository from GitHub to your local machine and navigate to the cloned directory. Open your
+terminal and run the following commands:
+
+```bash
+git clone https://github.com/Delta-Research-Team/intermap.git
+cd intermap
+```
+
+## 2. Create the Conda Environment
+
+The InterMap repository includes an `environment.yml` file that contains all the necessary dependencies. Create a new
+conda environment using this file:
+
+```bash
+conda env create -f environment.yml
+```
+
+This command will:
+
+- Read the `environment.yml` file
+- Create a new conda environment with all required dependencies
+- Install the specified Python version and packages
+
+!!! note "Environment Creation Time"
+
+    The environment creation process may take several minutes depending on your internet connection and system performance, as conda needs to download and install all the required packages.
+
+## 3. Activate the Environment
+
+Once the environment is created successfully, activate it:
+
+```bash
+conda activate intermap
+```
+
+You'll need to activate this environment every time you want to use InterMap. You can verify that the environment is
+active by checking that `(intermap)` appears at the beginning of your command prompt or just by running
+```conda info --envs```, which will list all your conda environments and highlight the active one.
+
+## 4. Keep InterMap Updated
+
+To update InterMap to the latest version:
+
+```bash
+# Navigate to the repository directory
+cd intermap
+
+# Pull the latest changes
+git pull origin master
+
+# Update the environment if needed
+conda env update -f environment.yml
+```
+
+!!! warning "Environment Updates"
+
+    When updating, the `environment.yml` file may have changed. Always run `conda env update -f environment.yml` after pulling updates to ensure you have the latest dependencies.
