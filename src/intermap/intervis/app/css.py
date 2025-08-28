@@ -295,10 +295,7 @@ CSS_STYLES = {
         .row {
             margin-top: 120px; 
         }
-    """
-
-
-    ,
+    """,
 
     'welcome_text': """
     .welcome-text {
@@ -550,6 +547,179 @@ CSS_STYLES = {
         .custom-checkbox {
             margin-bottom: 8px;
         }
-        """
+    """,
 
+    'transpose_button': """
+    .transpose-button-container {
+        padding: 10px 15px;
+        margin-bottom: 15px;
+    }
+
+    .transpose-button {
+        width: 100%;
+        background-color: #4d4d4dd0;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Roboto;
+        font-size: 14px;
+    }
+
+    .transpose-button:hover {
+        background-color: #4051b5ff;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .transpose-button:active {
+        transform: translateY(0);
+    }
+
+    .transpose-button-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .transpose-button.active {
+        background-color: #4051b5ff;
+    }
+
+    .fa-exchange-alt {
+        transition: transform 0.3s ease;
+    }
+
+    .transpose-button.active .fa-exchange-alt {
+        transform: rotate(90deg);
+    }
+    """,
+
+    'action_buttons': """
+    .action-buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0 15px;
+    }
+
+    #plot_button {
+        background-color: #4a4a4a;
+        color: white;
+        padding: 20px 35px;  
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 50%;
+    }
+
+    #plot_button:hover {
+        background-color: #4051b5ff !important;
+    }
+
+    #download_plot_button {
+        background-color: #4051b5ff;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 50%;
+    }
+
+    #download_plot_button:hover {
+        background-color: #4a4a4a !important;
+    }
+    """,
+
+    'footer': """
+    .footer-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: black;
+        padding: 10px 20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Roboto';
+        z-index: 1000;
+    }
+
+    .footer-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: white;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        flex: 1;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .footer-divider {
+        color: white;
+        margin: 0 15px;
+    }
+    """,
+
+    'plots_section': """
+    .plots-main-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .plot-tab-content {
+        width: 100%;
+        max-width: 90%;
+        margin: 20px auto;
+    }
+
+    .prevalence-container {
+        width: 100%;
+        max-width: 90%;
+        margin: 20px auto;
+    }
+
+    .prevalence-plots {
+        display: flex;
+        flex-direction: column;
+        gap: 60px;
+    }
+
+    .prevalence-plot-item {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prevalence-plot-title {
+        text-align: center;
+        font-family: Roboto;
+        margin-bottom: 20px;
+    }
+
+    .prevalence-plot-content {
+        width: 100%;
+        min-height: 450px;
+    }
+    """
 }

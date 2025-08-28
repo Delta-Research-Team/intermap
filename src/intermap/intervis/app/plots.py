@@ -22,7 +22,8 @@ def create_plot(df, width, height, axisx, axisy, show_prevalence=False):
 
     heatmap = HeatMap(
         df=df,
-        plot_size=(width, height),
+        width=width,
+        height=height,
         show_prevalence=show_prevalence)
 
     return heatmap.create_heatmap_plot(axisx, axisy)
