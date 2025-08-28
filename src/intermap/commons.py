@@ -5,81 +5,66 @@ Common functions used in the different modules of the package
 import logging
 import os
 import re
+from os.path import join
 
-import numpy_indexed as npi
-from numba import njit
+import numpy as np
 from numba.typed import List
 from numba_kdtree import KDTree as nckd
 
 logger = logging.getLogger('InterMapLogger')
 
 
-def start_logger(log_path):
+def trajiter(universe, chunk_frames, sel_idx):
+    for chunk in chunk_frames:
+        xyz_chunk = np.empty((chunk.size, sel_idx.size, 3),
+                             dtype=np.float32)
+        for i, frame in enumerate(chunk):
+            xyz_chunk[i] = universe.trajectory[frame].positions[
+                sel_idx]
+        yield xyz_chunk
+
+
+def parse_last_param(last, traj_len):
     """
-    Start the logger for the InterMap run.
+    Parse the last parameter
 
     Args:
-        log_path (str): Path to the log file.
+        last (int): Last frame to process
+        traj_len (int): Length of the trajectory
 
     Returns:
-        logger (logging.Logger): Logger object.
+        last (int): Last frame to process
     """
-
-    logger = logging.getLogger('InterMapLogger')
-    logger.setLevel("DEBUG")
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel("DEBUG")
-    formatter = logging.Formatter(
-        ">>>>>>>> {asctime} - {levelname} - {message}\n",
-        style="{",
-        datefmt="%Y-%m-%d %H:%M")
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    file_handler = logging.FileHandler(log_path, encoding="utf-8")
-    file_handler.setLevel("DEBUG")
-    logger.addHandler(file_handler)
-    return logger
+    if last == -1:
+        last = traj_len
+    elif last > traj_len:
+        logger.warning(
+            f"The declared end frame '{last}' is larger than the trajectory "
+            f"length '{traj_len}'. The end frame will be set to the last frame.")
+        last = traj_len
+    return last
 
 
-def get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs):
+def split_in_chunks(array, chunk_size):
     """
-    Get the cutoffs and interactions to compute
+    Split an array in chunks of the specified size
 
     Args:
-        to_compute (ndarray): All interactions to compute
-        all_inters (ndarray): All interactions
-        all_cutoffs (ndarray): All cutoffs
+        array (ndarray): Array to split
+        chunk_size (int): Size of the chunks
 
     Returns:
-        to_compute_aro (ndarray): Aromatic interactions to compute
-        to_compute_others (ndarray): Non-aromatic interactions to compute
-        cutoffs_aro (ndarray): Cutoffs for the aromatic interactions
-        cutoffs_others (ndarray): Cutoffs for the non-aromatic interactions
+        chunks (generator): Generator with the chunks
     """
+    for i in range(0, array.shape[0], chunk_size):
+        yield array[i:i + chunk_size]
 
-    # Parse aromatics
-    bit_aro = [y for x in to_compute if re.search(r'Pi|Face', x) for y in
-               npi.indices(all_inters, [x])]
-    if len(bit_aro) == 0:
-        to_compute_aro = List(['None'])
-    else:
-        to_compute_aro = List([all_inters[x] for x in bit_aro])
 
-    # Parse non-aromatics
-    bit_others = [y for x in to_compute if not re.search(r'Pi|Face', x) for y
-                  in npi.indices(all_inters, [x])]
-    if len(bit_others) == 0:
-        to_compute_others = List(['None'])
-    else:
-        to_compute_others = List([all_inters[x] for x in bit_others])
-
-    # Get the cutoffs
-    cutoffs_aro = all_cutoffs[:, bit_aro]
-    cutoffs_others = all_cutoffs[:, bit_others]
-
-    return to_compute_aro, to_compute_others, cutoffs_aro, cutoffs_others
+def get_coordinates(u, chunk, sel_idx):
+    xyz_chunk = np.empty((chunk.size, sel_idx.size, 3), dtype=np.float32)
+    for i, frame in enumerate(chunk):
+        xyz_chunk[i] = u.trajectory[frame].positions[sel_idx].copy()
+    return xyz_chunk
 
 
 def check_path(path, check_exist=True):
@@ -145,19 +130,3 @@ def get_trees(xyz_chunk, s2_indices):
     for x in xyz_chunk:
         trees.append(nckd(x[s2_indices]))
     return trees
-
-
-@njit(parallel=False, cache=True)
-def get_ball(xyz, s1_indices, tree, dist_cut):
-    """
-    Args:
-        xyz:
-        s1_indices:
-        tree:
-        dist_cut:
-
-    Returns:
-
-    """
-    ball_1 = tree.query_radius_parallel(xyz[s1_indices], dist_cut)
-    return ball_1

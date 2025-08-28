@@ -13,9 +13,9 @@ from os.path import join
 import mdtraj as md
 import pytest
 
-from intermap import commons as cmn, config as conf, cutoffs as cf
-from intermap.indices import IndexManager
-from intermap.others import others
+from intermap import commons as cmn
+from managers import config as conf, cutoffs as cf
+from managers.indices import IndexManager
 
 
 @pytest.fixture(scope="module")
@@ -103,21 +103,21 @@ def others_arguments(conf_path, parameters):
     u = iman.universe
     xyz = u.atoms.positions
     k = 0
-    s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+    s1_indices, s2_indices = iman.s1_idx, iman.s2_idx
     anions, cations = iman.anions, iman.cations
     hydrophobes = iman.hydroph
-    vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-    met_donors = iman.metal_don
-    met_acc = iman.metal_acc
-    hb_hydros = iman.hb_H
-    hb_donors = iman.hb_D
-    hb_acc = iman.hb_A
-    xb_halogens = iman.xb_H
-    xb_donors = iman.xb_D
-    xb_acc = iman.xb_A
+    vdw_radii, max_vdw = iman.vdw_radii, iman.get_max_vdw_dist()
+    met_donors = iman.met_don
+    met_acc = iman.met_acc
+    hb_hydros = iman.hb_hydro
+    hb_donors = iman.hb_don
+    hb_acc = iman.hb_acc
+    xb_halogens = iman.xb_hal
+    xb_donors = iman.xb_don
+    xb_acc = iman.xb_acc
 
     # Get the interactions and cutoffs
-    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+    all_inters, all_cutoffs = cf.get_inters_cutoffs()
     to_compute = all_inters
     selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
@@ -145,21 +145,21 @@ def others_arguments_all(conf_path, parameters):
     u = iman.universe
     xyz = u.atoms.positions
     k = 0
-    s1_indices, s2_indices = iman.sel1_idx, iman.sel2_idx
+    s1_indices, s2_indices = iman.s1_idx, iman.s2_idx
     anions, cations = iman.anions, iman.cations
     hydrophobes = iman.hydroph
-    vdw_radii, max_vdw = iman.radii, iman.get_max_vdw_dist()
-    hb_donors = iman.hb_D
-    hb_acc = iman.hb_A
-    hb_hydros = iman.hb_H
-    met_donors = iman.metal_don
-    met_acc = iman.metal_acc
-    xb_donors = iman.xb_D
-    xb_acc = iman.xb_A
-    xb_halogens = iman.xb_H
+    vdw_radii, max_vdw = iman.vdw_radii, iman.get_max_vdw_dist()
+    hb_donors = iman.hb_don
+    hb_acc = iman.hb_acc
+    hb_hydros = iman.hb_hydro
+    met_donors = iman.met_don
+    met_acc = iman.met_acc
+    xb_donors = iman.xb_don
+    xb_acc = iman.xb_acc
+    xb_halogens = iman.xb_hal
 
     # Get the interactions and cutoffs
-    all_inters, all_cutoffs = cf.get_inters_cutoffs(args.cutoffs)
+    all_inters, all_cutoffs = cf.get_inters_cutoffs()
     to_compute = all_inters
     selected_aro, selected_others, cutoffs_aro, cutoffs_others = \
         cmn.get_cutoffs_and_inters(to_compute, all_inters, all_cutoffs)
@@ -181,9 +181,9 @@ def others_containers(others_arguments):
      args) = others_arguments
 
     ijf, inters = others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
-                         cations, met_donors, met_acc, hb_hydros,
-                         hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
-                         max_vdw, vdw_radii, cutoffs_others, selected_others)
+                         cations, met_donors, met_acc, hb_hydros, hb_donors,
+                         hb_acc, xb_halogens, xb_donors, xb_acc, max_vdw,
+                         vdw_radii, cutoffs_others, selected_others,,
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
     return ijf, inters, row1, row2
@@ -200,9 +200,9 @@ def others_containers_all(others_arguments_all):
      selected_others, args) = others_arguments_all
 
     ijf, inters = others(xyz, k, s1_indices, s2_indices, hydrophobes, anions,
-                         cations, met_donors, met_acc, hb_hydros,
-                         hb_donors, hb_acc, xb_halogens, xb_donors, xb_acc,
-                         max_vdw, vdw_radii, cutoffs_others, selected_others)
+                         cations, met_donors, met_acc, hb_hydros, hb_donors,
+                         hb_acc, xb_halogens, xb_donors, xb_acc, max_vdw,
+                         vdw_radii, cutoffs_others, selected_others,,
     row1 = ijf[:, 0]
     row2 = ijf[:, 1]
     return ijf, inters, row1, row2

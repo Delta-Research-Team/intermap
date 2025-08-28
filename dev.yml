@@ -1,4 +1,4 @@
-name: intermap-dev
+name: intermap
 channels:
   - defaults
   - conda-forge
@@ -17,9 +17,17 @@ dependencies:
   - pip
   - pip:
       - -e .
+      - uvicorn
+      - shiny
+      - screeninfo
+      - plotly
+      - mkdocs
+      - mkdocs-material
+      - prolif[tutorials]
       - memory_profiler
       - numpy_indexed
       - numba_kdtree == 0.5.0
       - pytest-randomly
       - openpyxl
       - git+https://github.com/rglez/rgpack.git@0.0.3
+      - git+https://github.com/chemosim-lab/ProLIF.git
