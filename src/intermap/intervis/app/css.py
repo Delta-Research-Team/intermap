@@ -721,5 +721,33 @@ CSS_STYLES = {
         width: 100%;
         min-height: 450px;
     }
+    
+    .axis-settings-container {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    }
+    
+    .rename-axes-button-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #custom_axes_inputs {
+        background-color: white;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        margin-top: 8px;
+    }
+    
+    #apply_axis_names {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
     """
+
 }

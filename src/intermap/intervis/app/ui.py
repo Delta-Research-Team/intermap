@@ -176,6 +176,33 @@ def create_filters_section():
             ),
             ui.hr(),
 
+            # Panel 6 - New Axis Settings section
+            ui.h4("Axis Settings"),
+            ui.div(
+                {"class": "axis-settings-container"},
+                # Option to simplify axis labels
+                ui.input_checkbox("simplify_axis_labels", "Show simplified axis labels", value=False),
+
+                # Custom axis names
+                ui.input_action_button(
+                    "rename_axes_button",
+                    "Rename Axes",
+                    class_="search-button"
+                ),
+
+                # Containers for custom axis names (initially hidden)
+                ui.div(
+                    {"id": "custom_axes_inputs", "style": "display: none; margin-top: 10px;"},
+                    ui.input_text("custom_x_axis", "X-Axis Title", placeholder="Custom X-Axis name"),
+                    ui.input_text("custom_y_axis", "Y-Axis Title", placeholder="Custom Y-Axis name"),
+                    ui.div(
+                        {"style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
+                        ui.input_action_button("apply_axis_names", "Apply", class_="search-button")
+                    )
+                ),
+                ui.p("Note: Custom axis names apply only to Heatmap and Prevalence plots",
+                     style="font-size: 12px; font-style: italic; margin-top: 8px; color: #666;")
+            ),
             # Transpose button
             ui.div(
                 {"class": "transpose-button-container"},
@@ -220,6 +247,17 @@ def create_filters_section():
                     // Manejar el botón de descarga
                     document.getElementById('download_plot_button').addEventListener('click', function() {
                         Shiny.setInputValue('save_plot_trigger', Date.now());
+                    });
+                    
+                    // Toggle custom axis inputs
+                    $('#rename_axes_button').on('click', function() {
+                        $('#custom_axes_inputs').toggle();
+                    });
+                
+                    // Apply button handler
+                    $('#apply_axis_names').on('click', function() {
+                        Shiny.setInputValue('custom_axes_applied', Date.now());
+                        $('#custom_axes_inputs').hide();
                     });
                 });
             """),

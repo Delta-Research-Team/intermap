@@ -32,7 +32,10 @@ def server(input, output, session):
     filtered_idx = reactive.Value(None)
     csv_filtered = reactive.Value(None)
     transpose_state = reactive.Value(False)
-    frame_visualization = reactive.Value(None)
+    simplify_labels = reactive.Value(False)
+    custom_x_axis = reactive.Value(None)
+    custom_y_axis = reactive.Value(None)
+
 
     @reactive.Effect
     @reactive.event(input.pickle_file, input.config_file)
@@ -312,6 +315,77 @@ def server(input, output, session):
             return ui.p(ERROR_MESSAGES["nothing_selected"])
         return None
 
+    def process_axis_labels(df, simplify=False):
+        """
+        Process axis labels based on user preferences.
+
+        Args:
+            df (pd.DataFrame): DataFrame to process
+            simplify (bool): Whether to simplify axis labels
+
+        Returns:
+            pd.DataFrame: Processed DataFrame
+        """
+        if df is None or not simplify:
+            return df
+
+        processed_df = df.copy()
+
+        # Simplify selection columns (main axes)
+        for col in ['sel1', 'sel2']:
+            if col in processed_df.columns:
+                processed_df[col] = processed_df[col].apply(
+                    lambda x: '_'.join(x.split('_')[:-1]) if isinstance(x,
+                                                                        str) and '_' in x else x
+                )
+
+        # Handle pair column for lifetime plot
+        if 'pair' in processed_df.columns:
+            processed_df['pair'] = processed_df['pair'].apply(
+                lambda x: simplify_pair_label(x) if isinstance(x, str) else x
+            )
+
+        # Handle selection_pair column for time series plot
+        if 'selection_pair' in processed_df.columns:
+            processed_df['selection_pair'] = processed_df[
+                'selection_pair'].apply(
+                lambda x: simplify_pair_label(x) if isinstance(x, str) else x
+            )
+
+        return processed_df
+
+    def simplify_pair_label(pair_text):
+        """
+        Simplify a pair label like "sel1 - sel2 (interaction)"
+        by removing the last part of each selection.
+        """
+        if not isinstance(pair_text, str) or ' - ' not in pair_text:
+            return pair_text
+
+        # Split into selections and interaction part
+        parts = pair_text.split(' (')
+        if len(parts) != 2:
+            return pair_text
+
+        selections = parts[0]
+        interaction_part = f" ({parts[1]}" if len(parts) > 1 else ""
+
+        # Split the selections
+        sel_parts = selections.split(' - ')
+        if len(sel_parts) != 2:
+            return pair_text
+
+        # Simplify each selection
+        simplified_sels = []
+        for sel in sel_parts:
+            if '_' in sel:
+                simplified_sels.append('_'.join(sel.split('_')[:-1]))
+            else:
+                simplified_sels.append(sel)
+
+        # Combine back
+        return f"{simplified_sels[0]} - {simplified_sels[1]}{interaction_part}"
+
     def render_plot(create_plot_func, is_main=False, is_network=False):
         """Helper function to render plots with common logic."""
         error = check_data()
@@ -322,13 +396,37 @@ def server(input, output, session):
         if master_instance is None:
             return ui.p(ERROR_MESSAGES["nothing_selected"])
 
+        # Get the current active tab
+        active_tab = input.plot_tabs()
+
+        # Apply axis customization only for Heatmap and Prevalence tabs
+        apply_axis_names = active_tab in ["Sele1 vs Sele2", "Prevalence"]
+
+        # Get the DataFrame
+        df_to_use = csv_filtered.get()
+
+        # Apply label simplification to all plots if enabled
+        if simplify_labels.get():
+            df_to_use = process_axis_labels(df_to_use, True)
+
+        # Get axis titles
+        x_axis_title = master_instance.axisx
+        y_axis_title = master_instance.axisy
+
+        # Apply custom axis titles if appropriate for this tab
+        if apply_axis_names:
+            if custom_x_axis.get() is not None:
+                x_axis_title = custom_x_axis.get()
+            if custom_y_axis.get() is not None:
+                y_axis_title = custom_y_axis.get()
+
         plot_args = [
-            csv_filtered.get(),
+            df_to_use,
             input.plot_width(),
             input.plot_height() if (
                         is_main or is_network) else input.plot_height() // 1.5,
-            master_instance.axisx,
-            master_instance.axisy
+            x_axis_title,
+            y_axis_title
         ]
 
         if is_main:
@@ -401,37 +499,41 @@ def server(input, output, session):
     # =========================================================================
     # Plot Rendering Functions
     # =========================================================================
+
     @output
     @render.ui
-    @reactive.event(input.plot_button, input.transpose_button)
+    @reactive.event(input.plot_button, input.transpose_button,
+                    input.simplify_axis_labels, input.apply_axis_names)
     def interaction_plot():
         """Render the main interaction heatmap plot."""
         return render_plot(create_plot, is_main=True)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.simplify_axis_labels,
+                    input.apply_axis_names)
     def sel1_interactions_plot():
         """Render the sel1 interactions plot."""
         return render_plot(create_sel1_interactions_plot)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.simplify_axis_labels,
+                    input.apply_axis_names)
     def sel2_interactions_plot():
         """Render the sel2 interactions plot."""
         return render_plot(create_sel2_interactions_plot)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.simplify_axis_labels)
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
         return render_plot(create_interactions_over_time_plot)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.simplify_axis_labels)
     def lifetime_plot():
         """Render the lifetime boxplot."""
         error = check_data()
@@ -442,7 +544,12 @@ def server(input, output, session):
         if master_instance is None:
             return ui.p(ERROR_MESSAGES["nothing_selected"])
 
-        fig = create_lifetime_plot(csv_filtered.get(),
+        # Apply label simplification if enabled
+        df_to_use = csv_filtered.get()
+        if simplify_labels.get():
+            df_to_use = process_axis_labels(df_to_use, True)
+
+        fig = create_lifetime_plot(df_to_use,
                                    input.plot_width(),
                                    input.plot_height(),
                                    master_instance.axisx,
@@ -465,12 +572,10 @@ def server(input, output, session):
 
     @output
     @render.ui
-    @reactive.event(input.plot_button)
+    @reactive.event(input.plot_button, input.simplify_axis_labels)
     def network_plot():
         """Render the network visualization plot."""
         return render_plot(create_network_plot, is_network=True)
-
-
 
     # =========================================================================
     # Checkbox Rendering
@@ -515,5 +620,23 @@ def server(input, output, session):
         else:
             ui.update_checkbox_group("selected_annotations", selected=[])
 
+    @reactive.Effect
+    @reactive.event(input.simplify_axis_labels)
+    def update_simplify_labels():
+        """Update axis label simplification setting."""
+        simplify_labels.set(input.simplify_axis_labels())
+        if filtered_idx.get() is not None:
+            session.send_custom_message("refresh-plots", {})
+
+    @reactive.Effect
+    @reactive.event(input.apply_axis_names)
+    def update_custom_axes():
+        """Update custom axis names."""
+        custom_x_axis.set(
+            input.custom_x_axis() if input.custom_x_axis() else None)
+        custom_y_axis.set(
+            input.custom_y_axis() if input.custom_y_axis() else None)
+        if filtered_idx.get() is not None:
+            session.send_custom_message("refresh-plots", {})
 
 app = App(app_ui, server)
