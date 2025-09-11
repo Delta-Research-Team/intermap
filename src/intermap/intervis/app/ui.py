@@ -177,11 +177,12 @@ def create_filters_section():
             ui.hr(),
 
             # Panel 6 - New Axis Settings section
-            ui.h4("Axis Settings"),
+            ui.h4("Axis Settings and Plot Title"),
             ui.div(
                 {"class": "axis-settings-container"},
                 # Option to simplify axis labels
-                ui.input_checkbox("simplify_axis_labels", "Show simplified axis labels", value=False),
+                ui.input_checkbox("simplify_axis_labels",
+                                  "Show simplified axis labels", value=False),
 
                 # Custom axis names
                 ui.input_action_button(
@@ -192,16 +193,53 @@ def create_filters_section():
 
                 # Containers for custom axis names (initially hidden)
                 ui.div(
-                    {"id": "custom_axes_inputs", "style": "display: none; margin-top: 10px;"},
-                    ui.input_text("custom_x_axis", "X-Axis Title", placeholder="Custom X-Axis name"),
-                    ui.input_text("custom_y_axis", "Y-Axis Title", placeholder="Custom Y-Axis name"),
+                    {"id": "custom_axes_inputs",
+                     "style": "display: none; margin-top: 10px;"},
+                    ui.input_text("custom_x_axis", "X-Axis Title",
+                                  placeholder="Custom X-Axis name"),
+                    ui.input_text("custom_y_axis", "Y-Axis Title",
+                                  placeholder="Custom Y-Axis name"),
                     ui.div(
-                        {"style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
-                        ui.input_action_button("apply_axis_names", "Apply", class_="search-button")
+                        {
+                            "style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
+                        ui.input_action_button("apply_axis_names", "Apply",
+                                               class_="search-button")
                     )
                 ),
-                ui.p("Note: Custom axis names apply only to Heatmap and Prevalence plots",
-                     style="font-size: 12px; font-style: italic; margin-top: 8px; color: #666;")
+                ui.p(
+                    "Note: Custom axis names apply only to Heatmap and Prevalence plots",
+                    style="font-size: 12px; font-style: italic; margin-top: 8px; color: #666;"),
+
+                # Custom plot titles
+                ui.input_action_button(
+                    "customize_plot_titles_button",
+                    "Customize Plot Titles",
+                    class_="search-button"
+                ),
+
+                # Containers for custom plot titles (initially hidden)
+                ui.div(
+                    {"id": "custom_plot_titles_inputs",
+                     "style": "display: none; margin-top: 10px;"},
+                    ui.input_text("heatmap_plot_title", "Heatmap Plot Title",
+                                  value="Interaction Heatmap"),
+                    ui.input_text("prevalence_plot_title",
+                                  "Prevalence Plot Title",
+                                  value="Interaction Prevalence Analysis"),
+                    ui.input_text("lifetime_plot_title", "Lifetime Plot Title",
+                                  value="Interaction Lifetimes Distribution"),
+                    ui.input_text("timeseries_plot_title",
+                                  "Time Series Plot Title",
+                                  value="Interactions Over Time"),
+                    ui.input_text("network_plot_title", "Network Plot Title",
+                                  value="Interaction Network"),
+                    ui.div(
+                        {
+                            "style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
+                        ui.input_action_button("apply_plot_titles", "Apply",
+                                               class_="search-button")
+                    )
+                ),
             ),
             # Transpose button
             ui.div(
@@ -259,7 +297,17 @@ def create_filters_section():
                         Shiny.setInputValue('custom_axes_applied', Date.now());
                         $('#custom_axes_inputs').hide();
                     });
-                });
+                    });
+                    // Toggle custom plot title inputs
+                    $('#customize_plot_titles_button').on('click', function() {
+                        $('#custom_plot_titles_inputs').toggle();
+                    });
+                    
+                    // Apply button handler for plot titles
+                    $('#apply_plot_titles').on('click', function() {
+                        Shiny.setInputValue('custom_plot_titles_applied', Date.now());
+                        $('#custom_plot_titles_inputs').hide();
+                    });
             """),
 
             # Action buttons

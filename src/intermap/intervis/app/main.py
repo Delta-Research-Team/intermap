@@ -36,6 +36,11 @@ def server(input, output, session):
     custom_x_axis = reactive.Value(None)
     custom_y_axis = reactive.Value(None)
 
+    heatmap_title = reactive.Value("Interaction Heatmap")
+    prevalence_title = reactive.Value("Interaction Prevalence Analysis")
+    lifetime_title = reactive.Value("Interaction Lifetimes Distribution")
+    timeseries_title = reactive.Value("Interactions Over Time")
+    network_title = reactive.Value("Interaction Network")
 
     @reactive.Effect
     @reactive.event(input.pickle_file, input.config_file)
@@ -399,9 +404,6 @@ def server(input, output, session):
         # Get the current active tab
         active_tab = input.plot_tabs()
 
-        # Apply axis customization only for Heatmap and Prevalence tabs
-        apply_axis_names = active_tab in ["Sele1 vs Sele2", "Prevalence"]
-
         # Get the DataFrame
         df_to_use = csv_filtered.get()
 
@@ -414,11 +416,24 @@ def server(input, output, session):
         y_axis_title = master_instance.axisy
 
         # Apply custom axis titles if appropriate for this tab
-        if apply_axis_names:
+        if active_tab in ["Sele1 vs Sele2", "Prevalence"]:
             if custom_x_axis.get() is not None:
                 x_axis_title = custom_x_axis.get()
             if custom_y_axis.get() is not None:
                 y_axis_title = custom_y_axis.get()
+
+        # Determine which title to use based on the active tab
+        plot_title = None
+        if active_tab == "Sele1 vs Sele2":
+            plot_title = heatmap_title.get()
+        elif active_tab == "Prevalence":
+            plot_title = prevalence_title.get()
+        elif active_tab == "Life Time":
+            plot_title = lifetime_title.get()
+        elif active_tab == "Time Series":
+            plot_title = timeseries_title.get()
+        elif active_tab == "Network":
+            plot_title = network_title.get()
 
         plot_args = [
             df_to_use,
@@ -432,34 +447,26 @@ def server(input, output, session):
         if is_main:
             plot_args.append(input.show_prevalence())
 
+        # Create the figure
         if is_network:
             net = create_plot_func(*plot_args)
             if net is None:
                 return ui.p(ERROR_MESSAGES["nothing_selected"])
 
+            # Apply network title
             unique_id = f"network_{hash(str(csv_filtered.get()))}"
             temp_file = os.path.join(tempfile.gettempdir(),
                                      f"{unique_id}.html")
-
             net.save_graph(temp_file)
 
             with open(temp_file, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 
-            enhanced_content = html_content.replace('</head>',
-                                                    """
-                                                    <script>
-                                                    document.addEventListener('DOMContentLoaded', function() {
-                                                        setTimeout(function() {
-                                                            if (typeof network !== 'undefined') {
-                                                                network.fit();
-                                                                network.redraw();
-                                                            }
-                                                        }, 100);
-                                                    });
-                                                    </script>
-                                                    </head>
-                                                    """)
+            # Insert title into the HTML
+            title_html = f'<h3 style="text-align:center;font-family:Roboto;margin-bottom:20px;">{plot_title}</h3>'
+            enhanced_content = html_content.replace('<body>',
+                                                    f'<body>{title_html}')
+
             try:
                 os.remove(temp_file)
             except:
@@ -474,6 +481,14 @@ def server(input, output, session):
             fig = create_plot_func(*plot_args)
             if fig is None:
                 return ui.p(ERROR_MESSAGES["nothing_selected"])
+
+            # Apply plot title if available
+            if plot_title:
+                fig.update_layout(title={
+                    'text': plot_title,
+                    'x': 0.5,
+                    'font': {'family': "Roboto", 'size': 20}
+                })
 
             plot_html = fig.to_html(
                 include_plotlyjs="cdn",
@@ -503,7 +518,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.transpose_button,
-                    input.simplify_axis_labels, input.apply_axis_names)
+                    input.simplify_axis_labels, input.apply_axis_names,
+                    input.apply_plot_titles)
     def interaction_plot():
         """Render the main interaction heatmap plot."""
         return render_plot(create_plot, is_main=True)
@@ -511,7 +527,7 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_axis_names)
+                    input.apply_axis_names, input.apply_plot_titles)
     def sel1_interactions_plot():
         """Render the sel1 interactions plot."""
         return render_plot(create_sel1_interactions_plot)
@@ -519,21 +535,23 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_axis_names)
+                    input.apply_axis_names, input.apply_plot_titles)
     def sel2_interactions_plot():
         """Render the sel2 interactions plot."""
         return render_plot(create_sel2_interactions_plot)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button, input.simplify_axis_labels)
+    @reactive.event(input.plot_button, input.simplify_axis_labels,
+                    input.apply_plot_titles)
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
         return render_plot(create_interactions_over_time_plot)
 
     @output
     @render.ui
-    @reactive.event(input.plot_button, input.simplify_axis_labels)
+    @reactive.event(input.plot_button, input.simplify_axis_labels,
+                    input.apply_plot_titles)
     def lifetime_plot():
         """Render the lifetime boxplot."""
         error = check_data()
@@ -559,6 +577,13 @@ def server(input, output, session):
         if fig is None:
             return ui.p(ERROR_MESSAGES["nothing_selected"])
 
+        # Apply title
+        fig.update_layout(title={
+            'text': lifetime_title.get(),
+            'x': 0.5,
+            'font': {'family': "Roboto", 'size': 20}
+        })
+
         plot_html = fig.to_html(
             include_plotlyjs="cdn",
             full_html=False,
@@ -572,7 +597,8 @@ def server(input, output, session):
 
     @output
     @render.ui
-    @reactive.event(input.plot_button, input.simplify_axis_labels)
+    @reactive.event(input.plot_button, input.simplify_axis_labels,
+                    input.apply_plot_titles)
     def network_plot():
         """Render the network visualization plot."""
         return render_plot(create_network_plot, is_network=True)
@@ -638,5 +664,24 @@ def server(input, output, session):
             input.custom_y_axis() if input.custom_y_axis() else None)
         if filtered_idx.get() is not None:
             session.send_custom_message("refresh-plots", {})
+
+    @reactive.Effect
+    @reactive.event(input.apply_plot_titles)
+    def update_plot_titles():
+        """Update custom plot titles."""
+        heatmap_title.set(
+            input.heatmap_plot_title() if input.heatmap_plot_title() else "Interaction Heatmap")
+        prevalence_title.set(
+            input.prevalence_plot_title() if input.prevalence_plot_title() else "Interaction Prevalence Analysis")
+        lifetime_title.set(
+            input.lifetime_plot_title() if input.lifetime_plot_title() else "Interaction Lifetimes Distribution")
+        timeseries_title.set(
+            input.timeseries_plot_title() if input.timeseries_plot_title() else "Interactions Over Time")
+        network_title.set(
+            input.network_plot_title() if input.network_plot_title() else "Interaction Network")
+
+        if filtered_idx.get() is not None:
+            session.send_custom_message("refresh-plots", {})
+
 
 app = App(app_ui, server)
