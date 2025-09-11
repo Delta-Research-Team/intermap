@@ -306,6 +306,69 @@ def server(input, output, session):
                 duration=5000,
                 type="error"
             )
+
+    @reactive.Effect
+    @reactive.event(input.export_csv_trigger)
+    def handle_export_csv():
+        """Handle exporting the current filtered data as CSV."""
+        ui.notification_show(
+            "Preparing to export data...",
+            duration=5,
+            type="message"
+        )
+
+        if csv_filtered.get() is None:
+            ui.notification_show(
+                "No data to export. Please generate a plot first.",
+                duration=5,
+                type="warning"
+            )
+            return
+
+        try:
+            # Create a tkinter root window
+            root = tk.Tk()
+            # Hide the main window
+            root.withdraw()
+            # Make sure it's brought to the foreground on Windows
+            root.attributes("-topmost", True)
+
+            # Open the save dialog
+            save_path = filedialog.asksaveasfilename(
+                title="Save CSV File",
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialfile=f"intermap_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            )
+
+            # Check if a path was selected
+            if not save_path:
+                print("Save cancelled by user")
+                return
+
+            # Save the current filtered DataFrame to CSV
+            df_to_export = csv_filtered.get()
+
+            # Handle the case where simplified labels are applied
+            if simplify_labels.get():
+                df_to_export = process_axis_labels(df_to_export.copy(), True)
+
+            # Export to CSV
+            df_to_export.to_csv(save_path, index=False)
+
+            ui.notification_show(
+                f"Data exported successfully as:\n{os.path.basename(save_path)}",
+                duration=5,
+                type="message"
+            )
+
+        except Exception as e:
+            print(f"Error exporting CSV: {str(e)}")
+            ui.notification_show(
+                f"Error exporting CSV: {str(e)}",
+                duration=5,
+                type="error"
+            )
         finally:
             if 'root' in locals():
                 root.destroy()

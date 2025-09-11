@@ -261,7 +261,7 @@ def create_filters_section():
             # JavaScript handlers
             ui.tags.script("""
                 $(document).ready(function() {
-                    // Handlers existentes
+                    // Handlers for transpose button
                     Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
                         const button = document.querySelector('.transpose-button');
                         if (message.active) {
@@ -271,6 +271,7 @@ def create_filters_section():
                         }
                     });
 
+                    // Handler for refreshing plots
                     Shiny.addCustomMessageHandler('refresh-plots', function(message) {
                         var plotTabs = ['interaction_plot', 'sel1_interactions_plot', 
                                         'sel2_interactions_plot', 'interactions_over_time_plot', 
@@ -282,32 +283,38 @@ def create_filters_section():
                         });
                     });
 
-                    // Manejar el botón de descarga
-                    document.getElementById('download_plot_button').addEventListener('click', function() {
-                        Shiny.setInputValue('save_plot_trigger', Date.now());
-                    });
-                    
                     // Toggle custom axis inputs
                     $('#rename_axes_button').on('click', function() {
                         $('#custom_axes_inputs').toggle();
                     });
-                
-                    // Apply button handler
+
+                    // Apply button handler for axis names
                     $('#apply_axis_names').on('click', function() {
                         Shiny.setInputValue('custom_axes_applied', Date.now());
                         $('#custom_axes_inputs').hide();
                     });
-                    });
+
                     // Toggle custom plot title inputs
                     $('#customize_plot_titles_button').on('click', function() {
                         $('#custom_plot_titles_inputs').toggle();
                     });
-                    
+
                     // Apply button handler for plot titles
                     $('#apply_plot_titles').on('click', function() {
                         Shiny.setInputValue('custom_plot_titles_applied', Date.now());
                         $('#custom_plot_titles_inputs').hide();
                     });
+
+                    // Button click handlers
+                    $('#download_plot_button').on('click', function() {
+                        Shiny.setInputValue('save_plot_trigger', Date.now());
+                    });
+
+                    $('#export_csv_button').on('click', function() {
+                        console.log("Export CSV button clicked");
+                        Shiny.setInputValue('export_csv_trigger', Date.now());
+                    });
+                });
             """),
 
             # Action buttons
@@ -315,6 +322,8 @@ def create_filters_section():
                 {"class": "action-buttons-container"},
                 ui.input_action_button("plot_button", "PLOT"),
                 ui.input_action_button("download_plot_button", "SAVE PLOT"),
+                ui.input_action_button("export_csv_button", "EXPORT CSV",
+                                       class_="export-csv-button"),
             )
         )
     )

@@ -748,6 +748,68 @@ CSS_STYLES = {
         font-size: 12px;
         padding: 4px 12px;
     }
+    
+    
+    .action-buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0 15px;
+    }
+    
+    #plot_button {
+        background-color: #4a4a4a;
+        color: white;
+        padding: 20px 35px;  
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #plot_button:hover {
+        background-color: #4051b5ff !important;
+    }
+    
+    #download_plot_button {
+        background-color: #4051b5ff;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #download_plot_button:hover {
+        background-color: #4a4a4a !important;
+    }
+    
+    #export_csv_button {
+        background-color: #2e7d32;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #export_csv_button:hover {
+        background-color: #1b5e20 !important;
+    }
     """
 
 }
