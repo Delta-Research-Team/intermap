@@ -208,8 +208,9 @@ class CSVFilter:
              topology and trajectory data
         """
         topo = self.cfg['topo-traj']['topology']
-        traj = self.cfg['topo-traj']['trajectory']
-        universe = mda.Universe(topo, traj)
+        #traj = self.cfg['topo-traj']['trajectory']
+        #universe = mda.Universe(topo, traj)
+        universe = mda.Universe(topo)
         return universe
 
     # =========================================================================
