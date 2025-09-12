@@ -36,6 +36,20 @@ def server(input, output, session):
     custom_x_axis = reactive.Value(None)
     custom_y_axis = reactive.Value(None)
 
+    network_params = reactive.Value({
+        'gravity': -200,
+        'central_gravity': 0.005,
+        'spring_length': 200,
+        'spring_constant': 0.5,
+        'avoid_overlap': 0.8,
+        'stabilization_iterations': 1000,
+        'physics_enabled': True,
+        'min_node_size': 20,
+        'max_node_size': 50,
+        'min_edge_width': 5,
+        'max_edge_width': 15
+    })
+
     heatmap_title = reactive.Value("Interaction Heatmap")
     prevalence_title = reactive.Value("Interaction Prevalence Analysis")
     lifetime_title = reactive.Value("Interaction Lifetimes Distribution")
@@ -661,10 +675,56 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_plot_titles)
+                    input.apply_plot_titles, input.apply_network_settings)
     def network_plot():
         """Render the network visualization plot."""
-        return render_plot(create_network_plot, is_network=True)
+        error = check_data()
+        if error is not None:
+            return error
+
+        master_instance = csv.get()
+        if master_instance is None:
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
+
+        df_to_use = csv_filtered.get()
+        if simplify_labels.get():
+            df_to_use = process_axis_labels(df_to_use, True)
+
+        # Pass network parameters to the plot creation
+        net = create_network_plot(
+            df_to_use,
+            input.plot_width(),
+            input.plot_height(),
+            master_instance.axisx,
+            master_instance.axisy,
+            network_params.get()
+        )
+
+        if net is None:
+            return ui.p(ERROR_MESSAGES["nothing_selected"])
+
+        # Apply title
+        unique_id = f"network_{hash(str(csv_filtered.get()))}"
+        temp_file = os.path.join(tempfile.gettempdir(), f"{unique_id}.html")
+        net.save_graph(temp_file)
+
+        with open(temp_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+
+        title_html = f'<h3 style="text-align:center;font-family:Roboto;margin-bottom:20px;">{network_title.get()}</h3>'
+        enhanced_content = html_content.replace('<body>',
+                                                f'<body>{title_html}')
+
+        try:
+            os.remove(temp_file)
+        except:
+            pass
+
+        return ui.tags.div(
+            ui.HTML(enhanced_content),
+            id=unique_id,
+            style=f"width: 100%; height: {input.plot_height()}px; border: none;"
+        )
 
     # =========================================================================
     # Checkbox Rendering
@@ -744,6 +804,29 @@ def server(input, output, session):
             input.network_plot_title() if input.network_plot_title() else "Interaction Network")
 
         if filtered_idx.get() is not None:
+            session.send_custom_message("refresh-plots", {})
+
+    @reactive.Effect
+    @reactive.event(input.apply_network_settings)
+    def update_network_params():
+        """Update network parameters when apply button is clicked."""
+        new_params = {
+            'gravity': input.network_gravity(),
+            'central_gravity': input.network_central_gravity(),
+            'spring_length': input.network_spring_length(),
+            'spring_constant': input.network_spring_constant(),
+            'avoid_overlap': input.network_avoid_overlap(),
+            'stabilization_iterations': input.network_stabilization_iterations(),
+            'physics_enabled': input.network_physics_enabled(),
+            'min_node_size': input.network_min_node_size(),
+            'max_node_size': input.network_max_node_size(),
+            'min_edge_width': input.network_min_edge_width(),
+            'max_edge_width': input.network_max_edge_width()
+        }
+        network_params.set(new_params)
+
+        # Refresh network plot
+        if csv_filtered.get() is not None:
             session.send_custom_message("refresh-plots", {})
 
 

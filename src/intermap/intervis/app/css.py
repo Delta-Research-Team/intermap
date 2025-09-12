@@ -749,6 +749,12 @@ CSS_STYLES = {
         padding: 4px 12px;
     }
     
+    .nav-panel[data-value="Network"] .plot-tab-content {
+    width: 80%;
+    max-width: 80%;
+    margin: 20px auto;
+    margin-left: 320px;  
+    }
     
     .action-buttons-container {
         display: flex;
@@ -811,5 +817,9 @@ CSS_STYLES = {
         background-color: #1b5e20 !important;
     }
     """
+
+    ,
+
+
 
 }

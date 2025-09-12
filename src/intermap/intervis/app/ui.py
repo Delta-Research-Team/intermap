@@ -19,22 +19,69 @@ proj_dir = dirname(app_dir)
 logo_path = join(proj_dir, "intervis", "statics", "Untitled.png")
 favicon_path = join(proj_dir, "statics", "favicon-32x32.png")
 
-"""
-   UI: create_app_ui
-  #####################################
-  #          Welcome Section          #
-  #####################################
-  #                   #   create_file #
-  #      create       # input_section #
-  #      plots        #---------------#  
-  #      section      #      create   # 
-  #                   #      filters  #
-  #                   #      section  #
-  #####################################
-  #              Footer               #
-  #####################################
-"""
+def create_network_controls_panel():
+    """Create the network controls panel for Tab 5."""
+    return ui.div(
+        {
+            "id": "network_controls_panel",
+            "class": "network-controls-panel",
+            "style": "display: none; position: fixed; left: 10px; top: 150px; width: 280px; z-index: 100; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto;"
+        },
+        ui.h5("Network Controls", style="margin-bottom: 15px; color: #4051b5; font-family: Roboto;"),
 
+        # Physics Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Physics", style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_gravity", "Gravitational Constant",
+                           min=-500, max=0, value=-200, step=10),
+            ui.input_slider("network_central_gravity", "Central Gravity",
+                           min=0, max=0.1, value=0.005, step=0.001),
+            ui.input_slider("network_spring_length", "Spring Length",
+                           min=50, max=500, value=200, step=10),
+            ui.input_slider("network_spring_constant", "Spring Constant",
+                           min=0.1, max=2.0, value=0.5, step=0.1),
+            ui.input_slider("network_avoid_overlap", "Avoid Overlap",
+                           min=0, max=1, value=0.8, step=0.1),
+        ),
+
+        # Node Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Nodes", style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_min_node_size", "Min Node Size",
+                           min=10, max=30, value=20, step=2),
+            ui.input_slider("network_max_node_size", "Max Node Size",
+                           min=40, max=100, value=50, step=5),
+        ),
+
+        # Edge Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Edges", style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_min_edge_width", "Min Edge Width",
+                           min=1, max=10, value=5, step=1),
+            ui.input_slider("network_max_edge_width", "Max Edge Width",
+                           min=10, max=30, value=15, step=1),
+        ),
+
+        # Simulation Controls
+        ui.div(
+            {"class": "control-group"},
+            ui.h6("Simulation", style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_stabilization_iterations", "Stabilization Iterations",
+                           min=100, max=2000, value=1000, step=100),
+            ui.input_switch("network_physics_enabled", "Physics Enabled", value=True),
+        ),
+
+        # Apply button
+        ui.div(
+            {"style": "margin-top: 15px; text-align: center;"},
+            ui.input_action_button("apply_network_settings", "Apply Settings",
+                                 class_="search-button",
+                                 style="width: 100%;")
+        )
+    )
 
 def create_app_ui():
     """Create the main UI of the app."""
@@ -49,11 +96,11 @@ def create_app_ui():
             ui.tags.style("\n".join(CSS_STYLES.values())),
         ),
         create_welcome_section(),
+        create_network_controls_panel(),
         ui.row(create_plots_section(),
                create_filters_section()),
         create_footer(),
     )
-
 
 def create_welcome_section():
     """Create the welcome section of the app."""
@@ -78,7 +125,6 @@ def create_welcome_section():
             target="_blank",
         ),
     )
-
 
 def create_file_input_section():
     """Create the file input section."""
@@ -105,7 +151,6 @@ def create_file_input_section():
                 value="", width="100%")
         )
     )
-
 
 def create_filters_section():
     """Create the filters section of the app."""
@@ -283,6 +328,18 @@ def create_filters_section():
                         });
                     });
 
+                    // Network controls panel visibility
+                    $(document).on('click', 'a[data-value]', function() {
+                        var tabValue = $(this).data('value');
+                        var networkPanel = $('#network_controls_panel');
+                        
+                        if (tabValue === 'Network') {
+                            networkPanel.show();
+                        } else {
+                            networkPanel.hide();
+                        }
+                    });
+
                     // Toggle custom axis inputs
                     $('#rename_axes_button').on('click', function() {
                         $('#custom_axes_inputs').toggle();
@@ -327,7 +384,6 @@ def create_filters_section():
             )
         )
     )
-
 
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""
@@ -396,7 +452,8 @@ def create_plots_section():
                     ui.nav_panel(
                         "Network",
                         ui.div(
-                            {"class": "plot-tab-content"},
+                            {"class": "plot-tab-content",
+                             "style": "width: 80%; max-width: 80%; margin: 20px auto; margin-left: 320px;"},
                             ui.output_ui("network_plot")
                         )
                     ),
@@ -416,7 +473,6 @@ def create_plots_section():
             });
         """)
     )
-
 
 def create_footer():
     """Create a footer with documentation and GitHub links."""
@@ -466,6 +522,5 @@ def create_footer():
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
         ),
     )
-
 
 app_ui = create_app_ui()

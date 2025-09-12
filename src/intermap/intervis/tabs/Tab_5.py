@@ -42,7 +42,7 @@ class InterNetwork:
     """
 
     def __init__(self, master_df, plot_size=(800, 600), node_sizes=(20, 50),
-                 edge_widths=(50, 200)):
+                 edge_widths=(50, 200), network_params=None):
         """
         Initializes the Network with the provided DataFrame.
 
@@ -51,6 +51,7 @@ class InterNetwork:
             plot_size (tuple): Size of the plot (width, height).
             node_sizes (tuple): Minimum and maximum sizes for nodes.
             edge_widths (tuple): Minimum and maximum widths for edges.
+            network_params (dict): Dictionary containing network parameters
         """
         self.master = master_df
         self.min_node_size = node_sizes[0]
@@ -59,6 +60,21 @@ class InterNetwork:
         self.max_edge_width = edge_widths[1]
         self.width = plot_size[0]
         self.height = plot_size[1]
+
+        # Default network parameters
+        self.network_params = {
+            'gravity': -200,
+            'central_gravity': 0.005,
+            'spring_length': 200,
+            'spring_constant': 0.5,
+            'avoid_overlap': 0.8,
+            'stabilization_iterations': 1000,
+            'physics_enabled': True
+        }
+
+        # Update with provided parameters
+        if network_params:
+            self.network_params.update(network_params)
 
     def get_graph(self):
         """
@@ -118,37 +134,41 @@ class InterNetwork:
             return None
 
         net = Network(height=f"{self.height}px", font_color='black')
-        net.set_options("""
-        {
-            "nodes": {
-                "font": {"size": 22}
-            },
-            "edges": {
-                "font": {"size": 22},
-                "smooth": {"type": "continuous"}
-            },
-            "physics": {
-                "enabled": true,
-                "forceAtlas2Based": {
-                    "gravitationalConstant": -200,
-                    "centralGravity": 0.005,
-                    "springLength": 200,
-                    "springConstant": 0.5,
-                    "avoidOverlap": 0.8
-                },
+
+        # Use customizable parameters in the options
+        options = f"""
+        {{
+            "nodes": {{
+                "font": {{"size": 22}}
+            }},
+            "edges": {{
+                "font": {{"size": 22}},
+                "smooth": {{"type": "continuous"}}
+            }},
+            "physics": {{
+                "enabled": {str(self.network_params['physics_enabled']).lower()},
+                "forceAtlas2Based": {{
+                    "gravitationalConstant": {self.network_params['gravity']},
+                    "centralGravity": {self.network_params['central_gravity']},
+                    "springLength": {self.network_params['spring_length']},
+                    "springConstant": {self.network_params['spring_constant']},
+                    "avoidOverlap": {self.network_params['avoid_overlap']}
+                }},
                 "solver": "forceAtlas2Based",
                 "minVelocity": 0.75,
-                "stabilization": {
+                "stabilization": {{
                     "enabled": true,
-                    "iterations": 1000
-                }
-            },
-            "interaction": {
+                    "iterations": {self.network_params['stabilization_iterations']}
+                }}
+            }},
+            "interaction": {{
                 "hover": true,
                 "tooltipDelay": 100
-            }
-        }
-        """)
+            }}
+        }}
+        """
+
+        net.set_options(options)
 
         for node in G.nodes():
             if 'WAT' in node or 'HOH' in node:
