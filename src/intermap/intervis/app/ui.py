@@ -221,7 +221,32 @@ def create_filters_section():
             ),
             ui.hr(),
 
-            # Panel 6 - New Axis Settings section
+            # Panel 6 - Data Sorting
+            ui.h4("Data Sorting"),
+            ui.div(
+                {"class": "organization-container",
+                 "style": "margin-bottom: 15px;"},
+                ui.layout_columns(
+                    ui.p("Organize labels by:",
+                         style="margin-top: 8px; margin-bottom: 0; font-weight: 500;"),
+                    ui.input_radio_buttons(
+                        "organization_method",
+                        "",
+                        choices={
+                            "resname": "Residue Name",
+                            "resnum": "Residue Number",
+                            "annotation": "Annotations"
+                        },
+                        selected="resname",
+                        inline=True,
+                        width="100%"
+                    ),
+                    col_widths=[4, 8]
+                )
+            ),
+            ui.hr(),
+
+            # Panel 7 - Axis Settings section
             ui.h4("Axis Settings and Plot Title"),
             ui.div(
                 {"class": "axis-settings-container"},

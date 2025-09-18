@@ -35,6 +35,7 @@ def server(input, output, session):
     simplify_labels = reactive.Value(False)
     custom_x_axis = reactive.Value(None)
     custom_y_axis = reactive.Value(None)
+    organization_method = reactive.Value("resname")
 
     network_params = reactive.Value({
         'gravity': -200,
@@ -131,6 +132,113 @@ def server(input, output, session):
 
             csv_filtered.set(filtered_df)
             session.send_custom_message("refresh-plots", {})
+
+    @reactive.Effect
+    @reactive.event(input.organization_method)
+    def update_organization_method():
+        """Update the organization method when the radio button selection changes."""
+        organization_method.set(input.organization_method())
+
+        if filtered_idx.get() is not None:
+            session.send_custom_message("refresh-plots", {})
+
+    def apply_organization_to_figure(fig, method):
+        """
+        Apply organization to a plotly figure's x-axis.
+
+        Args:
+            fig: Plotly figure to modify
+            method: Organization method ('resname', 'resnum', or 'annotation')
+
+        Returns:
+            The modified plotly figure
+        """
+        if fig is None:
+            return fig
+
+        if not hasattr(fig.data[0], 'x') or fig.data[0].x is None:
+            return fig
+
+        try:
+            x_values = []
+            for trace in fig.data:
+                if hasattr(trace, 'x') and trace.x is not None:
+                    x_values.extend(trace.x)
+
+            x_values = list(dict.fromkeys(
+                x_values))
+
+            if not x_values:
+                return fig
+
+            x_components = {}
+            for x in x_values:
+                if isinstance(x, str):
+                    try:
+                        if '__' in x:
+                            first_part, rest = x.split('__', 1)
+                            if '_' in first_part:
+                                parts = first_part.split('_')
+                                resname = parts[0]
+                                resid = int(parts[1]) if len(parts) > 1 and \
+                                                         parts[
+                                                             1].isdigit() else 0
+                            else:
+                                resname = first_part
+                                resid = 0
+                        else:
+                            parts = x.split('_')
+                            resname = parts[0] if parts else ""
+
+                            resid = int(parts[1]) if len(parts) > 1 and parts[
+                                1].isdigit() else 0
+
+                        x_components[x] = {
+                            'resname': resname,
+                            'resid': resid,
+                            'full': x
+                        }
+                    except Exception as e:
+                        print(f"Error parsing x value '{x}': {str(e)}")
+                        x_components[x] = {
+                            'resname': x,
+                            'resid': 0,
+                            'full': x
+                        }
+
+            if not x_components:
+                return fig
+
+            if method == "resname":
+                sorted_x = sorted(x_components.keys(),
+                                  key=lambda x: x_components[x]['resname'])
+            elif method == "resnum":
+                sorted_x = sorted(x_components.keys(),
+                                  key=lambda x: x_components[x]['resid'])
+            elif method == "annotation":
+                df = csv_filtered.get()
+                if df is not None and 'note1' in df.columns and 'sel1' in df.columns:
+                    sel1_to_note1 = dict(zip(df['sel1'], df['note1']))
+                    sorted_x = sorted(x_components.keys(),
+                                      key=lambda x: str(
+                                          sel1_to_note1.get(x, "")))
+                else:
+                    sorted_x = x_values
+            else:
+                sorted_x = sorted(x_components.keys(),
+                                  key=lambda x: x_components[x]['resname'])
+
+            fig.update_layout(
+                xaxis=dict(
+                    categoryorder='array',
+                    categoryarray=sorted_x
+                )
+            )
+
+            return fig
+        except Exception as e:
+            print(f"Error applying organization to figure: {str(e)}")
+            return fig
 
     @reactive.Effect
     @reactive.event(input.plot_button,
@@ -237,6 +345,9 @@ def server(input, output, session):
                                            master_instance.axisx,
                                            master_instance.axisy,
                                            input.show_prevalence())
+                if organization_method.get() != "default":
+                    fig = apply_organization_to_figure(fig, organization_method.get())
+
                 filename = f"lifetime_plot_{timestamp}.html"
                 full_path = save_dir / filename
                 fig.write_html(str(full_path))
@@ -248,6 +359,10 @@ def server(input, output, session):
                                   master_instance.axisx,
                                   master_instance.axisy,
                                   input.show_prevalence())
+                # Apply organization if needed
+                if organization_method.get() != "default":
+                    fig = apply_organization_to_figure(fig, organization_method.get())
+
                 filename = f"sele1_vs_sele2_plot_{timestamp}.html"
                 full_path = save_dir / filename
                 fig.write_html(str(full_path))
@@ -258,6 +373,10 @@ def server(input, output, session):
                                                      input.plot_height() // 1.5,
                                                      master_instance.axisx,
                                                      master_instance.axisy)
+                # Apply organization if needed
+                if organization_method.get() != "default":
+                    fig1 = apply_organization_to_figure(fig1, organization_method.get())
+
                 filename1 = f"selection1_prevalence_{timestamp}.html"
                 full_path1 = save_dir / filename1
                 fig1.write_html(str(full_path1))
@@ -267,6 +386,10 @@ def server(input, output, session):
                                                      input.plot_height() // 1.5,
                                                      master_instance.axisx,
                                                      master_instance.axisy)
+                # Apply organization if needed
+                if organization_method.get() != "default":
+                    fig2 = apply_organization_to_figure(fig2, organization_method.get())
+
                 filename2 = f"selection2_prevalence_{timestamp}.html"
                 full_path2 = save_dir / filename2
                 fig2.write_html(str(full_path2))
@@ -284,6 +407,10 @@ def server(input, output, session):
                                                          input.plot_height(),
                                                          master_instance.axisx,
                                                          master_instance.axisy)
+                # Apply organization if needed
+                if organization_method.get() != "default":
+                    fig = apply_organization_to_figure(fig, organization_method.get())
+
                 filename = f"time_series_plot_{timestamp}.html"
                 full_path = save_dir / filename
                 fig.write_html(str(full_path))
@@ -567,6 +694,10 @@ def server(input, output, session):
                     'font': {'family': "Roboto", 'size': 20}
                 })
 
+            # Apply organization as the last step
+            if organization_method.get() != "default":
+                fig = apply_organization_to_figure(fig, organization_method.get())
+
             plot_html = fig.to_html(
                 include_plotlyjs="cdn",
                 full_html=False,
@@ -596,7 +727,7 @@ def server(input, output, session):
     @render.ui
     @reactive.event(input.plot_button, input.transpose_button,
                     input.simplify_axis_labels, input.apply_axis_names,
-                    input.apply_plot_titles)
+                    input.apply_plot_titles, input.organization_method)
     def interaction_plot():
         """Render the main interaction heatmap plot."""
         return render_plot(create_plot, is_main=True)
@@ -604,7 +735,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_axis_names, input.apply_plot_titles)
+                    input.apply_axis_names, input.apply_plot_titles,
+                    input.organization_method)
     def sel1_interactions_plot():
         """Render the sel1 interactions plot."""
         return render_plot(create_sel1_interactions_plot)
@@ -612,7 +744,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_axis_names, input.apply_plot_titles)
+                    input.apply_axis_names, input.apply_plot_titles,
+                    input.organization_method)
     def sel2_interactions_plot():
         """Render the sel2 interactions plot."""
         return render_plot(create_sel2_interactions_plot)
@@ -620,7 +753,7 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_plot_titles)
+                    input.apply_plot_titles, input.organization_method)
     def interactions_over_time_plot():
         """Render the interactions over time plot."""
         return render_plot(create_interactions_over_time_plot)
@@ -628,7 +761,7 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_plot_titles)
+                    input.apply_plot_titles, input.organization_method)
     def lifetime_plot():
         """Render the lifetime boxplot."""
         error = check_data()
@@ -661,6 +794,10 @@ def server(input, output, session):
             'font': {'family': "Roboto", 'size': 20}
         })
 
+        # Apply organization as the last step
+        if organization_method.get() != "default":
+            fig = apply_organization_to_figure(fig, organization_method.get())
+
         plot_html = fig.to_html(
             include_plotlyjs="cdn",
             full_html=False,
@@ -675,7 +812,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.plot_button, input.simplify_axis_labels,
-                    input.apply_plot_titles, input.apply_network_settings)
+                    input.apply_plot_titles, input.apply_network_settings,
+                    input.organization_method)
     def network_plot():
         """Render the network visualization plot."""
         error = check_data()
