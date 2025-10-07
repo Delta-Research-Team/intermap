@@ -2,10 +2,10 @@
 User interface components for the InterMap Visualizations app.
 """
 from screeninfo import get_monitors
-from shiny import ui
 
 from intermap.intervis.app.css import CSS_STYLES
 from intermap.intervis.app.helpers import get_image_base64
+from shiny import ui
 
 for m in get_monitors():
     personal_width = m.width
@@ -19,22 +19,77 @@ proj_dir = dirname(app_dir)
 logo_path = join(proj_dir, "intervis", "statics", "Untitled.png")
 favicon_path = join(proj_dir, "statics", "favicon-32x32.png")
 
-"""
-   UI: create_app_ui
-  #####################################
-  #          Welcome Section          #
-  #####################################
-  #                   #   create_file #
-  #      create       # input_section #
-  #      plots        #---------------#  
-  #      section      #      create   # 
-  #                   #      filters  #
-  #                   #      section  #
-  #####################################
-  #              Footer               #
-  #####################################
-"""
 
+def create_network_controls_panel():
+    """Create the network controls panel for Tab 5."""
+    return ui.div(
+        {
+            "id": "network_controls_panel",
+            "class": "network-controls-panel",
+            "style": "display: none; position: fixed; left: 10px; top: 150px; width: 280px; z-index: 100; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto;"
+        },
+        ui.h5("Network Controls",
+              style="margin-bottom: 15px; color: #4051b5; font-family: Roboto;"),
+
+        # Physics Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Physics",
+                  style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_gravity", "Gravitational Constant",
+                            min=-500, max=0, value=-200, step=10),
+            ui.input_slider("network_central_gravity", "Central Gravity",
+                            min=0, max=0.1, value=0.005, step=0.001),
+            ui.input_slider("network_spring_length", "Spring Length",
+                            min=50, max=500, value=200, step=10),
+            ui.input_slider("network_spring_constant", "Spring Constant",
+                            min=0.1, max=2.0, value=0.5, step=0.1),
+            ui.input_slider("network_avoid_overlap", "Avoid Overlap",
+                            min=0, max=1, value=0.8, step=0.1),
+        ),
+
+        # Node Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Nodes",
+                  style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_min_node_size", "Min Node Size",
+                            min=10, max=30, value=20, step=2),
+            ui.input_slider("network_max_node_size", "Max Node Size",
+                            min=40, max=100, value=50, step=5),
+        ),
+
+        # Edge Controls
+        ui.div(
+            {"class": "control-group", "style": "margin-bottom: 15px;"},
+            ui.h6("Edges",
+                  style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_min_edge_width", "Min Edge Width",
+                            min=1, max=10, value=5, step=1),
+            ui.input_slider("network_max_edge_width", "Max Edge Width",
+                            min=10, max=30, value=15, step=1),
+        ),
+
+        # Simulation Controls
+        ui.div(
+            {"class": "control-group"},
+            ui.h6("Simulation",
+                  style="font-weight: 500; margin-bottom: 8px; color: #333;"),
+            ui.input_slider("network_stabilization_iterations",
+                            "Stabilization Iterations",
+                            min=100, max=2000, value=1000, step=100),
+            ui.input_switch("network_physics_enabled", "Physics Enabled",
+                            value=True),
+        ),
+
+        # Apply button
+        ui.div(
+            {"style": "margin-top: 15px; text-align: center;"},
+            ui.input_action_button("apply_network_settings", "Apply Settings",
+                                   class_="search-button",
+                                   style="width: 100%;")
+        )
+    )
 
 def create_app_ui():
     """Create the main UI of the app."""
@@ -49,11 +104,11 @@ def create_app_ui():
             ui.tags.style("\n".join(CSS_STYLES.values())),
         ),
         create_welcome_section(),
+        create_network_controls_panel(),
         ui.row(create_plots_section(),
                create_filters_section()),
         create_footer(),
     )
-
 
 def create_welcome_section():
     """Create the welcome section of the app."""
@@ -78,7 +133,6 @@ def create_welcome_section():
             target="_blank",
         ),
     )
-
 
 def create_file_input_section():
     """Create the file input section."""
@@ -105,7 +159,6 @@ def create_file_input_section():
                 value="", width="100%")
         )
     )
-
 
 def create_filters_section():
     """Create the filters section of the app."""
@@ -176,6 +229,96 @@ def create_filters_section():
             ),
             ui.hr(),
 
+            # Panel 6 - Data Sorting
+            ui.h4("Data Sorting"),
+            ui.div(
+                {"class": "organization-container",
+                 "style": "margin-bottom: 15px;"},
+                ui.layout_columns(
+                    ui.p("Organize labels by:",
+                         style="margin-top: 8px; margin-bottom: 0; font-weight: 500;"),
+                    ui.input_radio_buttons(
+                        "organization_method",
+                        "",
+                        choices={
+                            "resname": "Residue Name",
+                            "resnum": "Residue Number",
+                            "annotation": "Annotations"
+                        },
+                        selected="resname",
+                        inline=True,
+                        width="100%"
+                    ),
+                    col_widths=[4, 8]
+                )
+            ),
+            ui.hr(),
+
+            # Panel 7 - Axis Settings section
+            ui.h4("Axis Settings and Plot Title"),
+            ui.div(
+                {"class": "axis-settings-container"},
+                # Option to simplify axis labels
+                ui.input_checkbox("simplify_axis_labels",
+                                  "Show simplified axis labels", value=False),
+
+                # Custom axis names
+                ui.input_action_button(
+                    "rename_axes_button",
+                    "Rename Axes",
+                    class_="search-button"
+                ),
+
+                # Containers for custom axis names (initially hidden)
+                ui.div(
+                    {"id": "custom_axes_inputs",
+                     "style": "display: none; margin-top: 10px;"},
+                    ui.input_text("custom_x_axis", "X-Axis Title",
+                                  placeholder="Custom X-Axis name"),
+                    ui.input_text("custom_y_axis", "Y-Axis Title",
+                                  placeholder="Custom Y-Axis name"),
+                    ui.div(
+                        {
+                            "style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
+                        ui.input_action_button("apply_axis_names", "Apply",
+                                               class_="search-button")
+                    )
+                ),
+                ui.p(
+                    "Note: Custom axis names apply only to Heatmap and Prevalence plots",
+                    style="font-size: 12px; font-style: italic; margin-top: 8px; color: #666;"),
+
+                # Custom plot titles
+                ui.input_action_button(
+                    "customize_plot_titles_button",
+                    "Customize Plot Titles",
+                    class_="search-button"
+                ),
+
+                # Containers for custom plot titles (initially hidden)
+                ui.div(
+                    {"id": "custom_plot_titles_inputs",
+                     "style": "display: none; margin-top: 10px;"},
+                    ui.input_text("heatmap_plot_title", "Heatmap Plot Title",
+                                  value="Interaction Heatmap"),
+                    ui.input_text("prevalence_plot_title",
+                                  "Prevalence Plot Title",
+                                  value="Interaction Prevalence Analysis"),
+                    ui.input_text("lifetime_plot_title", "Lifetime Plot Title",
+                                  value="Interaction Lifetimes Distribution"),
+                    ui.input_text("timeseries_plot_title",
+                                  "Time Series Plot Title",
+                                  value="Interactions Over Time"),
+                    ui.input_text("network_plot_title", "Network Plot Title",
+                                  value="Interaction Network"),
+                    ui.div(
+                        {
+                            "style": "display: flex; justify-content: flex-end; margin-top: 8px;"},
+                        ui.input_action_button("apply_plot_titles", "Apply",
+                                               class_="search-button")
+                    )
+                ),
+            ),
             # Transpose button
             ui.div(
                 {"class": "transpose-button-container"},
@@ -196,7 +339,7 @@ def create_filters_section():
             # JavaScript handlers
             ui.tags.script("""
                 $(document).ready(function() {
-                    // Handlers existentes
+                    // Handlers for transpose button
                     Shiny.addCustomMessageHandler('update-transpose-button', function(message) {
                         const button = document.querySelector('.transpose-button');
                         if (message.active) {
@@ -206,6 +349,7 @@ def create_filters_section():
                         }
                     });
 
+                    // Handler for refreshing plots
                     Shiny.addCustomMessageHandler('refresh-plots', function(message) {
                         var plotTabs = ['interaction_plot', 'sel1_interactions_plot', 
                                         'sel2_interactions_plot', 'interactions_over_time_plot', 
@@ -217,9 +361,48 @@ def create_filters_section():
                         });
                     });
 
-                    // Manejar el botón de descarga
-                    document.getElementById('download_plot_button').addEventListener('click', function() {
+                    // Network controls panel visibility
+                    $(document).on('click', 'a[data-value]', function() {
+                        var tabValue = $(this).data('value');
+                        var networkPanel = $('#network_controls_panel');
+                        
+                        if (tabValue === 'Network') {
+                            networkPanel.show();
+                        } else {
+                            networkPanel.hide();
+                        }
+                    });
+
+                    // Toggle custom axis inputs
+                    $('#rename_axes_button').on('click', function() {
+                        $('#custom_axes_inputs').toggle();
+                    });
+
+                    // Apply button handler for axis names
+                    $('#apply_axis_names').on('click', function() {
+                        Shiny.setInputValue('custom_axes_applied', Date.now());
+                        $('#custom_axes_inputs').hide();
+                    });
+
+                    // Toggle custom plot title inputs
+                    $('#customize_plot_titles_button').on('click', function() {
+                        $('#custom_plot_titles_inputs').toggle();
+                    });
+
+                    // Apply button handler for plot titles
+                    $('#apply_plot_titles').on('click', function() {
+                        Shiny.setInputValue('custom_plot_titles_applied', Date.now());
+                        $('#custom_plot_titles_inputs').hide();
+                    });
+
+                    // Button click handlers
+                    $('#download_plot_button').on('click', function() {
                         Shiny.setInputValue('save_plot_trigger', Date.now());
+                    });
+
+                    $('#export_csv_button').on('click', function() {
+                        console.log("Export CSV button clicked");
+                        Shiny.setInputValue('export_csv_trigger', Date.now());
                     });
                 });
             """),
@@ -229,10 +412,11 @@ def create_filters_section():
                 {"class": "action-buttons-container"},
                 ui.input_action_button("plot_button", "PLOT"),
                 ui.input_action_button("download_plot_button", "SAVE PLOT"),
+                ui.input_action_button("export_csv_button", "EXPORT CSV",
+                                       class_="export-csv-button"),
             )
         )
     )
-
 
 def create_plots_section():
     """Create the plots section of the app with styled tabbed navigation."""
@@ -301,7 +485,8 @@ def create_plots_section():
                     ui.nav_panel(
                         "Network",
                         ui.div(
-                            {"class": "plot-tab-content"},
+                            {"class": "plot-tab-content",
+                             "style": "width: 80%; max-width: 80%; margin: 20px auto; margin-left: 320px;"},
                             ui.output_ui("network_plot")
                         )
                     ),
@@ -321,7 +506,6 @@ def create_plots_section():
             });
         """)
     )
-
 
 def create_footer():
     """Create a footer with documentation and GitHub links."""
@@ -371,6 +555,5 @@ def create_footer():
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
         ),
     )
-
 
 app_ui = create_app_ui()

@@ -3,7 +3,6 @@ Plotting components for the InterMap Visualizations app.
 """
 
 import pandas as pd
-import plotly.graph_objects as go
 
 from intermap.intervis.tabs.heatmap import HeatMap
 from intermap.intervis.tabs.Tab_2 import PrevalencePlot
@@ -109,15 +108,31 @@ def create_interactions_over_time_plot(df, width, height, axisx, axisy):
 ###############################################################################
 # Tab 5
 ###############################################################################
-def create_network_plot(df, width, height, axisx, axisy):
+def create_network_plot(df, width, height, axisx, axisy, network_params=None):
     """Create interactive network visualization using InterNetwork class."""
     if df.empty:
         return None
 
+    # Default parameters if none provided
+    default_params = {
+        'gravity': -200,
+        'central_gravity': 0.005,
+        'spring_length': 200,
+        'spring_constant': 0.5,
+        'avoid_overlap': 0.8,
+        'stabilization_iterations': 1000,
+        'physics_enabled': True
+    }
+
+    params = network_params if network_params else default_params
+
     network = InterNetwork(
         master_df=df,
         plot_size=(width, height),
-        node_sizes=(20, 50),
-        edge_widths=(5, 15))
+        node_sizes=(
+            params.get('min_node_size', 20), params.get('max_node_size', 50)),
+        edge_widths=(
+            params.get('min_edge_width', 5), params.get('max_edge_width', 15)),
+        network_params=params)
 
     return network.create_network_plot()

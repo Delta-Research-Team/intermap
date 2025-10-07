@@ -721,5 +721,105 @@ CSS_STYLES = {
         width: 100%;
         min-height: 450px;
     }
+    
+    .axis-settings-container {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    }
+    
+    .rename-axes-button-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #custom_axes_inputs {
+        background-color: white;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        margin-top: 8px;
+    }
+    
+    #apply_axis_names {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
+    
+    .nav-panel[data-value="Network"] .plot-tab-content {
+    width: 80%;
+    max-width: 80%;
+    margin: 20px auto;
+    margin-left: 320px;  
+    }
+    
+    .action-buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0 15px;
+    }
+    
+    #plot_button {
+        background-color: #4a4a4a;
+        color: white;
+        padding: 20px 35px;  
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #plot_button:hover {
+        background-color: #4051b5ff !important;
+    }
+    
+    #download_plot_button {
+        background-color: #4051b5ff;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #download_plot_button:hover {
+        background-color: #4a4a4a !important;
+    }
+    
+    #export_csv_button {
+        background-color: #2e7d32;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #export_csv_button:hover {
+        background-color: #1b5e20 !important;
+    }
     """
+
+    ,
+
+
+
 }

@@ -7,7 +7,7 @@ import MDAnalysis as mda
 import numpy as np
 import pandas as pd
 import rgpack.generals as gnl
-from bitarray import bitarray as ba, util as bu
+from bitarray import bitarray as ba
 
 from intermap.intervis.app.css import all_interactions_colors
 
@@ -208,8 +208,9 @@ class CSVFilter:
              topology and trajectory data
         """
         topo = self.cfg['topo-traj']['topology']
-        traj = self.cfg['topo-traj']['trajectory']
-        universe = mda.Universe(topo, traj)
+        # traj = self.cfg['topo-traj']['trajectory']
+        # universe = mda.Universe(topo, traj)
+        universe = mda.Universe(topo)
         return universe
 
     # =========================================================================

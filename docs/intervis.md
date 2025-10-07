@@ -39,6 +39,12 @@ using the ``Control Panel`` on the right side of the interface.
 - Click on `Browse PICKLE` / `Browse Config` to upload these file. Alternatively, you can drag and drop them into the
   designated area.
 
+- The time Intervis takes to upload the PICKLE and show the plots depends on the amount of data.
+
+!!! warning "Environment Updates"
+
+    The paths in the `config file` leading to the topology and trajectory must be absolute.
+
 ## 3. Configuring Visualizations
 
 Once the files are uploaded, you can configure the visualizations that will render in the different tabs of the
