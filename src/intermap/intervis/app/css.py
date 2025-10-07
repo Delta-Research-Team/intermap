@@ -27,48 +27,36 @@ all_interactions_colors = {
 """
 
 all_interactions_colors = {
-    # Interacciones de puente de hidrógeno - Rojo y Azul complementarios
-    'HBDonor': '#FF6B6B',  # Rojo cálido - donador de protones
-    'HBAcceptor': '#4ECDC4',  # Turquesa - aceptor de protones
-
-    # Interacciones iónicas - Azul y Naranja complementarios
-    'Cationic': '#2B95FF',  # Azul brillante - carga positiva
-    'Anionic': '#FF8F40',  # Naranja cálido - carga negativa
-
-    # Interacciones de agua - Tonos azules suaves
-    'Water Bridge': '#87CEEB',  # Azul cielo - representa agua
-
-    # Interacciones Pi - Tonos morados y rosados
-    'PiStacking': '#9B6B9E',  # Morado medio - apilamiento π-π
-    'PiCation': '#BE79BE',  # Morado-rosa - interacción π-catión
-    'CationPi': '#D4A5D4',  # Lila suave - interacción catión-π
-    'FaceToFace': '#845B87',  # Morado oscuro - apilamiento cara a cara
-    'EdgeToFace': '#AA8BAD',  # Morado grisáceo - apilamiento borde a cara
-
-    # Interacciones metálicas - Tonos metálicos
-    'MetalDonor': '#B8B8B8',  # Gris plateado - donador metálico
-    'MetalAcceptor': '#D4AF37',  # Dorado suave - aceptor metálico
-
-    # Interacciones débiles - Tonos suaves y grises
-    'VdWContact': '#D3D3D3',  # Gris claro - fuerzas de Van der Waals
-    'CloseContact': '#E6E6E6',  # Gris muy claro - contactos cercanos
-    'Hydrophobic': '#90A4AE',  # Gris azulado - interacciones hidrofóbicas
-
-    # Interacciones de halógeno - Verde azulados complementarios
-    'XBAcceptor': '#66CDAA',  # Verde mar medio - aceptor de halógeno
-    'XBDonor': '#20B2AA'  # Verde mar claro - donador de halógeno
+    'HBDonor': '#FF6B6B',
+    'HBAcceptor': '#4ECDC4',
+    'Cationic': '#2B95FF',
+    'Anionic': '#FF8F40',
+    'WaterBridge': '#87CEEB',
+    'PiStacking': '#9B6B9E',
+    'PiCation': '#BE79BE',
+    'PiAnion': '#418641',
+    'CationPi': '#D4A5D4',
+    'FaceToFace': '#845B87',
+    'EdgeToFace': '#AA8BAD',
+    'MetalDonor': '#B8B8B8',
+    'MetalAcceptor': '#D4AF37',
+    'VdWContact': '#D3D3D3',
+    'CloseContact': '#E6E6E6',
+    'Hydrophobic': '#90A4AE',
+    'XBAcceptor': '#66CDAA',
+    'XBDonor': '#20B2AA'
 }
 
 # Error messages dictionary
 ERROR_MESSAGES = {
     'nothing_selected': "Change your filters, your selection is empty",
-    'no_file': "Please upload a CSV file.",
-    'invalid_file': "Invalid file format. Please upload a CSV file.",
+    'no_file': "Please upload a pickle file.",
+    'invalid_file': "Invalid file format. Please upload a pickle file.",
     'no_data': "No data available for plotting.",
     'processing_error': "Error processing file: {}",
     'no_interactions': "No interactions found with current filters.",
     'plot_error': "Error generating plot: {}",
-    'no_topology': "No topology file found in directory.",
+    'no_topology': "No configuration file found in directory.",
     'invalid_sele': "Invalid MDAnalysis selection: {}"
 }
 
@@ -307,10 +295,7 @@ CSS_STYLES = {
         .row {
             margin-top: 120px; 
         }
-    """
-
-
-    ,
+    """,
 
     'welcome_text': """
     .welcome-text {
@@ -400,15 +385,49 @@ CSS_STYLES = {
     }
     """,
 
-    #'search_container': """
-    #.search-container {
-    #    display: flex;
-    #    align-items: center;
-    #    gap: 10px;
-    #    margin-bottom: 10px;
-    #    font-family: 'Roboto', sans-serif;
-    #}
-    #""",
+    'select_all_checkbox': """
+    .interaction-filter .select-all-container {
+        padding: 4px !important;
+        margin-bottom: 5px !important;
+        background-color: transparent !important;
+        border-radius: 4px !important;
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"] {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        width: 16px !important;
+        height: 16px !important;
+        border: 2px solid #ff5555ff !important; 
+        border-radius: 50% !important;
+        background-color: white !important;
+        cursor: pointer !important;
+        margin-right: 8px !important;
+        position: relative !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"]:checked {
+        background-color: #ff5555ff !important;  
+    }
+
+    .interaction-filter .select-all-container input[type="checkbox"]:checked::after {
+        content: '✓' !important;
+        color: white !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-size: 12px !important;
+    }
+
+    .interaction-filter .select-all-container label {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 0.9em !important;
+        color: black !important;  
+    }
+    """,
 
     'plot_container': """
     .plot-container {
@@ -498,81 +517,309 @@ CSS_STYLES = {
             width: 100%;
             margin-bottom: 20px;
         }
-        """,
+        
+        .control-group {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .control-group h5 {
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-group label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .slider-container {
+            padding: 0 10px;
+        }
+        
+        .custom-checkbox {
+            margin-bottom: 8px;
+        }
+    """,
 
+    'transpose_button': """
+    .transpose-button-container {
+        padding: 10px 15px;
+        margin-bottom: 15px;
+    }
 
-
-
-    'select_all_checkbox': """
-    .select-all-container {
-        padding: 4px;
-        margin-bottom: 5px;
-        background-color: #f8f9fa;
+    .transpose-button {
+        width: 100%;
+        background-color: #4d4d4dd0;
+        color: white;
+        padding: 12px 20px;
+        border: none;
         border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Roboto;
+        font-size: 14px;
     }
 
-    .select-all-container input[type="checkbox"] {
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        width: 16px !important;
-        height: 16px !important;
-        border: 2px solid #4051b5ff !important;
-        border-radius: 50% !important;  
-        background-color: #FEFBF6 !important;
-        cursor: pointer !important;
-        margin-right: 8px !important;
-        position: relative !important;
-        transition: all 0.3s ease !important;
+    .transpose-button:hover {
+        background-color: #4051b5ff;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-    .select-all-container input[type="checkbox"]:checked {
-        background-color: #4051b5ff !important;
+    .transpose-button:active {
+        transform: translateY(0);
     }
 
-    .select-all-container input[type="checkbox"]:checked::after {
-        content: '✓' !important;
-        color: #FEFBF6 !important;
-        position: absolute !important;
-        left: 50% !important;
-        top: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        font-size: 12px !important;
+    .transpose-button-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .select-all-container label {
-        font-family: 'Roboto', sans-serif !important;
-        font-size: 0.9em !important;
-        color: #383747ff !important;
+    .transpose-button.active {
+        background-color: #4051b5ff;
+    }
+
+    .fa-exchange-alt {
+        transition: transform 0.3s ease;
+    }
+
+    .transpose-button.active .fa-exchange-alt {
+        transform: rotate(90deg);
     }
     """,
 
-    'checkbox_group': """
-    .checkbox-group {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ddd;
+    'action_buttons': """
+    .action-buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0 15px;
+    }
+
+    #plot_button {
+        background-color: #4a4a4a;
+        color: white;
+        padding: 20px 35px;  
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
         border-radius: 4px;
-        font-family: 'Roboto', sans-serif;
-        scrollbar-width: thin;
-        scrollbar-color: #4051b5ff #f0f0f0;
-        margin-top: 5px;  
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 50%;
     }
 
-    .checkbox-group::-webkit-scrollbar {
-        width: 4px;
+    #plot_button:hover {
+        background-color: #4051b5ff !important;
     }
 
-    .checkbox-group::-webkit-scrollbar-track {
-        background: #f0f0f0;
-        border-radius: 4px;
-    }
-
-    .checkbox-group::-webkit-scrollbar-thumb {
+    #download_plot_button {
         background-color: #4051b5ff;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
         border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 50%;
+    }
+
+    #download_plot_button:hover {
+        background-color: #4a4a4a !important;
+    }
+    """,
+
+    'footer': """
+    .footer-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: black;
+        padding: 10px 20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Roboto';
+        z-index: 1000;
+    }
+
+    .footer-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: white;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        flex: 1;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .footer-divider {
+        color: white;
+        margin: 0 15px;
+    }
+    """,
+
+    'plots_section': """
+    .plots-main-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .plot-tab-content {
+        width: 100%;
+        max-width: 90%;
+        margin: 20px auto;
+    }
+
+    .prevalence-container {
+        width: 100%;
+        max-width: 90%;
+        margin: 20px auto;
+    }
+
+    .prevalence-plots {
+        display: flex;
+        flex-direction: column;
+        gap: 60px;
+    }
+
+    .prevalence-plot-item {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prevalence-plot-title {
+        text-align: center;
+        font-family: Roboto;
+        margin-bottom: 20px;
+    }
+
+    .prevalence-plot-content {
+        width: 100%;
+        min-height: 450px;
+    }
+    
+    .axis-settings-container {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    }
+    
+    .rename-axes-button-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #custom_axes_inputs {
+        background-color: white;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        margin-top: 8px;
+    }
+    
+    #apply_axis_names {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
+    
+    .nav-panel[data-value="Network"] .plot-tab-content {
+    width: 80%;
+    max-width: 80%;
+    margin: 20px auto;
+    margin-left: 320px;  
+    }
+    
+    .action-buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0 15px;
+    }
+    
+    #plot_button {
+        background-color: #4a4a4a;
+        color: white;
+        padding: 20px 35px;  
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #plot_button:hover {
+        background-color: #4051b5ff !important;
+    }
+    
+    #download_plot_button {
+        background-color: #4051b5ff;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #download_plot_button:hover {
+        background-color: #4a4a4a !important;
+    }
+    
+    #export_csv_button {
+        background-color: #2e7d32;
+        color: white;
+        padding: 20px 35px;
+        font-family: Roboto;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin: 10px 0;
+        width: 33.33%;
+    }
+    
+    #export_csv_button:hover {
+        background-color: #1b5e20 !important;
     }
     """
+
+    ,
+
+
 
 }

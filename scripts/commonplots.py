@@ -1,17 +1,17 @@
 # Created by gonzalezroy at 4/2/25
 import matplotlib as mpl
 
-cmap1 = 'tab20c'
+cmap1 = 'tab10'
 
 alpha1 = 0.75
 alpha2 = 0.50
 alpha3 = 0.25
 
 c1 = 'tab:red'
-c2 = 'tab:gray'
-c3 = 'tab:blue'
+c2 = 'tab:orange'
+c3 = 'tab:green'
 
-lw1 = 0.5
+lw1 = 1
 fs1 = 20
 
 

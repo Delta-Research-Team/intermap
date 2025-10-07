@@ -42,7 +42,7 @@ cutoffs = {
     'max_ang_nc_EdgeToFace': 30,
     'intersect_radius_EdgeToFace': 1.5,
 
-    'dist_cut_PiStacking': 6.5,
+    'dist_cut_PiStacking': 5.5,
     'min_ang_nn_PiStacking': 0,
     'max_ang_nn_PiStacking': 90,
     'min_ang_nc_PiStacking': 0,
@@ -51,13 +51,16 @@ cutoffs = {
     'dist_cut_PiCation': 4.5,
     'min_ang_PiCation': 0,
     'max_ang_PiCation': 30,
+    'dist_cut_PiAnion': 4.5,
+    'min_ang_PiAnion': 0,
+    'max_ang_PiAnion': 30,
 }
 
 interactions = [
     'CloseContact', 'VdWContact', 'Hydrophobic', 'Anionic',
     'Cationic', 'MetalDonor', 'MetalAcceptor', 'HBAcceptor',
     'HBDonor', 'XBAcceptor', 'XBDonor', 'FaceToFace', 'EdgeToFace',
-    'PiStacking', 'PiCation', 'CationPi']
+    'PiStacking', 'PiCation', 'CationPi', 'PiAnion', 'AnionPi']
 
 
 def get_cutoff(cutoff_name, args=()):
@@ -193,6 +196,14 @@ class CutoffsManager:
                 {'distCut1': get_cutoff('dist_cut_PiCation', cuts),
                  'minAng1': get_cutoff('min_ang_PiCation', cuts),
                  'maxAng1': get_cutoff('max_ang_PiCation', cuts)},
+            'PiAnion':
+                {'distCut1': get_cutoff('dist_cut_PiAnion', cuts),
+                 'minAng1': get_cutoff('min_ang_PiAnion', cuts),
+                 'maxAng1': get_cutoff('max_ang_PiAnion', cuts)},
+            'AnionPi':
+                {'distCut1': get_cutoff('dist_cut_PiAnion', cuts),
+                 'minAng1': get_cutoff('min_ang_PiAnion', cuts),
+                 'maxAng1': get_cutoff('max_ang_PiAnion', cuts)},
             'WaterBridge': {}
         }
         return cutoffs_raw

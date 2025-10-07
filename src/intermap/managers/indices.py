@@ -69,18 +69,59 @@ def any_hh_bonds(universe):
     return False
 
 
-def get_hh_bonds(universe):
+def calc_dist(a, b):
     """
-    Get the hydrogen-hydrogen bonds in the Universe
+    Calculate the distance between two atoms
+
+    Args:
+        a (numpy.ndarray): Coordinates of atom a
+        b (numpy.ndarray): Coordinates of atom b
 
     Returns:
-        bonds (list): List of hydrogen-hydrogen bonds
+        float: Distance between the two atoms
+    """
+    return np.linalg.norm(a - b)
+
+
+def fix_hh_and_hvalence(universe):
+    """
+    Delete H-H bonds from the universe
+
+    Args:
+        universe (MDAnalysis.Universe): Universe object
     """
     bonds = universe.bonds
-    for bond in bonds:
-        atom1, atom2 = bond
-        if (atom1.element == 'H') and (atom2.element == 'H'):
-            yield bond
+    neighbors = defaultdict(list)
+
+    hh = []
+    for a1, a2 in bonds:
+        a1_idx = a1.index
+        a2_idx = a2.index
+        if (a1.element == 'H') and (a2.element == 'H'):
+            hh.append((a1_idx, a2_idx))
+            continue
+        if a1.element == 'H':
+            neighbors[a1_idx].append(a2_idx)
+        if a2.element == 'H':
+            neighbors[a2_idx].append(a1_idx)
+
+    # Remove H-H bonds
+    universe.delete_bonds(hh)
+
+    offending = {k: v for k, v in neighbors.items() if len(v) > 1}
+    hv = []
+    for k, v in offending.items():
+        distances = []
+        for j in v:
+            distance = calc_dist(universe.atoms[k].position,
+                                 universe.atoms[j].position)
+            distances.append(distance)
+        argmin = np.argmin(distances)
+        v.pop(argmin)
+        for x in v:
+            hv.append((k, x))
+    universe.delete_bonds(hv)
+    return universe
 
 
 def ag2rdkit(ag):
@@ -175,16 +216,21 @@ class IndexManager:
     """
     smarts = {
         'hydroph': '[c,s,Br,I,S&v2&H0,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
+        # 'hydroph': "[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6X4H0]);+0]",
         'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
+        # 'cations': '[+{1-},$([NX3&!$([NX3]-O)]-[C]=[NX3+])]',
         'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
+        # 'anions': '[-{1-},$(O=[C,S,P]-[O-])]',
         'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
         'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
         'hb_acc': '[#7&!$([nX3])&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4&+1]),O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O),o+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
         'xb_acc': '[$([O,S;+0]),$([N;v3,v4&+1]),n+0]-[H]',
         'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
         'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
-        'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
-        'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        # 'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'rings5': '[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1',
+        'rings6': '[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1',
+        # 'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
         'water': ' [OH2]'}
 
     def __init__(self, args):
@@ -210,10 +256,11 @@ class IndexManager:
 
         # Get indices of the selections
         (self.sel_idx, self.s1_idx, self.s2_idx,
-         self.overlap) = self.get_selections_indices()
+         self.overlap, self.resconv,
+         self.shared_idx) = self.get_selections_indices()
 
         # Get the names of the atoms
-        (self.resconv, self.resid_names, self.atom_names, self.resid_notes,
+        (self.resid_names, self.atom_names, self.resid_notes,
          self.atom_notes) = self.get_resids_and_names()
 
         # Get triads (connected) / monomers (disconnected) of residues
@@ -241,10 +288,10 @@ class IndexManager:
         self.waters, self.raw_waters = self.get_waters()
 
         # Get indices of the aromatic interactions
-        (self.rings, self.s1_cat, self.s2_cat, self.s1_cat_idx,
-         self.s2_cat_idx, self.s1_rings, self.s2_rings, self.s1_rings_idx,
-         self.s2_rings_idx, self.s1_aro_idx, self.s2_aro_idx,
-         self.xyz_aro_idx) = self.get_aro()
+        (self.rings, self.s1_cat, self.s2_cat, self.s1_ani, self.s2_ani,
+         self.s1_cat_idx, self.s2_cat_idx, self.s1_ani_idx, self.s2_ani_idx,
+         self.s1_rings, self.s2_rings, self.s1_rings_idx, self.s2_rings_idx,
+         self.s1_aro_idx, self.s2_aro_idx, self.xyz_aro_idx) = self.get_aro()
 
         # Report the interactions detected
         self.inters_requested = self.report()
@@ -308,7 +355,10 @@ class IndexManager:
         universe.add_TopologyAttr('elements', elements)
         stamp1 = time.time()
         are_hh = any_hh_bonds(universe)
-        universe.delete_bonds(get_hh_bonds(universe))
+
+        universe = fix_hh_and_hvalence(universe)
+        # universe.delete_bonds(get_hh_bonds(universe))
+
         del_time = time.time() - stamp1
         if are_hh:
             logger.warning(
@@ -353,8 +403,14 @@ class IndexManager:
         sel_idx = np.asarray(uniques, dtype=np.int32)
         s1_idx = npi.indices(sel_idx, s1_idx).astype(np.int32)
         s2_idx = npi.indices(sel_idx, s2_idx).astype(np.int32)
-        overlap = np.intersect1d(s1_idx, s2_idx).size > 0
-        return sel_idx, s1_idx, s2_idx, overlap
+
+        resconv = self.universe.atoms.resindices[sel_idx].astype(np.int32)
+        if self.args.resolution == 'atom':
+            shared_idx = set(np.intersect1d(s1_idx, s2_idx))
+        else:
+            shared_idx = set(resconv[np.intersect1d(s1_idx, s2_idx)])
+        overlap = len(shared_idx) > 0
+        return sel_idx, s1_idx, s2_idx, overlap, resconv, shared_idx
 
     def get_singles(self, identifier):
         """
@@ -536,27 +592,38 @@ class IndexManager:
         rings = rings_raw[rings_raw[:, 0] != -1]
         s1_cat = self.s1_idx[geom.isin(self.s1_idx, self.cations)]
         s2_cat = self.s2_idx[geom.isin(self.s2_idx, self.cations)]
+        s1_ani = self.s1_idx[geom.isin(self.s1_idx, self.anions)]
+        s2_ani = self.s2_idx[geom.isin(self.s2_idx, self.anions)]
         s1_rings = rings[geom.isin(rings[:, 0], self.s1_idx)]
         s2_rings = rings[geom.isin(rings[:, 0], self.s2_idx)]
 
-        n0 = s1_cat.size + s2_cat.size
+        n0 = s1_cat.size + s2_cat.size + s1_ani.size + s2_ani.size
         n1 = n0 + s1_rings.shape[0]
         n2 = n1 + s2_rings.shape[0]
 
         s1_cat_idx = np.arange(0, s1_cat.size, dtype=np.int32)
-        s2_cat_idx = np.arange(s1_cat.size, n0, dtype=np.int32)
+        s2_cat_idx = np.arange(s1_cat.size, s1_cat.size + s2_cat.size,
+                               dtype=np.int32)
+        s1_ani_idx = np.arange(s1_cat.size + s2_cat.size,
+                               s1_cat.size + s2_cat.size + s1_ani.size,
+                               dtype=np.int32)
+        s2_ani_idx = np.arange(s1_cat.size + s2_cat.size + s1_ani.size,
+                               n0, dtype=np.int32)
         s1_rings_idx = np.arange(n0, n1, dtype=np.int32)
         s2_rings_idx = np.arange(n1, n2, dtype=np.int32)
-        s1_aro_idx = np.concatenate((s1_cat_idx, s1_rings_idx)).astype(
-            np.int32)
-        s2_aro_idx = np.concatenate((s2_cat_idx, s2_rings_idx)).astype(
-            np.int32)
-        xyz_aro_idx = np.concatenate((s1_cat, s2_cat, s1_rings[:, 0],
-                                      s2_rings[:, 0])).astype(np.int32)
+        s1_aro_idx = np.concatenate((s1_cat_idx, s1_ani_idx,
+                                     s1_rings_idx)).astype(np.int32)
+        s2_aro_idx = np.concatenate((s2_cat_idx, s2_ani_idx,
+                                     s2_rings_idx)).astype(np.int32)
+
+        xyz_aro_idx = np.concatenate(
+            (s1_cat, s2_cat, s1_ani, s2_ani,
+             s1_rings[:, 0], s2_rings[:, 0])).astype(np.int32)
 
         return (
-            rings, s1_cat, s2_cat, s1_cat_idx, s2_cat_idx, s1_rings, s2_rings,
-            s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx)
+            rings, s1_cat, s2_cat, s1_ani, s2_ani, s1_cat_idx, s2_cat_idx,
+            s1_ani_idx, s2_ani_idx, s1_rings, s2_rings, s1_rings_idx,
+            s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx)
 
     def get_waters(self):
         """
@@ -656,6 +723,8 @@ class IndexManager:
             'PiStacking': len_rings > 0,
             'PiCation': (len_rings > 0) and (len_ca > 0),
             'CationPi': (len_rings > 0) and (len_ca > 0),
+            'AnionPi': (len_rings > 0) and (len_an > 0),
+            'PiAnion': (len_rings > 0) and (len_an > 0),
             'FaceToFace': len_rings > 0,
             'EdgeToFace': len_rings > 0,
             'WaterBridge': len(self.waters) > 0,
@@ -695,8 +764,7 @@ class IndexManager:
         resnames = self.universe.atoms.resnames[self.sel_idx]
         resids = self.universe.atoms.resids[self.sel_idx]
         atindex = self.universe.atoms.indices[self.sel_idx]
-        resindex = self.universe.atoms.resindices[self.sel_idx].astype(
-            np.int32)
+        resindex = self.resconv
 
         annotations = self.annotations
         if annotations:
@@ -716,7 +784,7 @@ class IndexManager:
                        for i, x in
                        enumerate(self.sel_idx)}
 
-        return resindex, resid_names, atom_names, res_annots, at_annots
+        return resid_names, atom_names, res_annots, at_annots
 
     def report(self):
         """

@@ -1,4 +1,6 @@
 # Created by rglez at 4/18/25
+import os
+
 from bitarray import bitarray as ba
 from rgpack.generals import recursive_defaultdict as rd
 
@@ -129,6 +131,7 @@ class MDLRDetector(Detector):
 # =============================================================================
 # files
 # =============================================================================
+user = os.getenv('USER')
 detectors = {'plif': ProlifDetector,
              'imap': IMapDetector,
              'gc': GetContactsDetector,
@@ -141,9 +144,9 @@ ignores = {'plif': ('ligand',),
 
 traj_results = {
     'nucleosome': {
-        'plif': '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/prolif/ncp-OCS-nosalt/nucleic-protein/interacciones.csv',
-        'imap': '/home/rglez/RoyHub/intermap/tests/imaps/prot-nuc/8oxoGA2_1_InterMap_full.csv',
-        'gc': '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/getContacts/ncp-OCS-nosalt/nucleic-protein/results.tsv',
+        'plif': f'/media/gonzalezroy/Roy2TB/RoyData/intermap/benchmark/n_inters/prolif/ncp-OCS-nosalt/nucleic-protein/interacciones.csv',
+        # 'imap': f'/home/{user}/RoyHub/intermap/tests/imaps/prot-nuc/8oxoGA2_1_InterMap_full.csv',
+        'gc': f'/media/{user}/Roy2TB/RoyData/intermap/benchmark/n_inters/getContacts/ncp-OCS-nosalt/nucleic-protein/results.tsv',
         'mdlr': None},
 
     'T2': {
@@ -191,9 +194,9 @@ for traj_label in traj_results.keys():
 # =============================================================================
 # getContacts
 # =============================================================================
-# gc_tsv = '/home/rglez/RoyHub/intermap/data/benchmark/n_inters/getContacts/ncp-OCS-nosalt/nucleic-protein/results.tsv'
-# self = GetContactsDetector(gc_tsv, ('#',))
-# n_inters, n_pairs = self.detect()
+gc_tsv = '/media/rglez/Roy2TB/RoyData/intermap/N_INTERS-FINAL/p53/results.tsv'
+self = GetContactsDetector(gc_tsv, ('#',))
+n_inters, n_pairs = self.detect()
 
 # =============================================================================
 # Prolif
@@ -208,3 +211,17 @@ for traj_label in traj_results.keys():
 # mdlr_csv = '/home/rglez/RoyHub/intermap/scripts/n_inters/IFP_results_rglez_20250306_101320.csv'
 # self = MDLRDetector(mdlr_csv, ('A', 'U', 'T', 'I', 'L', 'T', ' ', ',', '\n'))
 # n_inters, n_pairs = self.detect()
+
+# from bitarray import util as bu
+# from rgpack import generals as gnl
+# pkl = '/media/gonzalezroy/Roy2TB/RoyData/intermap/benchmark/n_inters/intermap/ncp-OCS-nosalt/nucleic-protein/nucleic-protein_InterMap.pickle'
+# dicty = gnl.unpickle_from_file(pkl)
+# counter = 0
+# for x in dicty:
+#     bitarr = bu.sc_decode(dicty[x]['time'])
+#     counter += bitarr.count()
+
+
+
+a = ba(10)
+a[:5][0, 2, 4] = 1

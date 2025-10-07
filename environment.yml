@@ -1,4 +1,4 @@
-name: intermap
+name: intermap1
 channels:
   - defaults
   - conda-forge
@@ -9,6 +9,7 @@ dependencies:
   - rdkit
   - numpy
   - pandas
+  - networkx
   - bitarray ~= 3.0.0
   - numba ~= 0.61.0
   - pip
@@ -16,9 +17,12 @@ dependencies:
       - -e .
       - uvicorn
       - shiny
-      - screeninfo
-      - plotly
+      - screeninfo==0.8.1
+      - plotly<6.0.0,>=5.5.0
       - numpy_indexed
       - numba_kdtree == 0.5.0
       - openpyxl
+      - fastapi
+      - pyvis==0.3.2
+      - plotly_resampler==0.11.0
       - git+https://github.com/rglez/rgpack.git@0.0.3

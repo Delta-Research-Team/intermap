@@ -1,10 +1,9 @@
 # Created by rglez at 12/29/24
 
 from collections import defaultdict
-from os.path import basename
 
-import bitarray.util as bu
 import numpy as np
+from bitarray import util as bu
 from numba import njit, types
 from numba.typed import List
 
@@ -125,16 +124,54 @@ def groupby_wb(ijfw):
     return indices_as_array
 
 
+def is_compressed(dict):
+    """
+    Check if the dictionary is compressed
+
+    Args:
+        dict: dict of bitarrays
+
+    Returns:
+        bool: True if the dictionary is compressed, False otherwise
+    """
+    seed = next(iter(dict.values()))
+    try:
+        bu.sc_decode(seed)
+        return True
+    except ValueError:
+        return False
+
+
 class ContainerManager:
     """
     A dictionary to store InterMap interactions
     """
+    swap_inters = {
+        'CloseContact': 'CloseContact',
+        'VdWContact': 'VdWContact',
+        'Hydrophobic': 'Hydrophobic',
+        'Anionic': 'Cationic',
+        'Cationic': 'Anionic',
+        'MetalDonor': 'MetalAcceptor',
+        'MetalAcceptor': 'MetalDonor',
+        'HBAcceptor': 'HBDonor',
+        'HBDonor': 'HBAcceptor',
+        'XBAcceptor': 'XBDonor',
+        'XBDonor': 'XBAcceptor',
+        'FaceToFace': 'FaceToFace',
+        'EdgeToFace': 'EdgeToFace',
+        'PiStacking': 'PiStacking',
+        'PiCation': 'CationPi',
+        'CationPi': 'PiCation',
+        'AnionPi': 'PiAnion',
+        'PiAnion': 'AnionPi',
+        'WaterBridge': 'WaterBridge'
+    }
 
     def __init__(self, args, iman, cuts):
 
         # Parse arguments from args
         self.args = args
-        self.format = self.args.format
         self.min_prevalence = self.args.min_prevalence
 
         # Parse arguments from cuts
@@ -153,10 +190,12 @@ class ContainerManager:
         self.n_frames = self.iman.traj_frames.size
 
         # Initialize containers
-        self.dict = defaultdict(lambda: bu.sc_encode(bu.zeros(self.n_frames)))
-
-        # Detect water bridges ?
         self.detect_wb = (self.iman.waters.size > 0) and (self.hb_idx.size > 0)
+        if self.detect_wb:
+            self.dict = defaultdict(
+                lambda: bu.sc_encode(bu.zeros(self.n_frames)))
+        else:
+            self.dict = defaultdict(lambda: bu.zeros(self.n_frames))
 
     # @profile
     def fill(self, ijfs, inters):
@@ -172,62 +211,84 @@ class ContainerManager:
                 to_assign = transform(ijfs, inters)
             else:
                 to_assign = transform_wb(ijfs)
-            for key, value in to_assign.items():
-                decoded = bu.sc_decode(self.dict[key])
-                decoded[value.tolist()] = True
-                self.dict[key] = bu.sc_encode(decoded)
 
-    def generate_lines(self):
-        """
-        Generate the lines to be written in the csv file
-
-        Yields:
-            full_line: str
-                The full line to be written in the full csv file
-            short_line: str
-                The short line to be written in the short csv file
-        """
-        for key in self.dict:
-            if len(key) == 3:
-                s1, s2, inter = key
-                wat = ''
-                inter_name = self.inter_names[inter]
-            elif len(key) == 4:
-                s1, s2, wat, inter_name = key
+            # Adopt a compressed representation only if detect_wb is True
+            if self.detect_wb:
+                for key, value in to_assign.items():
+                    decoded = bu.sc_decode(self.dict[key])
+                    decoded[value.tolist()] = True
+                    self.dict[key] = bu.sc_encode(decoded)
             else:
-                raise ValueError('The key must have 3 or 4 elements')
+                for key, value in to_assign.items():
+                    self.dict[key][value.tolist()] = True
 
-            s1_name = self.names[s1]
-            s1_note = self.anotations.get(s1, '')
-            s2_name = self.names[s2]
-            s2_note = self.anotations.get(s2, '')
-            s3_name = self.names[wat] if wat else ''
-            time = bu.sc_decode(self.dict[key])
-            prevalence = round(time.count() / self.n_frames * 100, 2)
-
-            # Yield each line as a generator
-            full_line = (
-                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
-                f'{inter_name},{prevalence},{time.to01()}\n')
-            short_line = (
-                f'{s1_name}, {s1_note}, {s2_name}, {s2_note}, {s3_name},'
-                f'{inter_name},{prevalence}\n')
-            yield full_line, short_line
-
-    def save(self, path1, path2):
+    def get_line_elements(self, dict_key):
         """
-        Save the dictionary to a csv file
+        Get the elements of an output line from the dictionary key
+
+        Args:
+            dict_key (tuple): The key of the dictionary, which can be either
+                a tuple of 3 elements (s1, s2, inter) or 4 elements
+                (s1, s2, wat, inter_name).
+
+        Returns:
+            s1_name (str): The name of the first selection.
+            s1_note (str): The note of the first selection.
+            s2_name (str): The name of the second selection.
+            s2_note (str): The note of the second selection.
+            s3_name (str): The name of the water selection, if applicable.
+            inter_name (str): The name of the interaction.
+            prevalence (float): The prevalence of the interaction.
+            time (bitarray): The time series of the interaction.
         """
-        with open(path1, 'w') as file1, open(path2, 'w') as file2:
-            file1.write(f'# {basename(self.args.topology)}\n')
-            file2.write(f'# {basename(self.args.topology)}\n')
-            file1.write(
-                'sel1,note1,sel2,note2,water,interaction_name,prevalence,timeseries\n')
-            file2.write(
-                'sel1,note1,sel2,note2,water,interaction_name,prevalence\n')
-            for full_line, short_line in self.generate_lines():
-                file1.write(full_line)
-                file2.write(short_line)
+
+        # Check the length of the key and assign values accordingly
+        if len(dict_key) == 3:
+            s1, s2, inter = dict_key
+            wat = ''
+            inter_name = self.inter_names[inter]
+        elif len(dict_key) == 4:
+            s1, s2, wat, inter_name = dict_key
+        else:
+            raise ValueError('The key must have 3 or 4 elements')
+
+        # Get the names and notes for the selections
+        s1_name = self.names[s1]
+        s1_note = self.anotations.get(s1, '')
+        s2_name = self.names[s2]
+        s2_note = self.anotations.get(s2, '')
+        s3_name = self.names[wat] if wat else ''
+        return s1_name, s1_note, s2_name, s2_note, s3_name, inter_name
+
+    def rename(self):
+        """
+        Rename the keys of the dictionary to a readable format
+        """
+        shared = self.iman.shared_idx
+        new_dict = {}
+        compressed = is_compressed(self.dict)
+
+        for key, value in self.dict.items():
+            # Compress the time series to a bitarray if not already done
+            time = bu.sc_encode(value) if not compressed else value
+
+            # Get the selections and interaction name from the key
+            s1, s2 = key[0], key[1]
+            (s1_name, s1_note, s2_name, s2_note, s3_name,
+             inter_name) = self.get_line_elements(key)
+            standard_line = (s1_name, s1_note, s2_name, s2_note, s3_name,
+                             inter_name)
+
+            both_shared = (s1 in shared) and (s2 in shared)
+            if not both_shared:
+                new_dict[standard_line] = time
+            else:
+                swap_line = (s2_name, s2_note, s1_name, s1_note, s3_name,
+                             self.swap_inters[inter_name])
+                new_dict[swap_line] = time
+                new_dict[standard_line] = time
+        self.dict = new_dict
+
 
     def get_inter_names(self):
         """
@@ -247,51 +308,3 @@ class ContainerManager:
         hbd = np.where(inter_names == 'HBDonor')[0]
         hb_idx = np.concatenate((hba, hbd))
         return inter_names, hb_idx
-
-    # def to_graph(self):
-    #     """
-    #     Convert the dictionary to a graph
-    #     """
-    #     # Create a dictionary with the average prevalence
-    #     shrinked = defaultdict(lambda: bu.zeros(self.n_frames))
-    #     for key in self.dict:
-    #         r1, r2 = key[0], key[1]
-    #         time = self.dict[key]
-    #         shrinked[(r1, r2)] |= time
-    #
-    #     shrinked = {key: round(value.count() / len(value), 2) * 100
-    #                 for key, value in shrinked.items()}
-    #
-    #     # Count nodes
-    #     nodes = []
-    #     for r1, r2 in shrinked.keys():
-    #         nodes.append(r1)
-    #         nodes.append(r2)
-    #     nodes_count = Counter(nodes)
-    #
-    #     # Create a graph from the dictionary
-    #     G = nx.Graph()
-    #     for key, value in shrinked.items():
-    #         r1, r2 = key
-    #         if value >= self.min_prevalence:
-    #             # Add nodes with their degree
-    #             if not G.has_node(r1):
-    #                 G.add_node(r1, name=self.names[r1], degree=nodes_count[r1])
-    #             if not G.has_node(r2):
-    #                 G.add_node(r2, name=self.names[r2], degree=nodes_count[r2])
-    #             # Add edges with their weight
-    #             G.add_edge(r1, r2, weight=value)
-    #
-    #     # Convert to cytoscape
-    #     s1_resids = self.iman.universe.select_atoms(self.iman.sel1).resindices
-    #     out_name = join(self.args.output_dir, "InterGraph.csv")
-    #     with open(out_name, 'w') as file:
-    #         file.write('source, target, r1_sel, r2_sel, source_count, target_count, weight\n')
-    #         for u, v, data in G.edges(data=True):
-    #             source_count = nodes_count[u]
-    #             target_count = nodes_count[v]
-    #             r1_sel = 's1' if u in s1_resids else 's2'
-    #             r2_sel = 's1' if v in s1_resids else 's2'
-    #             file.write(f'{u},{v},{r1_sel},{r2_sel},{source_count},{target_count},{data["weight"]}\n')
-    #
-    #     return G
