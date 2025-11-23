@@ -203,23 +203,17 @@ InterVis provides several advanced configuration options to customize your visua
 
 ??? note "**Interaction Lifetimes**"
 
-    Violin plots representing the distribution of interaction lifetimes.
+    box plots representing the distribution of interaction lifetimes.
 
     ![Image title](assets/Tab_3.png){width="100%"}
 
     /// caption
-    The Life Time tab presents violin plots displaying the distribution of interaction lifetimes across the trajectory.
+    The Life Time tab presents box plots displaying the distribution of interaction lifetimes across the trajectory.
     ///
 
     - ``X-axis``: Interaction pairs (Selection 1 – Selection 2)
 
     - ``Y-axis``: Duration of interactions (in frames)
-
-    - ``Violin Shape``: Distribution of durations
-        - Wider sections indicate more frequent durations
-        - Narrower sections indicate less frequent durations
-    
-    - ``Width``: Relative frequency of interaction durations
 
     - ``Color``: Interaction type
 
