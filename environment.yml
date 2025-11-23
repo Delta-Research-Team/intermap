@@ -1,4 +1,4 @@
-name: intermap1
+name: intermap
 channels:
   - defaults
   - conda-forge
