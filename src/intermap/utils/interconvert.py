@@ -29,9 +29,11 @@ def convert_to_csv(pickle, output_csv):
     with open(output_csv, 'w') as f:
         f.write('s1,note1,s2,note2,s3,inter_name,prevalence,time\n')
         for key, value in bit_dict.items():
-            decoded = bu.sc_decode(value)
-            prevalence = f'{decoded.count(True) / len(decoded) * 100:3.4f}'
-            time = bu.sc_decode(value).to01()
+            if isinstance(value, bytes):
+                value = bu.sc_decode(value)
+
+            prevalence = f'{value.count(True) / len(value) * 100:3.4f}'
+            time = value.to01()
             s1, note1, s2, note2, s3, inter_name = key
             line = f'{s1},{note1},{s2},{note2},{s3},{inter_name},{prevalence},{time}\n'
             f.write(line)
@@ -52,3 +54,6 @@ def main():
     output_csv = sys.argv[2]
     convert_to_csv(pickle, output_csv)
     print(f'Converted {pickle} to {output_csv}')
+
+# pickle = '/media/rglez/Roy5T/RoyData/intermap/1000Frames/NSP13/outs_imap/residue-12-50_InterMap.pickle'
+# output_csv = '/media/rglez/Roy5T/RoyData/intermap/1000Frames/NSP13/outs_imap/residue-12-50_InterMap.csv'
