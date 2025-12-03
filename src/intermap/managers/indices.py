@@ -215,23 +215,32 @@ class IndexManager:
     Class to manage the indices of the selections in a trajectory.
     """
     smarts = {
-        'hydroph': '[c,s,Br,I,S&v2&H0,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6&X4&H0]);+0]',
-        # 'hydroph': "[c,s,Br,I,S&H0&v2,$([D3,D4;#6])&!$([#6]~[#7,#8,#9])&!$([#6X4H0]);+0]",
-        'cations': '[+{1-},$([N&X3&!$([N&X3]-O)]-C=[N&X3&+])]',
-        # 'cations': '[+{1-},$([NX3&!$([NX3]-O)]-[C]=[NX3+])]',
-        'anions': '[-{1-},$(O=[C,S,P]-[O&-])]',
-        # 'anions': '[-{1-},$(O=[C,S,P]-[O-])]',
-        'metal_acc': '[O,#7&!$([n&X3])&!$([N&X3]-*=[!#6])&!$([N&X3]-a)&!$([N&X4]),-{1-};!+{1-}]',
-        'metal_don': '[#20,#48,#27,#29,#26,#12,#25,#28,#30]',
-        'hb_acc': '[#7&!$([nX3])&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4&+1]),O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O),o+0,F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])]',
-        'xb_acc': '[$([O,S;+0]),$([N;v3,v4&+1]),n+0]-[H]',
-        'hb_don': '[$([O,S;+0]),$([N;v2,v3,v4&+1]),n+0]-[H]',
-        'xb_don': '[#6,#7,#14,F,Cl,Br,I]-[Cl,Br,I,#85]',
-        # 'rings5': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:1',
+        'hydroph': (
+            "[c,s,Br,I,S&H0&v2"
+            ",$([C&R0;$([CH0](=*)=*),$([CH1](=*)-[!#1]),$([CH2](-[!#1])-[!#1])])"
+            ",$([C;$([CH0](=*)(-[!#1])-[!#1]),$([CH1](-[!#1])(-[!#1])-[!#1])])"
+            ",$([C&D4!R](-[CH3])(-[CH3])-[CH3])"
+            ";!$([#6]~[#7,#8,#9]);+0]"
+        ),
+        'hb_acc': (
+            "[$([N&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4+1])&!$(N=C(-[C,N])-N)])"
+            ",$([n+0&!X3&!$([n&r5]:[n+&r5])])"
+            ",$([O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O)])"
+            ",$([o+0])"
+            ",$([F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])])]"
+        ),
+        'hb_don': '[$([O,S,#7;+0]),$([Nv4+1]),$([n+]c[nH])]-[H]',
+        'xb_acc': '[#7,#8,P,S,Se,Te,a;!+{1-}]!#[*]',
+        'xb_don': '[#6,#7,Si,F,Cl,Br,I]-[Cl,Br,I,At]',
+        'cations': '[+{1-},$([NX3&!$([NX3]-O)]-[C]=[NX3+])]',
+        'anions': '[-{1-},$(O=[C,S,P]-[O-])]',
         'rings5': '[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1',
         'rings6': '[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1',
-        # 'rings6': '[a&r]1:[a&r]:[a&r]:[a&r]:[a&r]:[a&r]:1',
-        'water': ' [OH2]'}
+        'metal_don': '[Ca,Cd,Co,Cu,Fe,Mg,Mn,Ni,Zn]',
+        'metal_acc': '[O,#7&!$([nX3])&!$([NX3]-*=[!#6])&!$([NX3]-[a])&!$([NX4]),-{1-};!+{1-}]',
+
+        'water': ' [OH2]'
+    }
 
     def __init__(self, args):
         logger.info("Loading trajectory and selections."
@@ -834,33 +843,33 @@ class IndexManager:
             with open(annot_file) as f:
                 lines = f.readlines()
 
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('#') or len(stripped) == 0:
-                continue
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('#') or len(stripped) == 0:
+                    continue
 
-            try:
-                name, value = stripped.split('=')
-            except ValueError:
-                raise ValueError(
-                    f"Error parsing the annotations file. The line "
-                    f"{line} does not contain a valid annotation.")
+                try:
+                    name, value = stripped.split('=')
+                except ValueError:
+                    raise ValueError(
+                        f"Error parsing the annotations file. The line "
+                        f"{line} does not contain a valid annotation.")
 
-            indices = universe.select_atoms(value).indices
-            annotations[name.strip()].update(indices)
-            if len(indices) == 0:
-                logger.warning(
-                    f"Selection {value} for the key {name} returned no"
-                    f" atoms in the topology {self.args.topology}. "
-                    f"Please check the selection.")
+                indices = universe.select_atoms(value).indices
+                annotations[name.strip()].update(indices)
+                if len(indices) == 0:
+                    logger.warning(
+                        f"Selection {value} for the key {name} returned no"
+                        f" atoms in the topology {self.args.topology}. "
+                        f"Please check the selection.")
 
-            intersect = set(indices).intersection(cumulative)
-            cumulative.update(indices)
-            if len(intersect) > 0:
-                raise ValueError(
-                    f"Error parsing the annotations file. The selection "
-                    f"{value} for the key {name} overlaps with one or"
-                    f" more of the previously defined selections.")
+                intersect = set(indices).intersection(cumulative)
+                cumulative.update(indices)
+                if len(intersect) > 0:
+                    raise ValueError(
+                        f"Error parsing the annotations file. The selection "
+                        f"{value} for the key {name} overlaps with one or"
+                        f" more of the previously defined selections.")
 
         return annotations
 
