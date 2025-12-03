@@ -18,7 +18,7 @@ def plot_box(ax, data, positions, color):
                        capprops=dict(color=color),
                        medianprops=dict(color=color, linewidth=2),
 
-                       flierprops=dict(marker='o', markersize=5, alpha=1,
+                       flierprops=dict(marker='_', markersize=5, alpha=1,
                                        markerfacecolor=color,
                                        markeredgecolor=color),
                        showfliers=True, widths=1)
@@ -33,9 +33,11 @@ def plot_box(ax, data, positions, color):
 # Load data
 # =============================================================================
 user = os.getenv('USER')
-plf_path = f'/home/{user}/RoyHub/intermap/scripts/identity/prolif_dict.pkl'
-imap_path = f'/home/{user}/RoyHub/intermap/scripts/identity/imap_dict.pkl'
-out_dir = f'/home/{user}/RoyHub/intermap/scripts/identity/'
+
+case = 'mpro'
+plf_path = f'/home/{user}/RoyHub/intermap/scripts/identity/{case}/prolif_dict.pkl'
+imap_path = f'/home/rglez/RoyHub/intermap/scripts/identity/{case}/imap_dict.pkl'
+out_dir = f'/home/{user}/RoyHub/intermap/scripts/identity/{case}'
 prolif_dict = gnl.unpickle_from_file(plf_path)
 imap_dict = gnl.unpickle_from_file(imap_path)
 
@@ -62,6 +64,13 @@ for inter in inters:
     in_plif = set.difference(plif_time, in_both)
     in_imap = set.difference(imap_time, in_both)
 
+    if inter[-1] == 'FaceToFace' and len(in_plif) > 50:
+        print('Go for it ')
+        print(inter, ' '.join(map(str, sorted(in_plif))))
+        break
+
+
+
     data[inter[2]]['plif'].append(len(in_plif))
     data[inter[2]]['imap'].append(len(in_imap))
     data[inter[2]]['both'].append(len(in_both))
@@ -74,15 +83,25 @@ cmp.generic_matplotlib()
 n_inters = len(data)
 x_pos = range(3 * n_inters)
 
-fig1, ax1 = plt.subplots(dpi=300, figsize=(14, 5))
+fig1, ax1 = plt.subplots(dpi=300, figsize=(9, 7))
 ax1.set_xlabel('Interaction type', fontweight='bold')
-ax1.set_ylabel('Interactions count distribution', fontweight='bold')
+ax1.set_ylabel('Frequency', fontweight='bold')
 
 colors = {'both': cmp.c3, 'imap': cmp.c2, 'plif': cmp.c1}
-sorted_inters = sorted(data.keys(), key=lambda x: (np.mean(data[x]['plif']),
-                                                   np.mean(data[x]['both']),
-                                                   np.mean(data[x]['imap'])),
-                       reverse=False)
+sorted_inters = [
+    'CationPi',
+    'PiCation',
+    'Anionic',
+    'Cationic',
+    'VdWContact',
+    'Hydrophobic',
+
+    'HBAcceptor',
+    'HBDonor',
+
+    'EdgeToFace',
+    'FaceToFace']
+
 spacer = 5
 current = 0
 label_pos = {}
@@ -107,15 +126,16 @@ leg = ax1.legend(
     [bbplot1["boxes"][0], bbplot2["boxes"][0], bbplot3["boxes"][0]],
     ['Both', 'InterMap only', 'ProLIF only'],
     loc='upper center', ncol=3, fontsize='small',
-    fancybox=False, framealpha=1,
+    fancybox=False, framealpha=0.75,
     handlelength=1.5, handletextpad=0.5,
-    borderpad=0.5, borderaxespad=0.5, frameon=True, bbox_to_anchor=(0.5, 1.06))
+    borderpad=0.5, borderaxespad=0.5, frameon=False,
+    bbox_to_anchor=(0.5, 1.16))
 
 cmp.reset_matplotlib()
 pos = np.asarray(list(label_pos.values())) - 1
 ax1.set_xticks(pos,
-               labels=list(label_pos.keys()), rotation=45, ha='right',
-               fontsize=14)
+               labels=list(label_pos.keys()), rotation=60, ha='right',
+               fontsize=18)
 ax1.set_xlim(-2, current + 1)
 plt.savefig(join(out_dir, 'identity-per-type.png'),
             bbox_inches='tight')

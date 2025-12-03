@@ -7,7 +7,6 @@ from os.path import basename
 
 import MDAnalysis as mda
 import numpy as np
-from rgpack import generals as gnl
 
 
 def concatextract(trajs, topo, out_dcd, n_frames=1000):
@@ -62,7 +61,6 @@ def concatextract(trajs, topo, out_dcd, n_frames=1000):
             for f in frame_list:
                 u.trajectory[f]
                 W.write(u.atoms)
-
 
 # =============================================================================
 # ACE2 Trajectories Concatenation

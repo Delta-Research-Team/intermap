@@ -31,10 +31,14 @@ def generic_matplotlib():
     mpl.rc('ytick.major', right=True, )
     mpl.rc('ytick.minor', right=True, visible=True)
 
-    mpl.rc('axes', labelsize=20)
     mpl.rc('lines', linewidth=8, color='k')
-    mpl.rc('font', family='monospace', size=20, monospace='Ubuntu Mono')
     mpl.rc('grid', alpha=0.5, color='gray', linewidth=2, linestyle='--')
+    mpl.rc('font', family='STIXGeneral', size=24, monospace='stix')
+    mpl.rc('axes', labelsize=24)
+    mpl.rcParams['xtick.labelsize'] = 24  # or whatever size you want
+    mpl.rcParams['ytick.labelsize'] = 24
+
+    # mpl.rcParams['mathtext.fontset'] = 'stix'
 
 
 def reset_matplotlib():

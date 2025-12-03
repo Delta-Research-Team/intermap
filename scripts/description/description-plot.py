@@ -124,7 +124,7 @@ def plot_img(ax, img_path, title):
         title: title of the image
     """
     ax.imshow(plt.imread(img_path))
-    ax.set_title(title, fontweight='bold', fontsize=20, fontname='Ubuntu mono')
+    ax.set_title(title, fontsize=16, fontname='STIXGeneral')
     ax.axis('off')
 
 
