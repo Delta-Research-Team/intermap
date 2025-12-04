@@ -1,9 +1,7 @@
 # Welcome to InterMap's documentation
 
-**InterMap** is a tool for computing <u>interaction fingerprints</u> in Molecular Dynamics (MD). An interaction
-fingerprint is a vector that succinctly
-describes the chemical interactions between two selections in a molecular system as it is shown in the example below. It
-contains information about what residues (or atoms) are interacting and under what type of interaction.
+**InterMap** is a tool for computing <u>interaction fingerprints</u> in Molecular Dynamics (MD) trajectories. An interaction
+fingerprint is a vector that succinctly describes the chemical interactions between two selections in a molecular system as it is shown in the example below. It contains information about what residues (or atoms) are interacting and under what type of interaction.
 
 ![Image title](assets/IFP.png){width="750"}
 /// caption
