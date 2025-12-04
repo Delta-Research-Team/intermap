@@ -1,83 +1,82 @@
 ## 1. Preparing the configuration file
 
 To run InterMap, you must prepare a configuration file specifying the parameters for your analysis. The
-configuration file is a text file that contains various sections, each corresponding to different aspects of the setup.
-In the following example, we will go through each entry, explaining its purpose and how to set it up.
+configuration file is a regular text file that contains various sections, each corresponding to different aspects of the setup.
+
+In the following example (that can be found under the `example` folder of the GitHub repository), we will go through each entry, explaining its purpose and how to set it up.
 
 !!! example
 
     ```toml
-    [generals]
-    n_procs = 8
-    job_name = DrHU-Prot-DNA
-    output_dir = ./output
-    n_samples = 10
-    n_factor = 1.5
-    
-    [topo-traj]
-    topology = /home/rglez/wrapped-trajs/DrHU-cut-P58R-3/hmr_cionize_ions_solvent_sc150mM_WRAPPED_RENUM.pdb
-    trajectory = /home/rglez/wrapped-trajs/DrHU-cut-P58R-16/drhu_cut_p58r_OUT-4_WRAPPED.dcd
-    start = 0
-    last = -1
-    stride = 1
-    chunk_size = 100
-    
-    [interactions]
-    selection_1 = protein
-    selection_2 = nucleic
-    min_prevalence = 0
-    format = extended
-    resolution = residue
-    interactions = all
-    export_csv = True
-    annotations = /home/rglez/wrapped-trajs/DrHU-cut-P58R-3/annotations.txt
-
-    [cutoffs]
-    dist_cut_CloseContact = 3.0
-    dist_cut_Hydrophobic = 4.5
-    dist_cut_Ionic = 4.5
-    dist_cut_Metalic = 2.8
-
-    dist_cut_HA = 3.5
-    dist_cut_DA = 3.5
-    min_ang_DHA = 130
-    max_ang_DHA = 180
-
-    dist_cut_XA = 3.5
-    dist_cut_XD = 3.5
-    min_ang_DXA = 0
-    max_ang_DXA = 90
-
-    dist_cut_FaceToFace = 5.5
-    min_ang_nn_FaceToFace = 0
-    max_ang_nn_FaceToFace = 35
-    min_ang_nc_FaceToFace =  0
-    max_ang_nc_FaceToFace = 30
-
-    dist_cut_EdgeToFace = 6.5
-    min_ang_nn_EdgeToFace = 50,
-    max_ang_nn_EdgeToFace = 90,
-    min_ang_nc_EdgeToFace = 0,
-    max_ang_nc_EdgeToFace = 30,
-    intersect_radius_EdgeToFace = 1.5
-
-    dist_cut_PiStacking = 5.5
-    min_ang_nn_PiStacking = 0
-    max_ang_nn_PiStacking = 90
-    min_ang_nc_PiStacking = 0
-    max_ang_nc_PiStacking = 30
-
-    dist_cut_PiCation = 4.5
-    min_ang_PiCation = 0
-    max_ang_PiCation = 30
-    dist_cut_PiAnion = 4.5
-    min_ang_PiAnion = 0
-    max_ang_PiAnion = 30
+      [generals]
+      n_procs = 8
+      job_name = prot-dna
+      output_dir = ./outputs
+      n_samples = 10
+      n_factor = 1.5
+      
+      [topo-traj]
+      topology = ./hmr_cionize_ions_solvent_sc150mM_WRAPPED_RENUM.pdb
+      trajectory = ./traj_sample.dcd
+      start = 0
+      last = -1
+      stride = 1
+      chunk_size = 100
+      
+      [interactions]
+      selection_1 = protein
+      selection_2 = nucleic
+      min_prevalence = 0
+      resolution = atom
+      interactions = all
+      annotations = False
+      
+      [cutoffs]
+      dist_cut_CloseContact = 3.0
+      dist_cut_Hydrophobic = 4.5
+      dist_cut_Ionic = 4.5
+      dist_cut_Metalic = 2.8
+      
+      dist_cut_HA = 3.5
+      dist_cut_DA = 3.5
+      min_ang_DHA = 130
+      max_ang_DHA = 180
+      
+      dist_cut_XA = 3.5
+      dist_cut_XD = 3.5
+      min_ang_DXA = 0
+      max_ang_DXA = 90
+      
+      dist_cut_FaceToFace = 5.5
+      min_ang_nn_FaceToFace = 0
+      max_ang_nn_FaceToFace = 35
+      min_ang_nc_FaceToFace =  0
+      max_ang_nc_FaceToFace = 30
+      
+      dist_cut_EdgeToFace = 6.5
+      min_ang_nn_EdgeToFace = 50
+      max_ang_nn_EdgeToFace = 90
+      min_ang_nc_EdgeToFace = 0
+      max_ang_nc_EdgeToFace = 30
+      intersect_radius_EdgeToFace = 1.5
+      
+      dist_cut_PiStacking = 5.5
+      min_ang_nn_PiStacking = 0
+      max_ang_nn_PiStacking = 90
+      min_ang_nc_PiStacking = 0
+      max_ang_nc_PiStacking = 30
+      
+      dist_cut_PiCation = 4.5
+      min_ang_PiCation = 0
+      max_ang_PiCation = 30
+      dist_cut_PiAnion = 4.5
+      min_ang_PiAnion = 0
+      max_ang_PiAnion = 30
     ```
 
     *Parameters in the configuration file are internally validated, so if you set a parameter that is not recognized or has an invalid value, InterMap will raise an error and inform you about the issue.*
 
-    *The only optional section is `[cutoffs]`, which allows you to customize the cutoffs for each interaction type. If you do not include this section, InterMap will use the default cutoffs defined in the code.*
+    *The only optional section is `[cutoffs]`, which allows you to customize the cutoffs for each interaction type. If you do not include this section, InterMap will use the default cutoffs shown here.*
 
 ### **`[generals]`**
 
@@ -87,13 +86,13 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Description:** The number of processes to use for parallel execution.
 
-    **Tip:** Increasing this value can speed up the analysis, especially for large trajectories. However, the performance may not improve significantly beyond a certain point due to the overhead of managing multiple processes. A good starting point is to set it to the number of CPU cores available on your machine.
+    **Tip:** Increasing this value can speed up the analysis, especially for large trajectories. However, the performance may not improve significantly beyond a certain point due to the overhead of managing multiple processes. 
 
 ??? note "job_name"
 
     **Value:** str
 
-    **Description:** A name for the job will be used as the base name to create output files.
+    **Description:** A name for the job. It will be used as the basename to create output files.
 
     **Tip:** Choose a descriptive name that reflects the system or analysis you are performing. This will help you identify the output files later.
 
@@ -109,21 +108,21 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Value:** int > 0
 
-    **Description:** The number of samples in your trajectory that InterMap explores before starting the complete detection stage. This helps infer the maximum number of interactions in your system.
+    **Description:** The number of samples in your trajectory that InterMap explores before starting the detection stage. This helps infer the maximum number of interactions in your system.
 
-    **Tip:** A good starting point is to set this value to 10. If you encounter memory issues, you can increase it later.
+    **Tip:** A good starting point is to set this value to 10. If you encounter memory issues, you should increase it.
 
 ??? note "n_factor"
 
     **Value:** float
 
-    **Description:** A factor to scale the maximum number of interactions detected in the `n_samples` frames. This is used to estimate the memory requirements for the analysis.
+    **Description:** A factor to scale the maximum number of interactions detected among the `n_samples` frames. This is used to estimate the memory requirements for the analysis.
 
-    **Tip:** A good starting point is to set this value to  1.5, which provides a reasonable estimate of memory requirements. If you encounter memory issues, you can increase this value later.
+    **Tip:** A good starting point is to set this value to  1.5, which provides a reasonable estimate of memory requirements. If you encounter memory issues, you can midly increase it.
 
 !!! info "Memory Allocation"
 
-    The `n_samples` and `n_factor` parameters are used to estimate the memory requirements for the analysis. If you set them too low, InterMap may not be able to handle the whole trajectory, leading to memory errors. If unsure about the values, start with the default (10 and 1.5, respectively) and increase them later upon encountering memory issues.
+    The `n_samples` and `n_factor` parameters are used to estimate the memory requirements for the analysis. If you set them too low, InterMap may not be able to handle the whole trajectory, leading to memory errors. If unsure about the values, start with the default (10 and 1.5, respectively) and increase them later upon encountering issues.
 
 ### **`[topo-traj]`**
 
@@ -133,15 +132,15 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Description:** The path to the topology file (e.g., PDB or PSF file) that describes the molecular system.
 
-    **Tip:** Ensure that the topology file is compatible with the trajectory file you will be using. The topology file should contain the atoms, residues, and connectivity information.
+    **Tip:** Ensure that the topology file is compatible with the trajectory file you will be using. InterMap suports the topology formats supported by MDAnalysis.
 
 ??? note "trajectory"
 
-    **Value:** valid path
+    **Value:** valid path(s)
 
     **Description:** The path to the trajectory file (e.g., DCD or XTC file) that contains the molecular dynamics simulation data. You can specify multiple trajectories by separating them with commas if they correspond to the same topology.
 
-    **Tip:** Ensure the trajectory file is compatible with the topology file. If you have multiple trajectories, they should all be in the same format and correspond to the same molecular system.
+    **Tip:** Ensure the trajectory file is compatible with the topology file. If you have multiple trajectories, they should all be in the same format and correspond to the same molecular system. InterMap suports the trajectory formats supported by MDAnalysis
 
 ??? note "start"
 
@@ -149,7 +148,7 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Description:** The starting frame of the trajectory to analyze. If set to 0, it will start from the first frame.
 
-    **Tip:** If you want to analyze a specific trajectory portion, you can set this value to the desired starting frame. If you want to analyze the entire trajectory, leave it at 0.
+    **Tip:** If you want to analyze a specific trajectory portion, you can set this value to the desired starting frame. 
 
 ??? note "last"
 
@@ -157,7 +156,7 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Description:** The last frame of the trajectory to analyze. If set to -1, it will analyze until the last frame of the trajectory.
 
-    **Tip:** If you want to analyze a specific trajectory portion, you can set this value to the desired last frame. If you want to analyze the entire trajectory, leave it at -1.
+    **Tip:** If you want to analyze a specific trajectory portion, you can set this value to the desired last frame. 
 
 ??? note "stride"
 
@@ -165,11 +164,11 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Description:** The stride for reading frames from the trajectory. If set to 1, it will read every frame; if set to 2, it will read every second frame, and so on.
 
-    **Tip:** A larger stride can reduce the number of frames processed, which can speed up the analysis but may also miss some interactions. A good starting point is to set this value to 1.
+    **Tip:** A larger stride can reduce the number of frames processed, which can speed up the analysis but may also miss some interactions. 
 
 ??? note "chunk_size"
 
-    **Value:** int > 0
+    **Value:** int >= 1
 
     **Description:** The number of frames to read from the trajectory. The greater the chunk size, the more memory will be used, which can speed up the analysis. If you encounter memory issues, you can reduce this value.
 
@@ -231,12 +230,12 @@ In the following example, we will go through each entry, explaining its purpose 
 
     **Value:** valid path OR False
 
-    **Description:** The path to a file containing annotations for the selections. This file is prepared by specifying the corresponding selection string for each arbitrary label representing a particular part of your system. These   InterMap tracks annotations and can be used later to group interactions by labels, which is helpful for
+    **Description:** The path to a file containing annotations for the selections. This file is prepared by specifying the corresponding selection string for each arbitrary label representing a particular part of your system. InterMap tracks these annotations and can be used later to group interactions by labels, which is helpful for
     analyzing interactions between different parts of a complex system that are not defined by conventional chains,
     segments, etc.
 
     **Tip:** If you want to use annotations, create a text file with the format shown below and specify its path here.
-    You can set this parameter to False if you do not have annotations. 
+    You can set this parameter to False if you do not have/need annotations. 
 
     !!! example
     ```
@@ -255,7 +254,7 @@ In the following example, we will go through each entry, explaining its purpose 
 
     The `[cutoffs]` section is optional and allows you to define the cutoffs for each interaction type. InterMap will use the default cutoffs defined in the code if this section is not included.
 
-    The cutoffs are specified in Angstroms (for distances) or Degrees (for angles) and are used to determine whether an interaction occurs between two atoms or residues. The currently available interactions and cutoffs are listed in the [configuration file example above](basic-usage.md).
+    The cutoffs are specified in Angstroms (for distances) or Degrees (for angles) and are used to determine whether an interaction occurs between a group of atoms. The currently available interactions and cutoffs are listed in the [configuration file example above](basic-usage.md).
 
 ??? note "dist_cut_CloseContact"
 
@@ -548,35 +547,48 @@ intermap <path_to_your_config_file>
 
 ### 2.2 Python Module
 
-To run InterMap as a Python module, you can use the following code snippet in your Python scripts:
+To run InterMap as a Python module, you can use the following code snippet in your Python scripts. This code can be found under the `example` folder of the GitHub repository (`example_script.py`).
 
 ```python
-from bitarray.util import sc_decode
+import bitarray.util as bu
 from intermap import runner
 
-cfg_path = 'path_to_your_config_file'
+# ----| 1. Execute InterMap with the given configuration file
+cfg_path = './prot-dna_InterMap.cfg'
 bit_dict = runner.execute(cfg_path=cfg_path)
-bit_dict = {k: sc_decode(v) for k, v in bit_dict.items()}
+first_element = bit_dict[list(bit_dict.keys())[0]]
+
+# ----| 2. Decode the bitarrays if they are in bytes format
+if isinstance(first_element, bytes):
+    bit_dict = {k: bu.sc_decode(v) for k, v in bit_dict.items()}
+else:
+    bit_dict = bit_dict
+
+# ----| 3. Continue with further processing of bit_dict as needed
+print(f'Processed {len(bit_dict)} interactions from configuration: {cfg_path}')
+
 ```
 
 ## 3. Output Files
 
 Upon successful execution, InterMap will generate the following output files in the specified `output_dir`.
 
-- `{job_name}_InterMap.log`: A log file containing information about the execution of InterMap, including any warnings
-  Alternatively, errors encountered during the analysis.
-
 - `{job_name}_InterMap.cfg`: A copy of the configuration file used for the analysis, which can be helpful for reference
   or reproducibility.
+
+- `topology.format`: A copy of the topology file used in the job.
+
+- `{job_name}_InterMap.log`: A log file containing information about the execution of InterMap, including any warnings
+  Alternatively, errors encountered during the analysis.
 
 - `{job_name}_InterMap.pickle`: A pickle file containing the analysis results. This file can be loaded later for
   further analysis or visualization with [InterVis](intervis.md). Also, you can use the [
   `interconvert`](#4-interconvert) command to convert this file into a CSV file.
 
+
 ## 4. InterConvert
 
-To convert the output of InterMap into a CSV file, you can use the `interconvert` command. This command allows you to
-convert the pickle file generated by InterMap into a CSV format that can be easily read and analyzed.
+To convert the output `{job_name}_InterMap.pickle` into a CSV file that can be easily read and analyzed, you can use the `interconvert` command: 
 
 ```bash
 interconvert <path_to_intermap_pickle_output_file>  <path_to_your_new_csv_file>
