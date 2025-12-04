@@ -15,20 +15,17 @@ This will automatically launch the InterVis server and open your default web bro
 ![Image title](assets/global_panel.png){width="75%"}
 
 /// caption
-InterVis interface is composed of three main areas: the ``Control Panel`` (right side), the ``Visualization Panel`` (
-left side), and the ``Footer`` (bottom bar).
+InterVis interface is composed of two main areas: the ``Control Panel`` (right side) and the ``Visualization Panel`` (
+left side).
 ///
 
-The InterVis interface consists of three main areas:
+The InterVis interface consists of two main areas:
 
 - The ``Control Panel`` (right side) contains tools for loading and filtering data. It is always visible for quick
   access and its effects are reflected in the visualizations after clicking the ``Plot`` button.
 
 - The ``Visualization Panel`` (left side) displays different types of visualizations. It is organized into tabs for
   smooth navigation and allows users to explore interaction data interactively.
-
-- The ``Footer`` (bottom bar) provides links to the InterMap's documentation and tutorials, its scientific paper, and
-  the GitHub repository.
 
 ## 2. Uploading Data
 
@@ -39,11 +36,12 @@ using the ``Control Panel`` on the right side of the interface.
 - Click on `Browse PICKLE` / `Browse Config` to upload these file. Alternatively, you can drag and drop them into the
   designated area.
 
-- The time Intervis takes to upload the PICKLE and show the plots depends on the amount of data.
+- The time Intervis takes to upload the `.PICKLE` and show the plots depends on the amount of data stored in the file and your
+  computer's performance.
 
-!!! warning "Environment Updates"
+!!! warning "Absolute paths in config file before uploading"
 
-    The paths in the `config file` leading to the topology and trajectory must be absolute.
+    Before uploading  the `config file` to InterVis, make sure that the paths leading to the topology and trajectory(ies) exist and are specified as absolute paths.
 
 ## 3. Configuring Visualizations
 
@@ -65,24 +63,23 @@ Once the files are uploaded, you can configure the visualizations that will rend
 
 ??? note "Interactions"
 
-    Upon uploading the `.PICKLE` file, InterVis will automatically detect all stored interactions and display them in this panel.
+    Upon uploading the `.PICKLE` file, InterVis will automatically detect all types of interactions detected and display their names in this panel.
 
-    - You can select one or multiple types. Click ``Select All`` to toggle all options.
+    - You can select one or multiple types. Click ``Select All`` to mark them all.
 
 ??? note "Annotations"
 
-    Upon uploading the `.PICKLE` file, InterVis will automatically detect all stored annotations and display them in this panel.
+    Upon uploading the `.PICKLE` file, InterVis will automatically detect all stored annotations and display their names in this panel.
     
-    - You can filter the visualized data based on the custom annotations defined in the configuration file.
+    - You can then filter the visualized data based on the custom annotations defined in the configuration file.
 
+    - You can select one or multiple annotations. Click ``Select All`` to mark them all.
 
-    - You can select one or multiple annotations. Click ``Select All`` to toggle all options.
+??? note "Prevalence"
 
-??? note "Prevalence Threshold"
+    When the files are loaded, InterVis automatically assigns a default prevalence threshold of ``30%``. Interactions less prevalent than this cutoff are not rendered. You can adjust this value to filter out interactions based on their prevalence in a range from 0 to 100%.
 
-    When the files are loaded, InterVis automatically assigns a default prevalence threshold of ``30%``. You can adjust this value to filter out interactions based on their prevalence (0–100%).
-
-    - The ``Show`` option will allow you to show/hide numeric values on plots.
+    - The ``Show`` option allows you to show/hide numeric values on plots.
 
 
 ## 4. Plot Settings and Customization
@@ -367,7 +364,7 @@ InterVis provides several advanced configuration options to customize your visua
         - ``For clearer visualization``: Increase ``Avoid Overlap`` to 1.0 to ensure perfect node separation
 
 
-## 10. Footer Resources
+## 6. Footer Resources
 
 The footer provides quick access to important resources:
 
