@@ -22,7 +22,7 @@ van der Waals radii used are those defined by the RDKit library.
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/vdw.png" width="500">
+        <img src="assets/interactions/vdw.png" width="500">
     </div>
 
 
@@ -46,7 +46,7 @@ Close contacts are defined as any two atoms that are within a specified threshol
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/cc.png" width="500">
+        <img src="assets/interactions/cc.png" width="500">
     </div>
 
 
@@ -70,7 +70,7 @@ Hydrophobic interactions are defined based on the proximity of hydrophobic atoms
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/hp.png" width="500">
+        <img src="assets/interactions/hp.png" width="500">
     </div>
 
 
@@ -95,7 +95,7 @@ the corresponding SMARTS patterns.
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/sb.png" width="500">
+        <img src="assets/interactions/sb.png" width="500">
     </div>
 
 
@@ -119,7 +119,7 @@ Interactions between metal ions and coordinating atoms, defined by the correspon
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/met.png" width="500">
+        <img src="assets/interactions/met.png" width="500">
     </div>
 
 
@@ -147,7 +147,7 @@ corresponding SMARTS patterns of donors and acceptors.
   
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/hb.png" width="500">
+        <img src="assets/interactions/hb.png" width="500">
     </div>
 
     
@@ -175,7 +175,7 @@ corresponding SMARTS patterns of donors and acceptors.
   
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/xb.png" width="500">
+        <img src="assets/interactions/xb.png" width="500">
     </div>
 
     
@@ -201,7 +201,7 @@ Cation–π interactions occur between a positively charged ion (cation) and the
   
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/picat.png" width="500">
+        <img src="assets/interactions/picat.png" width="500">
     </div>
 
 
@@ -227,7 +227,7 @@ Anion–π interactions occur between a negatively charged ion (anion) and the e
   
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/pian.png" width="500">
+        <img src="assets/interactions/pian.png" width="500">
     </div>
 
 
@@ -255,7 +255,7 @@ Face-to-face π–π stacking interactions occur between two aromatic rings that
     
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/f2f.png" width="500">
+        <img src="assets/interactions/f2f.png" width="500">
     </div>
 
 
@@ -279,7 +279,7 @@ Edge-to-face π–π stacking interactions occur between two aromatic rings that
       ```
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/e2f.png" width="500">
+        <img src="assets/interactions/e2f.png" width="500">
     </div>
 
 
@@ -288,18 +288,20 @@ Edge-to-face π–π stacking interactions occur between two aromatic rings that
 
 ## Water Bridges
 
-InterMaps detects first-order water-mediated interactions (water bridges) between two polar atoms (A and B) via a water molecule (W) when both polar atoms form hydrogen bonds with the same water molecule. The criteria for hydrogen bond formation are the same as those defined for direct hydrogen bonds.
+InterMaps detects first-order water-mediated interactions (water bridges)  when two residues form hydrogen bonds with the same water molecule. The criteria for hydrogen bond formation are the same as those defined for conventional hydrogen bonds.
 
 ??? note "First Order Water Bridges"
 
     **SMARTS**
       ```
+      Donor: [$([O,S,#7;+0]),$([Nv4+1]),$([n+]c[nH])]-[H]
+      Acceptor: [$([N&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4+1])&!$(N=C(-[C,N])-N)]),$([n+0&!X3&!$([n&r5]:[n+&r5])]),$([O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O)]),$([o+0]),$([F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])])]
       Water: [O&H2]
       ```
 
     **Example**  
     <div align="center">
-        <img src="../assets/interactions/wb.png" width="500">
+        <img src="assets/interactions/wb.png" width="500">
     </div>
 
 ---
