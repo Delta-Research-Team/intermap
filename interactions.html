@@ -911,11 +911,13 @@ corresponding SMARTS patterns of donors and acceptors.</p>
 </details>
 <hr />
 <h2 id="water-bridges">Water Bridges<a class="headerlink" href="#water-bridges" title="Permanent link">&para;</a></h2>
-<p>InterMaps detects first-order water-mediated interactions (water bridges) between two polar atoms (A and B) via a water molecule (W) when both polar atoms form hydrogen bonds with the same water molecule. The criteria for hydrogen bond formation are the same as those defined for direct hydrogen bonds.</p>
+<p>InterMaps detects first-order water-mediated interactions (water bridges)  when two residues form hydrogen bonds with the same water molecule. The criteria for hydrogen bond formation are the same as those defined for conventional hydrogen bonds.</p>
 <details class="note">
 <summary>First Order Water Bridges</summary>
 <p><strong>SMARTS</strong>
-  <div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Water: [O&amp;H2]
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Donor: [$([O,S,#7;+0]),$([Nv4+1]),$([n+]c[nH])]-[H]
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>Acceptor: [$([N&amp;!$([NX3]-*=[O,N,P,S])&amp;!$([NX3]-[a])&amp;!$([Nv4+1])&amp;!$(N=C(-[C,N])-N)]),$([n+0&amp;!X3&amp;!$([n&amp;r5]:[n+&amp;r5])]),$([O&amp;!$([OX2](C)C=O)&amp;!$(O(~a)~a)&amp;!$(O=N-*)&amp;!$([O-]-N=O)]),$([o+0]),$([F&amp;$(F-[#6])&amp;!$(F-[#6][F,Cl,Br,I])])]
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Water: [O&amp;H2]
 </span></code></pre></div></p>
 <p><strong>Example</strong><br />
 <div align="center">
