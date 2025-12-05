@@ -48,6 +48,22 @@ inters_imap = list(imap_dict.keys())
 inters_prolif = list(prolif_dict.keys())
 inters = sorted(set(inters_imap) | set(inters_prolif), key=lambda x: x[2])
 
+inters_fig = set([x[-1] for x in inters_imap])
+
+lookfor = 'AnionPi'
+forbidden = []
+
+for inter in inters_imap:
+    adj = abs(int(inter[0][3:]) - int(inter[1][3:]))
+    if inter[-1] == lookfor and inter not in forbidden:
+        time = imap_dict[inter]
+
+        print(inter, time)
+        break
+
+# %%
+
+
 data = defaultdict(lambda: defaultdict(list))
 for inter in inters:
     try:
@@ -63,13 +79,6 @@ for inter in inters:
     in_both = set.intersection(plif_time, imap_time)
     in_plif = set.difference(plif_time, in_both)
     in_imap = set.difference(imap_time, in_both)
-
-    if inter[-1] == 'FaceToFace' and len(in_plif) > 50:
-        print('Go for it ')
-        print(inter, ' '.join(map(str, sorted(in_plif))))
-        break
-
-
 
     data[inter[2]]['plif'].append(len(in_plif))
     data[inter[2]]['imap'].append(len(in_imap))
