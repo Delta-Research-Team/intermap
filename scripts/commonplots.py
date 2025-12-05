@@ -1,0 +1,48 @@
+# Created by gonzalezroy at 4/2/25
+import matplotlib as mpl
+
+cmap1 = 'tab10'
+
+alpha1 = 0.75
+alpha2 = 0.50
+alpha3 = 0.25
+
+c1 = 'tab:red'
+c2 = 'tab:orange'
+c3 = 'tab:green'
+
+lw1 = 1
+fs1 = 20
+
+
+# =============================================================================
+#
+# =============================================================================
+def generic_matplotlib():
+    """
+    Some customizations of matplotlib.
+    """
+    print('Customizing matplotlib')
+    mpl.rc('figure', figsize=[12, 8], dpi=300)
+    mpl.rc('xtick', direction='in', top=True)
+    mpl.rc('xtick.major', top=False)
+    mpl.rc('xtick.minor', top=False, visible=True, bottom=False)
+    mpl.rc('ytick', direction='in', right=True)
+    mpl.rc('ytick.major', right=True, )
+    mpl.rc('ytick.minor', right=True, visible=True)
+
+    mpl.rc('lines', linewidth=8, color='k')
+    mpl.rc('grid', alpha=0.5, color='gray', linewidth=2, linestyle='--')
+    mpl.rc('font', family='STIXGeneral', size=24, monospace='stix')
+    mpl.rc('axes', labelsize=24)
+    mpl.rcParams['xtick.labelsize'] = 24  # or whatever size you want
+    mpl.rcParams['ytick.labelsize'] = 24
+
+    # mpl.rcParams['mathtext.fontset'] = 'stix'
+
+
+def reset_matplotlib():
+    """
+    Reset matplotlib parameters to default.
+    """
+    mpl.rcParams.update(mpl.rcParamsDefault)
