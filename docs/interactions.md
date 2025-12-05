@@ -21,7 +21,10 @@ van der Waals radii used are those defined by the RDKit library.
         ```
     
     **Example**  
-        `![VdW](../assets/interactions/vdw.png)`
+    <div align="center">
+        <img src="../assets/interactions/vdw.png" width="500">
+    </div>
+
 
 ---
 
@@ -41,8 +44,11 @@ Close contacts are defined as any two atoms that are within a specified threshol
         None
         ```
     
-      **Example**  
-      `![CC](../assets/interactions/cc.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/cc.png" width="500">
+    </div>
+
 
 ---
 
@@ -62,8 +68,11 @@ Hydrophobic interactions are defined based on the proximity of hydrophobic atoms
         Hydrophobe: "[c,s,Br,I,S&H0&v2,$([C&R0;$([CH0](=*)=*),$([CH1](=*)-[!#1]),$([CH2](-[!#1])-[!#1])]),$([C;$([CH0](=*)(-[!#1])-[!#1]),$([CH1](-!#1])(-[!#1])-[!#1])]),$([C&D4!R](-[CH3])(-[CH3])-[CH3]);!$([#6]~[#7,#8,#9]);+0]"
         ```
     
-      **Example image**  
-      `![HP](../assets/interactions/hydrophobic.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/hp.png" width="500">
+    </div>
+
 
 ---
 
@@ -84,8 +93,11 @@ the corresponding SMARTS patterns.
         Anion: [-{1-},$(O=[C,S,P]-[O-])]
         ```
     
-      **Example image**  
-      `![SB](../assets/interactions/saltbridge.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/sb.png" width="500">
+    </div>
+
 
 ---
 
@@ -105,8 +117,11 @@ Interactions between metal ions and coordinating atoms, defined by the correspon
         Coordinating atoms: [O,#7&!$([nX3])&!$([NX3]-*=[!#6])&!$([NX3]-[a])&!$([NX4]),-{1-};!+{1-}]
         ```
     
-      **Example image**  
-      `![MC](../assets/interactions/metalcoord.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/met.png" width="500">
+    </div>
+
 
 ---
 
@@ -130,9 +145,11 @@ corresponding SMARTS patterns of donors and acceptors.
         Acceptor: [$([N&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4+1])&!$(N=C(-[C,N])-N)]),$([n+0&!X3&!$([n&r5]:[n+&r5])]),$([O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O)]),$([o+0]),$([F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])])]
         ```
   
-      **Example image**  
-      *Add your file:*  
-      `![HB](../assets/interactions/hbond.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/hb.png" width="500">
+    </div>
+
     
     ---
 
@@ -156,9 +173,11 @@ corresponding SMARTS patterns of donors and acceptors.
         Acceptor: [#7,#8,P,S,Se,Te,a;!+{1-}]!#[*]
         ```
   
-      **Example image**  
-      *Add your file:*  
-      `![XB](../assets/interactions/xbond.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/xb.png" width="500">
+    </div>
+
     
     ---
 
@@ -180,8 +199,11 @@ Cation–π interactions occur between a positively charged ion (cation) and the
         Aromatic: [a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1
         ```
   
-      **Example image**  
-      `![CatPi](../assets/interactions/cationpi.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/picat.png" width="500">
+    </div>
+
 
 ---
 
@@ -199,11 +221,15 @@ Anion–π interactions occur between a negatively charged ion (anion) and the e
       **SMARTS**
         ```
         Anion: [-{1-},$(O=[C,S,P]-[O-])]
-        Aromatic: [a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1
+        Aromatic ring (6-members): [a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1
+        Aromatic ring (5-members): [a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1
         ```
   
-      **Example image**  
-      `![AnPi](../assets/interactions/anionpi.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/pian.png" width="500">
+    </div>
+
 
 ---
 
@@ -227,8 +253,11 @@ Face-to-face π–π stacking interactions occur between two aromatic rings that
       Aromatic ring (5-members): [a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1
       ```
     
-    **Example image**  
-    `![F2F](../assets/interactions/pistack.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/f2f.png" width="500">
+    </div>
+
 
 --- 
 
@@ -248,8 +277,11 @@ Edge-to-face π–π stacking interactions occur between two aromatic rings that
       Aromatic ring (6-members): [a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1
       Aromatic ring (5-members): [a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1
       ```
-    **Example image**  
-    `![E2F](../assets/interactions/pistack.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/e2f.png" width="500">
+    </div>
+
 
 --- 
 
@@ -265,7 +297,9 @@ InterMaps detects first-order water-mediated interactions (water bridges) betwee
       Water: [O&H2]
       ```
 
-    **Example image**  
-    `![WB](../assets/interactions/halogen.png)`
+    **Example**  
+    <div align="center">
+        <img src="../assets/interactions/wb.png" width="500">
+    </div>
 
 ---
