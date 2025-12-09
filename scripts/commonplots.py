@@ -1,7 +1,15 @@
 # Created by gonzalezroy at 4/2/25
+import matplotlib
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 
-cmap1 = 'tab10'
+# choose number of discrete colors
+
+
+N = 10  # number of discrete colors
+colors = plt.cm.RdYlGn_r(np.linspace(0.05, 0.95, N))
+cmap1 = matplotlib.colors.ListedColormap(colors)
 
 alpha1 = 0.75
 alpha2 = 0.50

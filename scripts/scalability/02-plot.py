@@ -40,9 +40,8 @@ def parse_performance(txt):
     return round(time / 60, 2), round(ram, 2), status
 
 
-def plot_block(matrix, axis, cmap, vmin=None, vmax=None):
-    im1 = axis.imshow(matrix, cmap=cmap, aspect='auto',
-                      vmin=vmin, vmax=vmax,
+def plot_block(matrix, axis, cmap, norm=None):
+    im1 = axis.imshow(matrix, cmap=cmap, norm=norm, aspect='auto',
                       alpha=cmp.alpha1)
 
     axis.set_yticks(range(len(matrix.index)))
@@ -59,6 +58,8 @@ def plot_block(matrix, axis, cmap, vmin=None, vmax=None):
     return im1
 
 
+
+
 def plot_colorbar(ax1, ax2, im1, title=None):
     cax, kw = matplotlib.colorbar.make_axes([ax1, ax2])
     cb = plt.colorbar(im1, cax=cax, **kw)
@@ -73,8 +74,9 @@ def plot_colorbar(ax1, ax2, im1, title=None):
 # User-defined variables
 # =============================================================================
 user = os.getenv('USER')
-root_dir = f'/media/{user}/Roy2TB/RoyData/intermap/SCALABILITY-FINAL/mpro_copy/'
+root_dir = f'/media/{user}/Roy5T/RoyData/intermap/SCALABILITY-FINAL/mpro_copy/'
 out_dir = root_dir
+os.makedirs(out_dir, exist_ok=True)
 # =============================================================================
 
 # Find all .txt files in the root directory
@@ -115,7 +117,7 @@ axs[1, 1].set_visible(False)
 ax_atom_ram = axs[2, 1]
 ax_resid_ram = axs[2, 0]
 
-fs1 = 14
+fs1 = 20
 ax_atom_time.set_title('Resolution: "atom"', fontweight='bold', fontsize=fs1)
 ax_atom_ram.set_title('Resolution: "atom"', fontweight='bold', fontsize=fs1)
 ax_resid_ram.set_title('Resolution: "residue"', fontweight='bold',
@@ -134,22 +136,33 @@ resid_ram = residic.pivot(index='chunk_size', columns='n_procs',
                           values='ram')
 
 # Plot time
-minim = min(atom_time.min().min(), resid_time.min().min())
-maxim = max(atom_time.max().max(), resid_time.max().max())
-im1 = plot_block(atom_time, ax_atom_time, cmap=cmp.cmap1, vmin=minim,
-                 vmax=maxim)
-im2 = plot_block(resid_time, ax_resid_time, cmap=cmp.cmap1, vmin=minim,
-                 vmax=maxim)
+# minim = min(atom_time.min().min(), resid_time.min().min())
+# maxim = max(atom_time.max().max(), resid_time.max().max())
+minim = 4
+maxim = 64
+N = 10
+bounds = np.linspace(minim, maxim, N + 1)
+bounds = np.round(bounds).astype(int)
+norm = matplotlib.colors.BoundaryNorm(bounds, N)
+im1 = plot_block(atom_time, ax_atom_time, cmap=cmp.cmap1, norm=norm)
+im2 = plot_block(resid_time, ax_resid_time, cmap=cmp.cmap1, norm=norm)
 plot_colorbar(ax_atom_time, ax_resid_time, im1, title='Time (min)')
 
-# Plot ram
-minim = min(atom_ram.min().min(), resid_ram.min().min())
-maxim = max(atom_ram.max().max(), resid_ram.max().max())
-im1 = plot_block(atom_ram, ax_atom_ram, cmap=cmp.cmap1, vmin=minim, vmax=maxim)
-im2 = plot_block(resid_ram, ax_resid_ram, cmap=cmp.cmap1, vmin=minim,
-                 vmax=maxim)
 
+# Plot ram
+# Plot ram
+# minim = min(atom_ram.min().min(), resid_ram.min().min())
+# maxim = max(atom_ram.max().max(), resid_ram.max().max())
+minim= 300
+maxim = 1200
+N = 10
+bounds = np.linspace(minim, maxim, N + 1)
+bounds = np.round(bounds).astype(int)
+norm = matplotlib.colors.BoundaryNorm(bounds, N)
+im1 = plot_block(atom_ram, ax_atom_ram, cmap=cmp.cmap1, norm=norm)
+im2 = plot_block(resid_ram, ax_resid_ram, cmap=cmp.cmap1, norm=norm)
 plot_colorbar(ax_atom_ram, ax_resid_ram, im1, title='RAM (MB)')
+
 
 # Set labels
 ax_atom_ram.set_xlabel('# Processors', fontweight='roman')
