@@ -197,7 +197,6 @@ def workflow(args):
         f" Total number of interactions detected: {total_inters}\n"
         f" Interactions saved in {out_name} (binary format)\n"
         f" Elapsed time: {tot} s")
-    print('Testing v0.0.3')
     return self.dict
 
 

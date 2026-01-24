@@ -52,7 +52,6 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - attr_list
   - md_in_html
   - pymdownx.blocks.caption
 
@@ -65,9 +64,9 @@ extra:
 
 nav:
   - Home: index.md
-  - Interactions: interactions.md
   - Installation: installation.md
   - Usage: basic-usage.md
+  - Interactions: interactions.md
   - InterVis (Visualizations): intervis.md
   - Citing: citing.md
 #  - How it works: how-it-works.md
