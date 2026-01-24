@@ -56,6 +56,19 @@ def server(input, output, session):
     timeseries_title = reactive.Value("Interactions Over Time")
     network_title = reactive.Value("Interaction Network")
 
+    # =========================================================================
+    # Helper function for axis names with defaults
+    # =========================================================================
+    def get_axis_names(master_instance):
+        """Get axis names with fallback to 'sel1' and 'sel2'."""
+        if master_instance is None:
+            return "sel1", "sel2"
+
+        x_axis = getattr(master_instance, 'axisx', None) or "sel1"
+        y_axis = getattr(master_instance, 'axisy', None) or "sel2"
+
+        return x_axis.strip() or "sel1", y_axis.strip() or "sel2"
+
     @reactive.Effect
     @reactive.event(input.pickle_file, input.config_file)
     def initialize_filter():
@@ -336,13 +349,14 @@ def server(input, output, session):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             master_instance = csv.get()
+            axisx, axisy = get_axis_names(master_instance)
 
             if active_tab == "Life Time":
                 fig = create_lifetime_plot(csv_filtered.get(),
                                            input.plot_width(),
                                            input.plot_height(),
-                                           master_instance.axisx,
-                                           master_instance.axisy,
+                                           axisx,
+                                           axisy,
                                            input.show_prevalence())
                 if organization_method.get() != "default":
                     fig = apply_organization_to_figure(fig,
@@ -356,8 +370,8 @@ def server(input, output, session):
                 fig = create_plot(csv_filtered.get(),
                                   input.plot_width(),
                                   input.plot_height(),
-                                  master_instance.axisx,
-                                  master_instance.axisy,
+                                  axisx,
+                                  axisy,
                                   input.show_prevalence())
                 # Apply organization if needed
                 if organization_method.get() != "default":
@@ -372,8 +386,8 @@ def server(input, output, session):
                 fig1 = create_sel1_interactions_plot(csv_filtered.get(),
                                                      input.plot_width(),
                                                      input.plot_height() // 1.5,
-                                                     master_instance.axisx,
-                                                     master_instance.axisy)
+                                                     axisx,
+                                                     axisy)
                 # Apply organization if needed
                 if organization_method.get() != "default":
                     fig1 = apply_organization_to_figure(fig1,
@@ -386,8 +400,8 @@ def server(input, output, session):
                 fig2 = create_sel2_interactions_plot(csv_filtered.get(),
                                                      input.plot_width(),
                                                      input.plot_height() // 1.5,
-                                                     master_instance.axisx,
-                                                     master_instance.axisy)
+                                                     axisx,
+                                                     axisy)
                 # Apply organization if needed
                 if organization_method.get() != "default":
                     fig2 = apply_organization_to_figure(fig2,
@@ -408,8 +422,8 @@ def server(input, output, session):
                 fig = create_interactions_over_time_plot(csv_filtered.get(),
                                                          input.plot_width(),
                                                          input.plot_height(),
-                                                         master_instance.axisx,
-                                                         master_instance.axisy)
+                                                         axisx,
+                                                         axisy)
                 # Apply organization if needed
                 if organization_method.get() != "default":
                     fig = apply_organization_to_figure(fig,
@@ -424,8 +438,8 @@ def server(input, output, session):
                     csv_filtered.get(),
                     input.plot_width(),
                     input.plot_height(),
-                    master_instance.axisx,
-                    master_instance.axisy
+                    axisx,
+                    axisy
                 )
                 filename = f"network_plot_{timestamp}.html"
                 full_path = save_dir / filename
@@ -619,9 +633,8 @@ def server(input, output, session):
         if simplify_labels.get():
             df_to_use = process_axis_labels(df_to_use, True)
 
-        # Get axis titles
-        x_axis_title = master_instance.axisx
-        y_axis_title = master_instance.axisy
+        # Get axis titles with defaults
+        x_axis_title, y_axis_title = get_axis_names(master_instance)
 
         # Apply custom axis titles if appropriate for this tab
         if active_tab in ["Sele1 vs Sele2", "Prevalence"]:
@@ -782,11 +795,13 @@ def server(input, output, session):
         if simplify_labels.get():
             df_to_use = process_axis_labels(df_to_use, True)
 
+        axisx, axisy = get_axis_names(master_instance)
+
         fig = create_lifetime_plot(df_to_use,
                                    input.plot_width(),
                                    input.plot_height(),
-                                   master_instance.axisx,
-                                   master_instance.axisy,
+                                   axisx,
+                                   axisy,
                                    input.show_prevalence())
 
         if fig is None:
@@ -833,13 +848,15 @@ def server(input, output, session):
         if simplify_labels.get():
             df_to_use = process_axis_labels(df_to_use, True)
 
+        axisx, axisy = get_axis_names(master_instance)
+
         # Pass network parameters to the plot creation
         net = create_network_plot(
             df_to_use,
             input.plot_width(),
             input.plot_height(),
-            master_instance.axisx,
-            master_instance.axisy,
+            axisx,
+            axisy,
             network_params.get()
         )
 
