@@ -850,7 +850,6 @@ def server(input, output, session):
 
         axisx, axisy = get_axis_names(master_instance)
 
-        # Pass network parameters to the plot creation
         net = create_network_plot(
             df_to_use,
             input.plot_width(),
@@ -863,7 +862,6 @@ def server(input, output, session):
         if net is None:
             return ui.p(ERROR_MESSAGES["nothing_selected"])
 
-        # Apply title
         unique_id = f"network_{hash(str(csv_filtered.get()))}"
         temp_file = os.path.join(tempfile.gettempdir(), f"{unique_id}.html")
         net.save_graph(temp_file)
@@ -985,7 +983,6 @@ def server(input, output, session):
         }
         network_params.set(new_params)
 
-        # Refresh network plot
         if csv_filtered.get() is not None:
             session.send_custom_message("refresh-plots", {})
 
