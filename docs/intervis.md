@@ -43,6 +43,14 @@ using the ``Control Panel`` on the right side of the interface.
 
     Before uploading  the `config file` to InterVis, make sure that the paths leading to the topology and trajectory(ies) exist and are specified as absolute paths.
 
+!!! tip "Manual Rendering in InterVis"
+
+    InterVis applies **manual rendering** to ensure smooth performance, especially with large datasets.  
+    - After making your selections (atomic selections, interactions, annotations, etc.), press the **Plot** button to trigger visualization.  
+    - Automatic re-rendering after every change is disabled intentionally to prevent performance issues on computers with limited resources.  
+    - This approach allows users to finalize all selections before rendering, keeping the interface responsive and avoiding freezes.
+
+
 ## 3. Configuring Visualizations
 
 Once the files are uploaded, you can configure the visualizations that will render in the different tabs of the
