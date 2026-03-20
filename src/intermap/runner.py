@@ -134,7 +134,7 @@ def workflow(args):
     # 6. Detect the interactions & Fill the container
     # =========================================================================
     total_pairs, total_inters = 0, 0
-    self = ContainerManager(args, iman, cuts)
+    cm = ContainerManager(args, iman, cuts)
     for i, xyz_chunk in tqdm(enumerate(trajiter),
                              desc='Detecting Interactions',
                              unit='chunk', total=n_chunks, ):
@@ -169,27 +169,27 @@ def workflow(args):
         frames = contiguous[i]
         if ijf_chunk.shape[0] > 0:
             ijf_chunk[:, 2] = frames[ijf_chunk[:, 2]]
-            self.fill(ijf_chunk, inters_chunk)
+            cm.fill(ijf_chunk, inters_chunk)
 
             # 6.7 Fill the container with the water bridges
-            if self.detect_wb:
-                ijwf = wb1(ijf_chunk, inters_chunk, waters, self.hb_idx,
+            if cm.detect_wb:
+                ijwf = wb1(ijf_chunk, inters_chunk, waters, cm.hb_idx,
                            resconv, atomic=atomic)
-                self.fill(ijwf, inters='wb')
+                cm.fill(ijwf, inters='wb')
 
     # %%=======================================================================
     # 7. Save the interactions
     # =========================================================================
-    self.rename()
+    cm.rename()
     base_name = f"{basename(args.job_name)}_InterMap.pickle"
     out_name = join(args.output_dir, base_name)
-    gnl.pickle_to_file(self.dict, out_name)
+    gnl.pickle_to_file(cm.dict, out_name)
 
     # %%=======================================================================
     # 8. Normal termination
     # =========================================================================
     tot = round(time.time() - start_time, 2)
-    ldict = len(self.dict)
+    ldict = len(cm.dict)
     pair_type = 'atom' if atomic else 'residue'
     logger.info(
         f" Normal termination of InterMap job '{basename(args.job_name)}'\n"
@@ -197,7 +197,7 @@ def workflow(args):
         f" Total number of interactions detected: {total_inters}\n"
         f" Interactions saved in {out_name} (binary format)\n"
         f" Elapsed time: {tot} s")
-    return self.dict
+    return cm.dict
 
 
 # =============================================================================
