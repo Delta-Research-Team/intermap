@@ -1,28 +1,27 @@
 name: intermap
 channels:
-  - defaults
   - conda-forge
 dependencies:
-  - python
-  - mdanalysis
-  - mdtraj
-  - rdkit
-  - numpy
-  - pandas
-  - networkx
-  - bitarray ~= 3.0.0
-  - numba ~= 0.61.0
-  - pip
+  - python=3.13.11
+  - mdanalysis=2.10.0
+  - mdtraj=1.11.1
+  - rdkit=2025.03.6
+  - numpy=2.2.5
+  - pandas=2.3.3
+  - networkx=3.6.1
+  - bitarray=3.0.0
+  - numba=0.61.2
+  - pip=25.3
   - pip:
       - -e .
-      - uvicorn
-      - shiny
+      - uvicorn==0.40.0
+      - shiny==1.5.1
       - screeninfo==0.8.1
-      - plotly<6.0.0,>=5.5.0
-      - numpy_indexed
-      - numba_kdtree == 0.5.0
-      - openpyxl
-      - fastapi
+      - plotly>=5.5.0,<6.0.0
+      - numpy_indexed==0.3.7
+      - numba_kdtree==0.5.0
+      - openpyxl==3.1.5
+      - fastapi==0.128.3
       - pyvis==0.3.2
       - plotly_resampler==0.11.0
       - git+https://github.com/rglez/rgpack.git@0.0.3

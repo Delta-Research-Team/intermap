@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import rgpack.generals as gnl
 from bitarray import bitarray as ba
+import bitarray.util as bu
 
 from intermap.intervis.app.css import all_interactions_colors
 
@@ -134,9 +135,11 @@ def parse_pickle(pickle):
 
     # Add the timeseries and the prevalence column
     df['timeseries'] = bit_dict.values()
-    #df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+    first_value = df['timeseries'].iloc[0]
+    if isinstance(first_value, bytes):
+        df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
     df['prevalence'] = df['timeseries'].apply(
-        lambda x: x.count() / len(x) * 100)
+        lambda x: x.count(1) / len(x) * 100)
     df['timeseries'] = df['timeseries'].apply(ba.to01)
 
     return df, resolution

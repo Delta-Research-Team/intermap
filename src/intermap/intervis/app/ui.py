@@ -501,7 +501,7 @@ def create_plots_section():
                 $(document).on('click', 'a[data-value="Network"]', function() {
                     setTimeout(function() {
                         $("#plot_button").click();
-                }, 100);
+                    }, 100);
                 });
             });
         """)

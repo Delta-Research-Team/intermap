@@ -98,7 +98,7 @@ def detect_config_path(mode='debug'):
 
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/residue-12-50.cfg'
+        config_path = '/home/rglez/RoyHub/intermap/BUGS/emanuelle-lolita/intermap.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
