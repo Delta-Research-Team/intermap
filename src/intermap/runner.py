@@ -22,12 +22,6 @@ from intermap.managers.cutoffs import CutoffsManager
 from intermap.managers.indices import IndexManager
 
 
-# High Priority
-# todo: Reorganize the code
-# todo: start writing tests
-# todo: assert identity against  prolif, again
-# todo: check docstrings
-
 def run(mode='production'):
     """
     Run the InterMap workflow.
