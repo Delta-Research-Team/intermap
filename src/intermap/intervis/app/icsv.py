@@ -136,10 +136,19 @@ def parse_pickle(pickle):
     # Add the timeseries and the prevalence column
     df['timeseries'] = bit_dict.values()
     first_value = df['timeseries'].iloc[0]
+
     if isinstance(first_value, bytes):
         df['timeseries'] = df['timeseries'].apply(bu.sc_decode)
+
+    #df['prevalence'] = df['timeseries'].apply(
+    #    lambda x: x.count(1) / len(x) * 100)
+
     df['prevalence'] = df['timeseries'].apply(
-        lambda x: x.count(1) / len(x) * 100)
+        lambda x: (x.count(1) / len(x) * 100) if (
+                    hasattr(x, 'count') and len(x) > 0) else 0
+    )
+
+
     df['timeseries'] = df['timeseries'].apply(ba.to01)
 
     return df, resolution
