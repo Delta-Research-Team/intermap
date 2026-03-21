@@ -73,9 +73,29 @@ def detect_config_path(mode='debug'):
     """
     if mode == 'production':
         if len(sys.argv) != 2:
-            raise ValueError(
-                '\nInterMap syntax is: intermap path-to-config-file')
+            # Make a header for the error message
+            print('*' * 80)
+            print('Wrong number of arguments. InterMap syntax is:')
+            print('\nintermap path-to-config-file')
+            print(
+                '\nFor more information on how to make a proper configuration file,'
+                ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
+            print('*' * 80)
+            sys.exit(1)
+
+        elif sys.argv[1] in {'-h', '--help'}:
+            print('*' * 80)
+            print(
+                'InterMap: Accelerated Detection of Interaction Fingerprints on Large-Scale Molecular Ensembles\nPlease run InterMap with the following syntax:')
+            print('\nintermap path-to-config-file')
+            print(
+                '\nFor more information on how to make a proper configuration file,'
+                ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
+            print('*' * 80)
+            sys.exit(0)
+
         config_path = sys.argv[1]
+
     elif mode == 'debug':
         # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
         config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/residue-12-50.cfg'
