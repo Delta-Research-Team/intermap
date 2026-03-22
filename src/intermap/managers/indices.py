@@ -204,7 +204,8 @@ def get_uniques_triads(universe, unknown_names):
     for residue in uniq_disconnected:
         mono = universe.residues[uniq_disconnected[residue][0]]
         mda_disconnected[residue] = mono
-        known_atoms = mono.atoms.select_atoms(f"not name {unknowns}")
+        known_atoms = mono.atoms.select_atoms(
+            f"not name {unknowns}") if unknowns else mono.atoms
         rdk_disconnected[residue] = ag2rdkit(known_atoms)
 
     rdkit_ = time.time() - stamp
@@ -343,9 +344,11 @@ class IndexManager:
         elements = np.asarray(elements)
         radii[''] = 0.0
 
-        logger.warning(f"Unknown elements found in the trajectory: {unknown}. "
-                       f"They will be assigned the symbol 'Z' and a VDW radius of 0. "
-                       f"Please check the topology if this is unexpected.")
+        if unknown:
+            logger.warning(
+                f"Unknown elements found in the trajectory: {unknown}. "
+                f"They will be assigned the symbol 'Z' and a VDW radius of 0. "
+                f"Please check the topology if this is unexpected.")
 
         trajs = [x.strip() for x in self.traj.split(',')]
 
