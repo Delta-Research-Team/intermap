@@ -15,6 +15,7 @@ inf_int = sys.maxsize
 inf_float = float(inf_int)
 
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+# proj_dir = '/home/rglez/RoyHub/intermap/src/'
 
 
 # =============================================================================
@@ -81,7 +82,8 @@ def detect_config_path(mode='debug'):
                 '\nFor more information on how to make a proper configuration file,'
                 ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
             print('*' * 80)
-            sys.exit(1)
+            print('\n')
+            sys.exit(0)
 
         elif sys.argv[1] in {'-h', '--help'}:
             print('*' * 80)
@@ -92,13 +94,13 @@ def detect_config_path(mode='debug'):
                 '\nFor more information on how to make a proper configuration file,'
                 ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
             print('*' * 80)
+            print('\n')
             sys.exit(0)
 
         config_path = sys.argv[1]
 
     elif mode == 'debug':
-        # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/home/rglez/RoyHub/intermap/BUGS/emanuelle-lolita/intermap.cfg'
+        config_path = '/media/rglez/Roy5T/RoyData/IDPFold/raw/InterMap-referees/no_glycans.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -214,10 +216,8 @@ class Config:
             'selection_2': {'dtype': str, 'values': None},
             'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
             'interactions': {'dtype': str, 'values': None},
-            # 'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
             'annotations': {'dtype': str, 'values': None},
-            # 'format': {'dtype': str, 'values': {'simple', 'extended'}}
         },
 
         # ____ cutoffs
@@ -283,6 +283,13 @@ class Config:
         [current_template.remove(x) for x in self.keyless_sections if
          x in current_template]
 
+        # Check if sections exist before accessing keys -----------------------
+        found_sections = self.config_obj.sections()
+        missing_sections = [s for s in current_template if
+                            s not in found_sections]
+        if missing_sections:
+            raise ValueError(f"Missing sections: {missing_sections}")
+
         for section in current_template:
             config_file_keys = list(self.config_obj[section].keys())
             for key in current_params[section]:
@@ -335,15 +342,15 @@ class Config:
         return config_args
 
     def parse_and_check_constraints(self):
-        """Check for specific constraints in the STDock config file
+        """Check for specific constraints in the InterMap config file
         """
         raise NotImplementedError
 
 
 class ConfigManager(Config):
     """
-    Specific parser for STDock's config files. It inherits from a more general
-    config parser and then perform STDock-related checkings.
+    Specific parser for InterMap's config files. It inherits from a more general
+    config parser and then perform InterMap-related checkings.
     """
 
     def parse_and_check_constraints(self):
@@ -384,13 +391,13 @@ class ConfigManager(Config):
 
     def build_dir_hierarchy(self):
         """
-        Build STDock directory hierarchy
+        Build InterMap directory hierarchy
         """
         # If output_dir exists, raise
         outdir = self.config_args['output_dir']
 
         try:
-            os.makedirs(outdir, exist_ok=True)
+            os.makedirs(outdir)
         except FileExistsError:
             raise FileExistsError(
                 f'The output directory {outdir} already exists. Please, '
