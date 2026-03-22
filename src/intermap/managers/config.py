@@ -488,5 +488,4 @@ class ConfigManager(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/rglez/RoyHub/intermap/data/ERRORS/e2/outputs/InterMap-job.cfg'
 # self = ConfigManager(mode='debug')

@@ -71,6 +71,7 @@ def workflow(args):
     # 2. Load the indices & interactions to compute
     # =========================================================================
     iman = IndexManager(args)
+
     (sel_idx, s1_idx, s2_idx, shared_idx, s1_cat, s2_cat, s1_ani, s2_ani,
      s1_cat_idx, s2_cat_idx, s1_ani_idx, s2_ani_idx, s1_rings, s2_rings,
      s1_rings_idx, s2_rings_idx, s1_aro_idx, s2_aro_idx, xyz_aro_idx,
