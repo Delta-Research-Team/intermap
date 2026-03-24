@@ -6,6 +6,7 @@ import re
 import sys
 from os.path import abspath, basename, dirname, isabs, join, normpath
 
+import numba
 import numpy as np
 
 import intermap.commons as cmn
@@ -15,6 +16,8 @@ inf_int = sys.maxsize
 inf_float = float(inf_int)
 
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+
+
 # proj_dir = '/home/rglez/RoyHub/intermap/src/'
 
 
@@ -365,6 +368,9 @@ class ConfigManager(Config):
 
         # 4. Parse the annotations
         self.read_annotations()
+
+        n_procs = self.config_args.get('n_procs')
+        numba.set_num_threads(n_procs)
 
         # 5. Start logging
         args = self.config_args
