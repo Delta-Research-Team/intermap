@@ -209,6 +209,10 @@ def aro(
     if 'None' in selected_aro:
         return ijf_aro, inters_aro
 
+    if ijf_aro.shape[0] == 0:
+        return np.zeros((0, 3), dtype=np.int32), np.zeros(
+            (0, len(selected_aro)), dtype=np.bool_)
+
     if 'PiCation' in selected_aro:
         picat_idx, pi_cat = pications(
             'PiCation', xyz_aro, row1, row2, dists_aro, s1_rings_idx,
