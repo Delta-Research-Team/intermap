@@ -45,10 +45,7 @@ using the ``Control Panel`` on the right side of the interface.
 
 !!! tip "Manual Rendering in InterVis"
 
-    InterVis applies **manual rendering** to ensure smooth performance, especially with large datasets.  
-    - After making your selections (atomic selections, interactions, annotations, etc.), press the **Plot** button to trigger visualization.  
-    - Automatic re-rendering after every change is disabled intentionally to prevent performance issues on computers with limited resources.  
-    - This approach allows users to finalize all selections before rendering, keeping the interface responsive and avoiding freezes.
+    InterVis applies **manual rendering** to ensure smooth performance, especially with large datasets. After making your selections in the Control Panel (atomic selections, interactions, annotations, prevalence cutoff, etc.), **press the Plot** button to trigger visualization.  
 
 
 ## 3. Configuring Visualizations
