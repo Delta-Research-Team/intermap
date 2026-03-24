@@ -8,7 +8,6 @@ from argparse import Namespace
 from os.path import basename, join
 
 import numpy as np
-from numba import set_num_threads
 from rgpack import generals as gnl
 from tqdm import tqdm
 
@@ -62,7 +61,6 @@ def workflow(args):
     # =========================================================================
     start_time = time.time()
     logger = logging.getLogger('InterMapLogger')
-    set_num_threads(args.n_procs)
 
     if isinstance(args, dict):
         args = Namespace(**args)
