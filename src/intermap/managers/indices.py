@@ -42,7 +42,7 @@ def guess_from_name(name, mass, pt_symbols, pt_masses, real_names):
         name2 = name.strip().lower()[0:2]
     else:
         name1 = name.strip().lower()[0]
-        if real_name := real_names[name1]:
+        if real_name := real_names.get(name1):
             return real_name
         else:
             raise ValueError(f"Unknown element: {name}")
@@ -443,6 +443,7 @@ class IndexManager:
 
         query = Chem.MolFromSmarts(self.smarts[identifier])
         singles = []
+        unk_str = ' '.join(self.unknown)
 
         # Look for the single atoms in the connected residues
         for case in self.rdk_connected:
@@ -450,8 +451,10 @@ class IndexManager:
             match = [y for x in tri_mol.GetSubstructMatches(query) for y in x]
             if match:
                 tri_res = self.mda_connected[case]
-                where = tri_res.atoms.resindices[match] == case
-                selected = tri_res.atoms.indices[match][where]
+                known_atoms = tri_res.atoms.select_atoms(
+                    f"not name {unk_str}") if unk_str else tri_res.atoms
+                where = known_atoms.resindices[match] == case
+                selected = known_atoms.indices[match][where]
                 singles.extend(selected)
 
         # Look for the single atoms in the disconnected residues
@@ -461,7 +464,9 @@ class IndexManager:
             if match:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected = mono_res.atoms.indices[match]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected = known_atoms.indices[match]
                     singles.extend(selected)
 
         selected_raw = npi.indices(
@@ -478,7 +483,6 @@ class IndexManager:
             hb_H: array with the indices of the hydrogens
             hb_A: array with the indices of the acceptors
         """
-
         smart_dx = self.smarts[donor_identifier]
         smart_a = self.smarts[acceptor_identifier]
 
@@ -487,16 +491,19 @@ class IndexManager:
         hx_H = []
         query_dh = Chem.MolFromSmarts(smart_dx)
         query_a = Chem.MolFromSmarts(smart_a)
+        unk_str = ' '.join(self.unknown)
 
         # Look for D, H, A in the connected residues
         for case in self.rdk_connected:
             tri_mol = self.rdk_connected[case]
             tri_res = self.mda_connected[case]
+            known_atoms = tri_res.atoms.select_atoms(
+                f"not name {unk_str}") if unk_str else tri_res.atoms
 
             match_dh = [x for x in tri_mol.GetSubstructMatches(query_dh)]
             if match_dh:
-                where_dh = tri_res.atoms.resindices[match_dh] == case
-                selected_dh = tri_res.atoms.indices[match_dh][
+                where_dh = known_atoms.resindices[match_dh] == case
+                selected_dh = known_atoms.indices[match_dh][
                     where_dh.all(axis=1)]
 
                 for i, x in enumerate(selected_dh):
@@ -505,18 +512,22 @@ class IndexManager:
 
             match_a = [x for x in tri_mol.GetSubstructMatches(query_a)]
             if match_a:
-                where_a = tri_res.atoms.resindices[match_a] == case
-                selected_a = tri_res.atoms.indices[match_a][where_a]
+                where_a = known_atoms.resindices[match_a] == case
+                selected_a = known_atoms.indices[match_a][where_a]
                 hx_A.extend(selected_a)
 
         # Look for D, H, A in the disconnected residues
         for case in self.rdk_disconnected:
             mono_mol = self.rdk_disconnected[case]
+
             match_dh = [x for x in mono_mol.GetSubstructMatches(query_dh)]
             if match_dh:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected_dh = mono_res.atoms.indices[match_dh]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected_dh = known_atoms.indices[match_dh]
+
                     for i, x in enumerate(selected_dh):
                         hx_D.append(x[0])
                         hx_H.append(x[1])
@@ -525,7 +536,9 @@ class IndexManager:
             if match_a:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected_a = mono_res.atoms.indices[match_a]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected_a = known_atoms.indices[match_a]
                     hx_A.extend(selected_a[:, 0])
 
         # Filter the indices
@@ -536,6 +549,7 @@ class IndexManager:
         hx_D = hx_D_raw[hx_D_raw != -1].astype(np.int32)
         hx_H = hx_H_raw[hx_H_raw != -1].astype(np.int32)
         hx_A = np.unique(hx_A_raw[hx_A_raw != -1]).astype(np.int32)
+
         assert len(hx_D) == len(
             hx_H), f"Donors ({hx_D.size}) and Hydrogens ({hx_H.size}) do not match"
         return hx_D, hx_H, hx_A
@@ -653,6 +667,7 @@ class IndexManager:
         query = Chem.MolFromSmarts(self.smarts['water'])
         query = Chem.AddHs(query)
         waters = []
+        unk_str = ' '.join(self.unknown)
 
         # Look for the water molecules in the disconnected residues
         for case in self.rdk_disconnected:
@@ -661,11 +676,13 @@ class IndexManager:
             if match:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected = mono_res.atoms.indices[match]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected = known_atoms.indices[match]
                     waters.extend(selected)
 
-        selected_raw = npi.indices(
-            self.sel_idx, np.asarray(waters), missing=-1)
+        selected_raw = npi.indices(self.sel_idx, np.asarray(waters),
+                                   missing=-1)
         selected = selected_raw[selected_raw != -1].astype(np.int32)
 
         return selected, waters
