@@ -16,13 +16,12 @@ class TestConfigCLI:
         monkeypatch.setattr(sys, 'argv', ['intermap', 'my_config.cfg'])
         assert detect_config_path(mode='production') == 'my_config.cfg'
 
-    def test_help_flag_exits(self, monkeypatch):
-        monkeypatch.setattr(sys, 'argv', ['intermap', '--help'])
-        with pytest.raises(SystemExit):
-            detect_config_path(mode='production')
-
-    def test_wrong_args_exits(self, monkeypatch):
-        monkeypatch.setattr(sys, 'argv', ['intermap'])
+    @pytest.mark.parametrize("mocked_argv", [
+        ['intermap', '--help'],  # Triggers help exit
+        ['intermap']  # Triggers wrong args exit
+    ])
+    def test_cli_system_exits(self, monkeypatch, mocked_argv):
+        monkeypatch.setattr(sys, 'argv', mocked_argv)
         with pytest.raises(SystemExit):
             detect_config_path(mode='production')
 
