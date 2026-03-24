@@ -69,28 +69,12 @@ def get_coordinates(u, chunk, sel_idx):
 
 def check_path(path, check_exist=True):
     """
-    Check if a path exists and return it if it does
-
-    Args:
-        path: path to check
-        check_exist: check if the path exists or not
-
-    Returns:
-        path: path to the file or directory
+    Check if a path exists and return it.
+    If check_exist is True, raises an error if the path is not found.
     """
-    path_exists = os.path.exists(path)
-    if check_exist and path_exists:
-        return path
-    elif (not check_exist) and (not path_exists):
-        return path
-    elif (not check_exist) and path_exists:
-        return path  # todo: check this behaviour
-    elif check_exist and (not path_exists):
+    if check_exist and not os.path.exists(path):
         raise ValueError(f'\nNo such file or directory: {path}')
-    else:
-        pass
-        raise ValueError(
-            f'\nPath already exists and will not be overwritten: {path}')
+    return path
 
 
 def check_numeric_in_range(arg_name, value, dtype, minim, maxim):
