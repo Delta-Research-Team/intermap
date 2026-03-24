@@ -42,7 +42,7 @@ def guess_from_name(name, mass, pt_symbols, pt_masses, real_names):
         name2 = name.strip().lower()[0:2]
     else:
         name1 = name.strip().lower()[0]
-        if real_name := real_names[name1]:
+        if real_name := real_names.get(name1):
             return real_name
         else:
             raise ValueError(f"Unknown element: {name}")
@@ -151,13 +151,14 @@ def match_rings(mol):
     return aromatic_rings
 
 
-def get_uniques_triads(universe):
+def get_uniques_triads(universe, unknown_names):
     """
     Get the unique residues in the universe taking into account the connected
     residues
 
     Args:
         universe (mda.Universe): Universe object
+        unknown_names (set): Atom names unknown to RDkit
 
     Returns:
         unique_mda_res (dict): Dictionary with the unique residues
@@ -169,6 +170,7 @@ def get_uniques_triads(universe):
     by_resnames = universe.residues.resnames
     by_resindex = universe.residues.resindices
     bonds = universe.bonds
+    unknowns = ' '.join(unknown_names)
 
     # Get connected residues
     connected = defaultdict(list)
@@ -202,7 +204,9 @@ def get_uniques_triads(universe):
     for residue in uniq_disconnected:
         mono = universe.residues[uniq_disconnected[residue][0]]
         mda_disconnected[residue] = mono
-        rdk_disconnected[residue] = ag2rdkit(mono.atoms)
+        known_atoms = mono.atoms.select_atoms(
+            f"not name {unknowns}") if unknowns else mono.atoms
+        rdk_disconnected[residue] = ag2rdkit(known_atoms)
 
     rdkit_ = time.time() - stamp
     logger.info(f"Residues converted to Rdkit format in {rdkit_:.2f} s")
@@ -258,7 +262,7 @@ class IndexManager:
 
         # Load the trajectory as a Universe
         (self.universe, self.traj_frames, self.n_atoms,
-         self.n_frames) = self.load_traj()
+         self.n_frames, self.unknown) = self.load_traj()
 
         # Get annotations
         self.annotations = self.get_annotations()
@@ -275,7 +279,7 @@ class IndexManager:
         # Get triads (connected) / monomers (disconnected) of residues
         (self.mda_connected, self.rdk_connected, self.mda_disconnected,
          self.rdk_disconnected, self.uniq_disconnected) = get_uniques_triads(
-            self.universe)
+            self.universe, self.unknown)
 
         # Get VDW radii
         self.vdw_radii = self.get_vdw_radii()
@@ -319,28 +323,32 @@ class IndexManager:
         universe = mda.Universe(*([self.topo] + trajs))
         masses = [round(x) for x in universe.atoms.masses]
         names = universe.atoms.names
+        pt_symbols, pt_masses, real_names = get_periodic_table_info()
+        pt = rdkit.Chem.GetPeriodicTable()
 
         # Ensure all elements are present
-        try:
-            elements = universe.atoms.elements.lolita
-        except Exception:
-            logger.warning("Element information not found in the topology."
-                           " Using the atoms name to guess it.")
-            pt_symbols, pt_masses, real_names = get_periodic_table_info()
-            elements = []
-            for i, name in enumerate(names):
+        elements = []
+        unknown = set()
+        radii = {}
+        for i, name in enumerate(names):
+            try:
                 element = guess_from_name(
                     name, masses[i], pt_symbols, pt_masses, real_names)
-                if not element:
-                    raise ValueError(
-                        f"Fail to guess element from {name}."
-                        f" Please check the topology.")
-                elements.append(element)
-            elements = np.asarray(elements)
+                radii[element] = pt.GetRvdw(pt_symbols[element])
+            except KeyError:
+                unknown.add(name)
+                element = 'Z'
+                radii[name] = 0.0
 
-        # Guess bonds if not present
-        pt = rdkit.Chem.GetPeriodicTable()
-        radii = {e: pt.GetRvdw(e) for e in elements}
+            elements.append(element)
+        elements = np.asarray(elements)
+        radii[''] = 0.0
+
+        if unknown:
+            logger.warning(
+                f"Unknown elements found in the trajectory: {unknown}. "
+                f"They will be assigned the symbol 'Z' and a VDW radius of 0. "
+                f"Please check the topology if this is unexpected.")
 
         trajs = [x.strip() for x in self.traj.split(',')]
 
@@ -352,6 +360,7 @@ class IndexManager:
             guessing = time.time()
             universe = mda.Universe(self.topo, *trajs, guess_bonds=True,
                                     vdwradii=radii)
+
             n_bonds = len(universe.bonds)
             logger.info(
                 f" {n_bonds} bonds guessed in {time.time() - guessing:.2f} s")
@@ -390,7 +399,7 @@ class IndexManager:
 
         # Copy the topology to the output dir
         shutil.copy(self.topo, self.args.output_dir)
-        return universe, traj_frames, n_atoms, n_frames
+        return universe, traj_frames, n_atoms, n_frames, unknown
 
     def get_selections_indices(self):
         """
@@ -434,6 +443,7 @@ class IndexManager:
 
         query = Chem.MolFromSmarts(self.smarts[identifier])
         singles = []
+        unk_str = ' '.join(self.unknown)
 
         # Look for the single atoms in the connected residues
         for case in self.rdk_connected:
@@ -441,8 +451,10 @@ class IndexManager:
             match = [y for x in tri_mol.GetSubstructMatches(query) for y in x]
             if match:
                 tri_res = self.mda_connected[case]
-                where = tri_res.atoms.resindices[match] == case
-                selected = tri_res.atoms.indices[match][where]
+                known_atoms = tri_res.atoms.select_atoms(
+                    f"not name {unk_str}") if unk_str else tri_res.atoms
+                where = known_atoms.resindices[match] == case
+                selected = known_atoms.indices[match][where]
                 singles.extend(selected)
 
         # Look for the single atoms in the disconnected residues
@@ -452,7 +464,9 @@ class IndexManager:
             if match:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected = mono_res.atoms.indices[match]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected = known_atoms.indices[match]
                     singles.extend(selected)
 
         selected_raw = npi.indices(
@@ -469,7 +483,6 @@ class IndexManager:
             hb_H: array with the indices of the hydrogens
             hb_A: array with the indices of the acceptors
         """
-
         smart_dx = self.smarts[donor_identifier]
         smart_a = self.smarts[acceptor_identifier]
 
@@ -478,16 +491,19 @@ class IndexManager:
         hx_H = []
         query_dh = Chem.MolFromSmarts(smart_dx)
         query_a = Chem.MolFromSmarts(smart_a)
+        unk_str = ' '.join(self.unknown)
 
         # Look for D, H, A in the connected residues
         for case in self.rdk_connected:
             tri_mol = self.rdk_connected[case]
             tri_res = self.mda_connected[case]
+            known_atoms = tri_res.atoms.select_atoms(
+                f"not name {unk_str}") if unk_str else tri_res.atoms
 
             match_dh = [x for x in tri_mol.GetSubstructMatches(query_dh)]
             if match_dh:
-                where_dh = tri_res.atoms.resindices[match_dh] == case
-                selected_dh = tri_res.atoms.indices[match_dh][
+                where_dh = known_atoms.resindices[match_dh] == case
+                selected_dh = known_atoms.indices[match_dh][
                     where_dh.all(axis=1)]
 
                 for i, x in enumerate(selected_dh):
@@ -496,18 +512,22 @@ class IndexManager:
 
             match_a = [x for x in tri_mol.GetSubstructMatches(query_a)]
             if match_a:
-                where_a = tri_res.atoms.resindices[match_a] == case
-                selected_a = tri_res.atoms.indices[match_a][where_a]
+                where_a = known_atoms.resindices[match_a] == case
+                selected_a = known_atoms.indices[match_a][where_a]
                 hx_A.extend(selected_a)
 
         # Look for D, H, A in the disconnected residues
         for case in self.rdk_disconnected:
             mono_mol = self.rdk_disconnected[case]
+
             match_dh = [x for x in mono_mol.GetSubstructMatches(query_dh)]
             if match_dh:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected_dh = mono_res.atoms.indices[match_dh]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected_dh = known_atoms.indices[match_dh]
+
                     for i, x in enumerate(selected_dh):
                         hx_D.append(x[0])
                         hx_H.append(x[1])
@@ -516,7 +536,9 @@ class IndexManager:
             if match_a:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected_a = mono_res.atoms.indices[match_a]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected_a = known_atoms.indices[match_a]
                     hx_A.extend(selected_a[:, 0])
 
         # Filter the indices
@@ -527,6 +549,7 @@ class IndexManager:
         hx_D = hx_D_raw[hx_D_raw != -1].astype(np.int32)
         hx_H = hx_H_raw[hx_H_raw != -1].astype(np.int32)
         hx_A = np.unique(hx_A_raw[hx_A_raw != -1]).astype(np.int32)
+
         assert len(hx_D) == len(
             hx_H), f"Donors ({hx_D.size}) and Hydrogens ({hx_H.size}) do not match"
         return hx_D, hx_H, hx_A
@@ -644,6 +667,7 @@ class IndexManager:
         query = Chem.MolFromSmarts(self.smarts['water'])
         query = Chem.AddHs(query)
         waters = []
+        unk_str = ' '.join(self.unknown)
 
         # Look for the water molecules in the disconnected residues
         for case in self.rdk_disconnected:
@@ -652,11 +676,13 @@ class IndexManager:
             if match:
                 for similar in self.uniq_disconnected[case]:
                     mono_res = self.universe.residues[similar]
-                    selected = mono_res.atoms.indices[match]
+                    known_atoms = mono_res.atoms.select_atoms(
+                        f"not name {unk_str}") if unk_str else mono_res.atoms
+                    selected = known_atoms.indices[match]
                     waters.extend(selected)
 
-        selected_raw = npi.indices(
-            self.sel_idx, np.asarray(waters), missing=-1)
+        selected_raw = npi.indices(self.sel_idx, np.asarray(waters),
+                                   missing=-1)
         selected = selected_raw[selected_raw != -1].astype(np.int32)
 
         return selected, waters
@@ -670,8 +696,14 @@ class IndexManager:
             max_vdw (float): Maximum van der Waals distance between the atoms
         """
 
-        s1_elements = set(self.universe.atoms[self.s1_idx].elements)
-        s2_elements = set(self.universe.atoms[self.s2_idx].elements)
+        a, b, c = get_periodic_table_info()
+        real_names = set(c.values())
+        s1_elements_raw = set(self.universe.atoms[self.s1_idx].elements)
+        s2_elements_raw = set(self.universe.atoms[self.s2_idx].elements)
+        s1_unk = s1_elements_raw - real_names
+        s2_unk = s2_elements_raw - real_names
+        s1_elements = s1_elements_raw - s1_unk
+        s2_elements = s2_elements_raw - s2_unk
 
         product = it.product(s1_elements, s2_elements)
         unique_pairs = set(tuple(sorted((a, b))) for a, b in product)
@@ -693,7 +725,9 @@ class IndexManager:
         """
         elements = self.universe.atoms.elements
         pt = rdkit.Chem.GetPeriodicTable()
-        radii = np.array([pt.GetRvdw(e) for e in elements])
+        pt_elements = set(pt.GetElementSymbol(i) for i in range(1, 119))
+        radii = np.array(
+            [pt.GetRvdw(e) if e in pt_elements else 0 for e in elements])
         all_radii = radii.astype(np.float32)
         return all_radii[self.sel_idx]
 

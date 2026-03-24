@@ -92,9 +92,11 @@ def estimate(
         hydroph, met_don, met_acc, vdw_radii, hb_hydr, hb_don, hb_acc, xb_hal,
         xb_don, xb_acc, cuts_others, selected_others, len_others, max_dist_aro,
         max_dist_others, overlap, atomic, resconv, factor=1.5, n_samples=10):
+
     # Get the samples coordinates along the trajectory
     n_frames = universe.trajectory.n_frames
-    sub = universe.trajectory[::n_frames // n_samples]
+    step = max(1, n_frames // n_samples)
+    sub = universe.trajectory[::step]
     positions = np.asarray([ts.positions.copy() for ts in sub],
                            dtype=np.float32)
 

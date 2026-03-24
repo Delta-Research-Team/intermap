@@ -6,6 +6,7 @@ import re
 import sys
 from os.path import abspath, basename, dirname, isabs, join, normpath
 
+import numba
 import numpy as np
 
 import intermap.commons as cmn
@@ -15,6 +16,9 @@ inf_int = sys.maxsize
 inf_float = float(inf_int)
 
 proj_dir = os.sep.join(dirname(os.path.abspath(__file__)).split(os.sep)[:-2])
+
+
+# proj_dir = '/home/rglez/RoyHub/intermap/src/'
 
 
 # =============================================================================
@@ -73,12 +77,33 @@ def detect_config_path(mode='debug'):
     """
     if mode == 'production':
         if len(sys.argv) != 2:
-            raise ValueError(
-                '\nInterMap syntax is: intermap path-to-config-file')
+            # Make a header for the error message
+            print('*' * 80)
+            print('Wrong number of arguments. InterMap syntax is:')
+            print('\nintermap path-to-config-file')
+            print(
+                '\nFor more information on how to make a proper configuration file,'
+                ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
+            print('*' * 80)
+            print('\n')
+            sys.exit(0)
+
+        elif sys.argv[1] in {'-h', '--help'}:
+            print('*' * 80)
+            print(
+                'InterMap: Accelerated Detection of Interaction Fingerprints on Large-Scale Molecular Ensembles\nPlease run InterMap with the following syntax:')
+            print('\nintermap path-to-config-file')
+            print(
+                '\nFor more information on how to make a proper configuration file,'
+                ' please refer to the documentation at:\nhttps://delta-research-team.github.io/intermap/basic-usage.html#1-preparing-the-configuration-file')
+            print('*' * 80)
+            print('\n')
+            sys.exit(0)
+
         config_path = sys.argv[1]
+
     elif mode == 'debug':
-        # config_path = '/media/gonzalezroy/Expansion/romie/TRAJECTORIES_INPUTS_DATA_mpro_wt_variants_amarolab/a173v/imap.cfg'
-        config_path = '/media/rglez/Roy2TB/Dropbox/RoyData/intermap/ERRORS/e2/residue-12-50.cfg'
+        config_path = '/media/rglez/Roy5T/RoyData/IDPFold/raw/InterMap-referees/no_glycans.cfg'
     else:
         raise ValueError('Only modes allowed are production and running')
     return config_path
@@ -194,10 +219,8 @@ class Config:
             'selection_2': {'dtype': str, 'values': None},
             'min_prevalence': {'dtype': float, 'min': 0, 'max': 100},
             'interactions': {'dtype': str, 'values': None},
-            # 'export_csv': {'dtype': str, 'values': {'True', 'False'}},
             'resolution': {'dtype': str, 'values': {'atom', 'residue'}},
             'annotations': {'dtype': str, 'values': None},
-            # 'format': {'dtype': str, 'values': {'simple', 'extended'}}
         },
 
         # ____ cutoffs
@@ -263,6 +286,13 @@ class Config:
         [current_template.remove(x) for x in self.keyless_sections if
          x in current_template]
 
+        # Check if sections exist before accessing keys -----------------------
+        found_sections = self.config_obj.sections()
+        missing_sections = [s for s in current_template if
+                            s not in found_sections]
+        if missing_sections:
+            raise ValueError(f"Missing sections: {missing_sections}")
+
         for section in current_template:
             config_file_keys = list(self.config_obj[section].keys())
             for key in current_params[section]:
@@ -315,15 +345,15 @@ class Config:
         return config_args
 
     def parse_and_check_constraints(self):
-        """Check for specific constraints in the STDock config file
+        """Check for specific constraints in the InterMap config file
         """
         raise NotImplementedError
 
 
 class ConfigManager(Config):
     """
-    Specific parser for STDock's config files. It inherits from a more general
-    config parser and then perform STDock-related checkings.
+    Specific parser for InterMap's config files. It inherits from a more general
+    config parser and then perform InterMap-related checkings.
     """
 
     def parse_and_check_constraints(self):
@@ -338,6 +368,9 @@ class ConfigManager(Config):
 
         # 4. Parse the annotations
         self.read_annotations()
+
+        n_procs = self.config_args.get('n_procs')
+        numba.set_num_threads(n_procs)
 
         # 5. Start logging
         args = self.config_args
@@ -364,13 +397,13 @@ class ConfigManager(Config):
 
     def build_dir_hierarchy(self):
         """
-        Build STDock directory hierarchy
+        Build InterMap directory hierarchy
         """
         # If output_dir exists, raise
         outdir = self.config_args['output_dir']
 
         try:
-            os.makedirs(outdir, exist_ok=True)
+            os.makedirs(outdir)
         except FileExistsError:
             raise FileExistsError(
                 f'The output directory {outdir} already exists. Please, '
@@ -461,5 +494,4 @@ class ConfigManager(Config):
 # %%===========================================================================
 # Debugging area
 # =============================================================================
-# config_path = '/home/rglez/RoyHub/intermap/data/ERRORS/e2/outputs/InterMap-job.cfg'
 # self = ConfigManager(mode='debug')

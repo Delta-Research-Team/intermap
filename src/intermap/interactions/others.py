@@ -177,14 +177,14 @@ def detect_hbonds(inter_name, row1, type1, row2, type2, dists, xyz, hb_don,
 
     # Compute DHA angles
     t3 = np.full(passing_HA.size, fill_value=-1, dtype=np.float32)
-    if "HBDonor" in inter_name:
+    if "Donor" in inter_name:
         idx_hydros = geom.indices(type1, t1)
         D = hb_don[idx_hydros]
         DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t1], xyz[t2])
         DA_dists = geom.calc_dist(xyz[D], xyz[t2])
         DHA_angles[DA_dists > da_cut] = -1
 
-    elif "HBAcceptor" in inter_name:
+    elif "Acceptor" in inter_name:
         idx_hydros = geom.indices(type2, t2)
         D = hb_don[idx_hydros]
         DHA_angles = geom.calc_angle_3p(xyz[D], xyz[t2], xyz[t1])
@@ -267,7 +267,10 @@ def others(
 
     # [HBonds]
     if ('HBAcceptor' in selected_others) or ('HBDonor' in selected_others):
-        idx_hb = selected_others.index('HBAcceptor')
+        if 'HBAcceptor' in selected_others:
+            idx_hb = selected_others.index('HBAcceptor')
+        else:
+            idx_hb = selected_others.index('HBDonor')
         da_cut_hb, ha_cut_hb, min_ang_hb, max_ang_hb = cuts_others[:4, idx_hb]
 
         if 'HBAcceptor' in selected_others:
@@ -279,25 +282,32 @@ def others(
 
         if 'HBDonor' in selected_others:
             hbd_idx, hbd = detect_hbonds('HBDonor', row1, hb_hydr, row2,
-                                         hb_acc, dists, xyz, hb_don, ha_cut_hb,
+                                         hb_acc, dists, xyz, hb_don,
+                                         ha_cut_hb,
                                          da_cut_hb, min_ang_hb, max_ang_hb,
                                          selected_others)
             inters[:, hbd_idx] = hbd
 
     # [XBonds]
     if ('XBAcceptor' in selected_others) or ('XBDonor' in selected_others):
-        idx_xb = selected_others.index('XBAcceptor')
+        if 'XBAcceptor' in selected_others:
+            idx_xb = selected_others.index('XBAcceptor')
+        else:
+            idx_xb = selected_others.index('XBDonor')
+
         da_cut_xb, ha_cut_xb, min_ang_xb, max_ang_xb = cuts_others[:4, idx_xb]
 
         if 'XBAcceptor' in selected_others:
             xba_idx, xba = detect_hbonds('XBAcceptor', row1, xb_acc, row2,
-                                         xb_hal, dists, xyz, xb_don, ha_cut_xb,
+                                         xb_hal, dists, xyz, xb_don,
+                                         ha_cut_xb,
                                          da_cut_xb, min_ang_xb, max_ang_xb,
                                          selected_others)
             inters[:, xba_idx] = xba
 
         if 'XBDonor' in selected_others:
-            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_hal, row2, xb_acc,
+            xbd_idx, xbd = detect_hbonds('XBDonor', row1, xb_hal, row2,
+                                         xb_acc,
                                          dists, xyz, xb_don, ha_cut_xb,
                                          da_cut_xb, min_ang_xb, max_ang_xb,
                                          selected_others)
