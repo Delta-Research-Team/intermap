@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#updating" class="md-skip">
+        <a href="#option-1-via-pip-recommended" class="md-skip">
           Skip to content
         </a>
       
@@ -430,6 +430,39 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#option-1-via-pip-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Via Pip (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-2-via-conda-for-developers-isolated-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Via Conda (For Developers &amp; Isolated Environments)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updating" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -437,6 +470,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Updating">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-installed-via-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If installed via Pip:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-installed-via-conda-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If installed via Conda (Source):
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -578,17 +639,44 @@
 
   <h1>Installation</h1>
 
-<p>Once you have git and conda/miniconda installed in your system, run:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Delta-Research-Team/intermap.git
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>intermap
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>conda<span class="w"> </span>activate<span class="w"> </span>intermap
+<h2 id="option-1-via-pip-recommended">Option 1: Via Pip (Recommended)<a class="headerlink" href="#option-1-via-pip-recommended" title="Permanent link">&para;</a></h2>
+<p>If you already have a working Python environment and want to use InterMap alongside your other tools, simply install it
+via pip:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>intermap
 </span></code></pre></div>
-<p>The last command activates the newly created conda environment named <code>intermap</code> and you will need to run it each time you want to use InterMap.</p>
+<h2 id="option-2-via-conda-for-developers-isolated-environments">Option 2: Via Conda (For Developers &amp; Isolated Environments)<a class="headerlink" href="#option-2-via-conda-for-developers-isolated-environments" title="Permanent link">&para;</a></h2>
+<p>If you experience dependency conflicts, or if you plan to contribute to the code and run tests, we recommend creating an
+isolated environment using our provided configuration:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Clone the repository</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Delta-Research-Team/intermap.git
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">cd</span><span class="w"> </span>intermap
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Create and activate the environment</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>conda<span class="w"> </span>activate<span class="w"> </span>intermap
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Install the package in editable mode </span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>Note:<span class="w"> </span>You<span class="w"> </span>will<span class="w"> </span>need<span class="w"> </span>to<span class="w"> </span>run<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>intermap<span class="w"> </span>each<span class="w"> </span><span class="nb">time</span><span class="w"> </span>you<span class="w"> </span>open<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>terminal<span class="w"> </span>to<span class="w"> </span>use<span class="w"> </span>the<span class="w"> </span>software.
+</span></code></pre></div>
+<h2 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
+<p>If you installed the package from source using Option 2, you can run the test suite from the root dir of the project.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">NUMBA_DISABLE_JIT</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>pytest<span class="w"> </span>tests/
+</span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Disable Numba's JIT compiler for running the tests</p>
+<p>You must use the previous command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.</p>
+</div>
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
-<p>To ensure at any moment that you have the latest version of InterMap, navigate to the previously cloned repository directory and run:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>master
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>conda<span class="w"> </span>env<span class="w"> </span>update<span class="w"> </span>-f<span class="w"> </span>environment.yml
+<p>To ensure you always have the latest version of InterMap:</p>
+<h3 id="if-installed-via-pip">If installed via Pip:<a class="headerlink" href="#if-installed-via-pip" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>intermap
+</span></code></pre></div>
+<h3 id="if-installed-via-conda-source">If installed via Conda (Source):<a class="headerlink" href="#if-installed-via-conda-source" title="Permanent link">&para;</a></h3>
+<p>Navigate to the cloned repository directory and run:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>master
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>conda<span class="w"> </span>env<span class="w"> </span>update<span class="w"> </span>-f<span class="w"> </span>environment.yml
 </span></code></pre></div>
 
 
@@ -642,10 +730,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["toc.follow", "toc.integrate", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.tabs", "navigation.tabs.sticky", "navigation.instant", "navigation.instant.progress", "navigation.top", "header.autohide"], "search": "assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["toc.follow", "toc.integrate", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.tabs", "navigation.tabs.sticky", "navigation.instant", "navigation.instant.progress", "navigation.top", "header.autohide"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
