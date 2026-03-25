@@ -35,6 +35,10 @@ If you installed the package from source using Option 2, you can run the test su
 NUMBA_DISABLE_JIT=1 pytest tests/
 ```  
 
+!!! note "Update file paths before running tests"
+
+Before running the tests, make sure to update the paths to the topology and trajectory files in the configuration file within the examples directory. Otherwise, this may lead to errors during test execution.
+
 !!! warning "Disable Numba's JIT compiler for running the tests"
 
     You must use the previous command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.
