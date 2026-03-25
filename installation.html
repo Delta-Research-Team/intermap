@@ -662,12 +662,16 @@ isolated environment using our provided configuration:</p>
 </span></code></pre></div>
 <h2 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
 <p>If you installed the package from source using Option 2, you can run the test suite from the root dir of the project.</p>
+<div class="admonition warning">
+<p class="admonition-title">Disable Numba's JIT compiler</p>
+<p>You must use the below command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Update the absolute paths in the configuration file</p>
+<p>Before running the tests, make sure to update the paths to the topology and trajectory files in the <strong>.cfg</strong> configuration file within the <code>examples</code> directory. </p>
+</div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">NUMBA_DISABLE_JIT</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>pytest<span class="w"> </span>tests/
 </span></code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Disable Numba's JIT compiler for running the tests</p>
-<p>You must use the previous command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.</p>
-</div>
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
 <p>To ensure you always have the latest version of InterMap:</p>
 <h3 id="if-installed-via-pip">If installed via Pip:<a class="headerlink" href="#if-installed-via-pip" title="Permanent link">&para;</a></h3>
