@@ -1,0 +1,98 @@
+Starting InterMap with the following static parameters:
+
+ Job name: prot-dna
+ Topology: /home/rglez/RoyHub/intermap/examples/T1/hmr_cionize_ions_solvent_sc150mM_WRAPPED_RENUM.pdb
+ Trajectory: /home/rglez/RoyHub/intermap/examples/T1/traj_sample.dcd
+ String for selection #1: protein
+ String for selection #2: nucleic
+ Output directory: outputs
+ Chunk size: 100
+ Number of processors: 8
+ Min prevalence: 0.0
+ Resolution: atom
+
+Loading trajectory and selections. Using the following SMARTS patterns:
+
+{'anions': '[-{1-},$(O=[C,S,P]-[O-])]',
+ 'cations': '[+{1-},$([NX3&!$([NX3]-O)]-[C]=[NX3+])]',
+ 'hb_acc': '[$([N&!$([NX3]-*=[O,N,P,S])&!$([NX3]-[a])&!$([Nv4+1])&!$(N=C(-[C,N])-N)]),$([n+0&!X3&!$([n&r5]:[n+&r5])]),$([O&!$([OX2](C)C=O)&!$(O(~a)~a)&!$(O=N-*)&!$([O-]-N=O)]),$([o+0]),$([F&$(F-[#6])&!$(F-[#6][F,Cl,Br,I])])]',
+ 'hb_don': '[$([O,S,#7;+0]),$([Nv4+1]),$([n+]c[nH])]-[H]',
+ 'hydroph': '[c,s,Br,I,S&H0&v2,$([C&R0;$([CH0](=*)=*),$([CH1](=*)-[!#1]),$([CH2](-[!#1])-[!#1])]),$([C;$([CH0](=*)(-[!#1])-[!#1]),$([CH1](-[!#1])(-[!#1])-[!#1])]),$([C&D4!R](-[CH3])(-[CH3])-[CH3]);!$([#6]~[#7,#8,#9]);+0]',
+ 'metal_acc': '[O,#7&!$([nX3])&!$([NX3]-*=[!#6])&!$([NX3]-[a])&!$([NX4]),-{1-};!+{1-}]',
+ 'metal_don': '[Ca,Cd,Co,Cu,Fe,Mg,Mn,Ni,Zn]',
+ 'rings5': '[a;r5]1:[a;r5]:[a;r5]:[a;r5]:[a;r5]:1',
+ 'rings6': '[a;r6]1:[a;r6]:[a;r6]:[a;r6]:[a;r6]:[a;r6]:1',
+ 'water': ' [OH2]',
+ 'xb_acc': '[#7,#8,P,S,Se,Te,a;!+{1-}]!#[*]',
+ 'xb_don': '[#6,#7,Si,F,Cl,Br,I]-[Cl,Br,I,At]'}
+
+The passed topology does not contain bonds. MDAnalysis will guess them automatically.
+ 6082 bonds guessed in 2.58 s
+Trajectory loaded in 2.77 s.
+ Number of frames to consider (start:last:stride): 10 (0:10:1)
+Residues converted to Rdkit format in 0.62 s
+The following selected atoms were detected and classified:
+
+ Total number of atoms: 5878
+ Number of selected atoms: 5878
+   In Selection 1 (protein): 3646
+   In Selection 2 (nucleic): 2232
+   Hydrophobic: 460
+   Cations: 88
+   Anions: 188
+   Metal acceptors: 836
+   Metal donors: 0
+   Hydrogen bond donors: 588
+   Hydrogen bond hydrogens: 588
+   Hydrogen bond acceptors: 836
+   Halogen bond donors: 0
+   Halogens: 0
+   Halogen bond acceptors: 3360
+   Aromatic rings: 96
+   Water molecules: 0
+
+Skipping the following interactions because there are no atoms to compute them under the current selections for the passed system:
+ [np.str_('MetalDonor'),
+ np.str_('MetalAcceptor'),
+ np.str_('XBAcceptor'),
+ np.str_('XBDonor')]
+Interactions to compute & their cutoffs:
+ {'AnionPi': {'distCut1': 4.5, 'maxAng1': 30.0, 'minAng1': 0.0},
+ 'Anionic': {'distCut1': 4.5},
+ 'CationPi': {'distCut1': 4.5, 'maxAng1': 30.0, 'minAng1': 0.0},
+ 'Cationic': {'distCut1': 4.5},
+ 'CloseContact': {'distCut1': 3.0},
+ 'EdgeToFace': {'distCut1': 6.5,
+                'distCut2': 1.5,
+                'maxAng1': 90.0,
+                'maxAng2': 30.0,
+                'minAng1': 50.0,
+                'minAng2': 0.0},
+ 'FaceToFace': {'distCut1': 5.5,
+                'maxAng1': 35.0,
+                'maxAng2': 30.0,
+                'minAng1': 0.0,
+                'minAng2': 0.0},
+ 'HBAcceptor': {'distCut1': 3.5,
+                'distCut2': 3.5,
+                'maxAng1': 180.0,
+                'minAng1': 130.0},
+ 'HBDonor': {'distCut1': 3.5,
+             'distCut2': 3.5,
+             'maxAng1': 180.0,
+             'minAng1': 130.0},
+ 'Hydrophobic': {'distCut1': 4.5},
+ 'PiAnion': {'distCut1': 4.5, 'maxAng1': 30.0, 'minAng1': 0.0},
+ 'PiCation': {'distCut1': 4.5, 'maxAng1': 30.0, 'minAng1': 0.0},
+ 'PiStacking': {'distCut1': 5.5,
+                'maxAng1': 90.0,
+                'maxAng2': 30.0,
+                'minAng1': 0.0,
+                'minAng2': 0.0},
+ 'VdWContact': {'distCut1': 0}}
+Estimated base memory allocation for coordinates (7 MB) and interactions (5 MB) arrays.
+ Normal termination of InterMap job 'prot-dna'
+ Total number of unique atom pairs detected: 2316
+ Total number of interactions detected: 7350
+ Interactions saved in outputs/prot-dna_InterMap.pickle (binary format)
+ Elapsed time: 61.71 s
