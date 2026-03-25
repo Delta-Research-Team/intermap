@@ -31,19 +31,19 @@ Note: You will need to run conda activate intermap each time you open a new term
 
 If you installed the package from source using Option 2, you can run the test suite from the root dir of the project.
 
+!!! warning "Disable Numba's JIT compiler"
+
+    You must use the below command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.
+
+
+!!! warning "Update the absolute paths in the configuration file"
+
+    Before running the tests, make sure to update the paths to the topology and trajectory files in the **.cfg** configuration file within the `examples` directory. 
+
+
 ```bash
 NUMBA_DISABLE_JIT=1 pytest tests/
 ```  
-
-!!! note "Update file paths before running tests"
-
-Before running the tests, make sure to update the paths to the topology and trajectory files in the configuration file within the examples directory. Otherwise, this may lead to errors during test execution.
-
-
-!!! warning "Disable Numba's JIT compiler for running the tests"
-
-    You must use the previous command to explicitly disable Numba's JIT compiler when running the tests. Otherwise, tests may fail or stall due to compilation overhead.
-
 
 ## Updating
 
